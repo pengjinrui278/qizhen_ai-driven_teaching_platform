@@ -1,0 +1,13 @@
+{
+  "course_id": "point_set_topology",
+  "display_name": "点集拓扑",
+  "mirror_name": "点拓 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": ["definition", "theorem", "proof", "counterexample", "construction"],
+  "capabilities": ["progressive_hint", "definition_comparison", "proof_review", "learning_evidence"],
+  "harnesses": ["definition_convention", "quantifier_logic", "counterexample_check", "condition_substitution"],
+  "source_refs": [],
+  "metadata": {"scope_status": "教材与代表章节待确认"}
+}
+

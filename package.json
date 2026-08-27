@@ -1,0 +1,11 @@
+{
+  "name": "learning-mirror-platform",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @mirror/web dev",
+    "build:web": "pnpm --filter @mirror/web build",
+    "test:web": "pnpm --filter @mirror/web test"
+  }
+}
+

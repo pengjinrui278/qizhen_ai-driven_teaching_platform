@@ -1,0 +1,13 @@
+{
+  "course_id": "linear_algebra_analytic_geometry",
+  "display_name": "高等代数与解析几何",
+  "mirror_name": "高代 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": ["definition", "theorem", "proof", "symbolic_calculation", "geometric_interpretation"],
+  "capabilities": ["progressive_hint", "calculation_review", "proof_review", "learning_evidence"],
+  "harnesses": ["symbolic_matrix_check", "rank_dimension_conditions", "necessity_sufficiency"],
+  "source_refs": [],
+  "metadata": {"scope_status": "教材与代表章节待确认"}
+}
+

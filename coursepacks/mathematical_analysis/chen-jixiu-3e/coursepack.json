@@ -1,0 +1,18 @@
+{
+  "coursepack_id": "analysis-chen-jixiu-3e-demo",
+  "status": "schema_trial",
+  "course_id": "mathematical_analysis",
+  "profile_id": "chen-jixiu-3e",
+  "textbook": {
+    "title": "数学分析",
+    "edition": 3,
+    "authors": ["陈纪修", "於崇华", "金路"],
+    "publisher": "高等教育出版社",
+    "volume_1_isbn": "978-7-04-051571-8",
+    "volume_2_isbn": "978-7-04-051630-2"
+  },
+  "content_policy": "当前只含自编示意条目；不含教材原文和原书习题。",
+  "knowledge_file": "knowledge.sample.jsonl",
+  "problems_file": "problems.sample.jsonl"
+}
+

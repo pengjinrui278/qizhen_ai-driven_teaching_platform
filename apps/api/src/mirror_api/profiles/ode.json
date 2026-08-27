@@ -1,0 +1,13 @@
+{
+  "course_id": "ordinary_differential_equations",
+  "display_name": "常微分方程",
+  "mirror_name": "常微分 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": ["equation_classification", "theorem", "analytic_solution", "numerical_solution", "proof"],
+  "capabilities": ["progressive_hint", "equation_classification", "solution_review", "learning_evidence"],
+  "harnesses": ["symbolic_residual", "initial_boundary_conditions", "existence_uniqueness", "numerical_crosscheck"],
+  "source_refs": [],
+  "metadata": {"scope_status": "教材与代表章节待确认"}
+}
+

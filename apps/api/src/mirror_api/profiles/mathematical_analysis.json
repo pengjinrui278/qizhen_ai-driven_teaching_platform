@@ -1,0 +1,43 @@
+{
+  "course_id": "mathematical_analysis",
+  "display_name": "数学分析",
+  "mirror_name": "数分 Mirror",
+  "stage": "flagship",
+  "profile_id": "chen-jixiu-3e",
+  "knowledge_forms": ["definition", "theorem", "proof", "counterexample", "calculation"],
+  "capabilities": ["progressive_hint", "proof_review", "theorem_condition_check", "learning_evidence"],
+  "harnesses": ["theorem_conditions", "quantifier_boundary", "proof_logic", "answer_leakage"],
+  "source_refs": [
+    {
+      "source_id": "hep-chen-jixiu-analysis-3e-volume-1",
+      "title": "数学分析（第3版）（上册）",
+      "locator": "ISBN 978-7-04-051571-8",
+      "rights": {
+        "allowed_for_runtime": false,
+        "allowed_for_rag": false,
+        "allowed_for_eval": false,
+        "allowed_for_training": false,
+        "license_note": "阶段0仅登记高教社公开书目信息；正文与习题须另行获得合法材料和授权。"
+      }
+    },
+    {
+      "source_id": "hep-chen-jixiu-analysis-3e-volume-2",
+      "title": "数学分析（第3版）（下册）",
+      "locator": "ISBN 978-7-04-051630-2",
+      "rights": {
+        "allowed_for_runtime": false,
+        "allowed_for_rag": false,
+        "allowed_for_eval": false,
+        "allowed_for_training": false,
+        "license_note": "阶段0仅登记高教社公开书目信息；正文与习题须另行获得合法材料和授权。"
+      }
+    }
+  ],
+  "metadata": {
+    "publisher": "高等教育出版社",
+    "authors": ["陈纪修", "於崇华", "金路"],
+    "edition": 3,
+    "flagship_scope": "完整闭环；首批实施章节由团队按课程进度选择"
+  }
+}
+
