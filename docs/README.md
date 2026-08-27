@@ -16,7 +16,6 @@
 | `MathMirror_产品角色与开发参照_v0.2.md` | 产品"宪法"：三对象、设计原则、各端规格 |
 | `development-roadmap.md` | 比赛版开发路线（阶段 0–6 + 并行泳道） |
 | `architecture.md` | 技术架构与模块边界 |
-| `phase-0.md` | 阶段 0 范围说明 |
 | `course-model-guide.md` | 课程模型指南 |
 | `data-rights.md` | 数据权利红线（教材授权范围、版权约束） |
 | `competition/通知原文.md` | 大赛通知原文存档 |

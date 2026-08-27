@@ -10,7 +10,7 @@
 - 文档地图：`docs/README.md`
 - 大赛通知与参赛指南：`docs/competition/`
 - 开发路线（阶段 0–5）：`docs/development-roadmap.md`
-- 架构与边界：`docs/architecture.md`、`docs/phase-0.md`
+- 架构与边界：`docs/architecture.md`
 - 产品参照：`docs/MathMirror_产品角色与开发参照_v0.2.md`
 - 数据权利约束：`docs/data-rights.md`
 - 当前进度：`docs/progress/进度日志.md`
