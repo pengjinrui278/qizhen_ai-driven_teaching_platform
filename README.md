@@ -49,6 +49,12 @@ pnpm dev:web
 docker compose up -d postgres redis minio
 ```
 
+国内网络提示（本机已验证可用）：
+
+- pip 慢或失败时改用清华镜像：`python -m pip install -e ".[dev]" -i https://pypi.tuna.tsinghua.edu.cn/simple`；
+- pnpm 慢时设置：`pnpm config set registry https://registry.npmmirror.com`；
+- Docker Hub 拉不动时在 `~/.docker/daemon.json` 加 `"registry-mirrors"`（如 `https://docker.m.daocloud.io`），重启 Docker Desktop。
+
 阶段 0 的 API：
 
 - `GET /health`
