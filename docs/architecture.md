@@ -36,3 +36,17 @@ Student Mirror   Course Mirror   Assignment Workspace
 
 Course Mirror 只能接收 `MinimalStudentContext`，不能持有完整个人画像。Learning Evidence 同时流向 Student Mirror；若属于当前作业，再以引用方式进入 Assignment Workspace。课程长期资产只能接收去身份化、聚合且经人工审核的经验。
 
+## 阶段 1 基座实现映射（`apps/api/src/mirror_api/`）
+
+| 模块边界 | 当前实现 |
+|---|---|
+| `course_mirrors` | `mirror_service.py` 统一请求管线（协议校验→检索→提示级别决策→生成→Harness→落库）；`domain.py` 请求/响应契约 |
+| `coursepacks` | `coursepack.py` 导入管道（校验、引用完整性、授权字段、幂等覆盖）；`models.py` 中 coursepacks/knowledge_nodes/problems/problem_hints 表 |
+| `tutoring` | 提示阶梯按历史事件递增、封顶于题目提示最大级；`retrieval.py` 精确定位与关键词检索 |
+| `harnesses` | 平台级 `answer_leakage`（提示泄露）与 `citation_presence` 真实执行；课程登记的其他 Harness 标记为 `not_run`，随阶段 1 深链路逐个实现 |
+| `evidence` | `mirror_events`（按 `request_id` 幂等）+ `learning_evidence`（草稿证据，不打分） |
+| `governance` | 检索/运行时双门控：`allowed_for_rag` / `allowed_for_runtime`；授权字段随条目原样保存 |
+| 模型网关 | `llm.py`：`stub` 确定性实现（离线可测）+ `openai_compatible`（国内通用大模型接入位），模型不允许绕过管线 |
+
+数据库以 SQLAlchemy 模型为单一事实来源（`create_all` 建表）；向量检索（pgvector）与发布/回滚版本链分别在嵌入接入后与阶段 3 引入。驱动用 `pg8000`（纯 Python，ARM64 Windows 无 psycopg 可用轮子）。
+

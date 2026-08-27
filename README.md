@@ -62,6 +62,22 @@ docker compose up -d postgres redis minio
 - `GET /api/v1/courses/{course_id}`
 - `POST /api/v1/course-mirror/preview`
 
+阶段 1 初始化（需要 PostgreSQL 已启动）：
+
+```powershell
+python -m mirror_api.cli init-db                 # 建表
+python -m mirror_api.cli seed-profiles           # 写入五门课程注册表
+python -m mirror_api.cli import-all-coursepacks  # 导入 coursepacks/ 全部课程包
+python -m mirror_api.cli status                  # 核对各表计数
+```
+
+阶段 1 的 API：
+
+- `POST /api/v1/course-mirror/requests`：统一课程请求管线（检索→提示→质检→证据落库，按 `request_id` 幂等）
+- `GET /api/v1/coursepacks`：已导入课程包列表
+
+模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`。
+
 ## 重要约束
 
 1. Course Mirror 保存课程知识与课程经验。
