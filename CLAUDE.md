@@ -6,6 +6,8 @@
 
 关键文档：
 
+- **项目概况总览（了解项目先读这个）**：`docs/项目概况总览.md`
+- 文档地图：`docs/README.md`
 - 大赛通知与参赛指南：`docs/competition/`
 - 开发路线（阶段 0–5）：`docs/development-roadmap.md`
 - 架构与边界：`docs/architecture.md`、`docs/phase-0.md`

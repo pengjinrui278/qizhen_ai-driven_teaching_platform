@@ -2,6 +2,11 @@
 
 这是 Student Mirror、Course Mirror 与 Assignment Workspace 的比赛版工程骨架。产品正式名称尚未确定；仓库名只用于开发，不代表品牌决策。
 
+## 快速了解
+
+- **项目概况总览（进度、目标、下一步，先读这个）**：`docs/项目概况总览.md`
+- 文档地图：`docs/README.md`
+
 ## 参赛信息
 
 - 赛事：第二届全国高校“启真问智”教育教学人工智能大赛（浙江大学主办，官网 <https://qzwz.mh.chaoxing.com>）
