@@ -1,7 +1,12 @@
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from .config import get_settings
+from .db import init_db, make_engine, make_session_factory
 from .domain import (
     CourseMirrorRequest,
     CourseMirrorResponse,
@@ -9,18 +14,50 @@ from .domain import (
     HarnessResult,
     LearningEvidenceDraft,
 )
+from .llm import build_model
+from .mirror_service import MirrorError, MirrorPipeline
+from .models import CoursePack
 from .registry import load_course_profiles, public_profile
+
+
+def configure(app: FastAPI, database_url: str | None = None) -> None:
+    """装配运行时依赖。测试可以直接调用并传入 SQLite 地址。"""
+    settings = get_settings()
+    engine = make_engine(database_url or settings.database_url)
+    init_db(engine)
+    app.state.session_factory = make_session_factory(engine)
+    app.state.pipeline = MirrorPipeline(build_model(settings))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not hasattr(app.state, "session_factory"):
+        configure(app)
+    yield
+
 
 app = FastAPI(
     title="Learning Mirror Platform API",
-    version="0.1.0",
-    description="Phase 0 contracts for Student Mirror, Course Mirror and Assignment Workspace.",
+    version="0.2.0",
+    description=(
+        "Phase 1 base: unified Course Mirror pipeline over course-bound knowledge, "
+        "hint ladders, harness checks and learning evidence."
+    ),
+    lifespan=lifespan,
 )
+
+
+def get_db(request: Request) -> Session:
+    session = request.app.state.session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "phase": "0"}
+    return {"status": "ok", "phase": "1-base"}
 
 
 @app.get("/api/v1/courses")
@@ -42,11 +79,11 @@ async def preview_course_mirror(request: CourseMirrorRequest) -> CourseMirrorRes
     if profile is None:
         raise HTTPException(status_code=404, detail="Course Mirror not found")
 
-    # Phase 0 uses a deterministic adapter. A real model cannot bypass this contract.
+    # 阶段 0 的确定性协议预览，保留用于前端联调；真实请求走 /requests。
     return CourseMirrorResponse(
         request_id=request.request_id,
         course_id=request.course_id,
-        answer=f"[{profile.mirror_name} 协议预览] 已接收问题；阶段 1 将接入检索、提示规划与课程 Harness。",
+        answer=f"[{profile.mirror_name} 协议预览] 已接收问题；真实处理请调用 /api/v1/course-mirror/requests。",
         answer_type="contract_preview",
         hint_level=1 if request.interaction_mode.value.endswith("hint") else None,
         harness=HarnessResult(
@@ -74,3 +111,30 @@ async def preview_course_mirror(request: CourseMirrorRequest) -> CourseMirrorRes
         uncertainty=["尚未接入课程知识与模型。"],
     )
 
+
+@app.post("/api/v1/course-mirror/requests", response_model=CourseMirrorResponse)
+async def course_mirror_request(
+    request: CourseMirrorRequest, http_request: Request, db: Session = Depends(get_db)
+) -> CourseMirrorResponse:
+    pipeline: MirrorPipeline = http_request.app.state.pipeline
+    try:
+        return pipeline.handle(db, request)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+@app.get("/api/v1/coursepacks")
+async def list_coursepacks(db: Session = Depends(get_db)) -> list[dict]:
+    packs = db.execute(select(CoursePack).order_by(CoursePack.imported_at)).scalars().all()
+    return [
+        {
+            "coursepack_id": pack.coursepack_id,
+            "course_id": pack.course_id,
+            "profile_id": pack.profile_id,
+            "status": pack.status,
+            "textbook": pack.textbook,
+            "content_policy": pack.content_policy,
+            "imported_at": pack.imported_at.isoformat() if pack.imported_at else None,
+        }
+        for pack in packs
+    ]
