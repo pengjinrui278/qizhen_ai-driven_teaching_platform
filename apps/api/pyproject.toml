@@ -12,11 +12,17 @@ dependencies = [
   "pydantic-settings>=2.5,<3",
   # 不用 uvicorn[standard]：其 httptools 在 Windows ARM64 无预编译轮子，
   # 需要本机 C++ 编译器；standard 中的 uvloop 在 Windows 上本就不可用。
-  "uvicorn>=0.30,<1"
+  "uvicorn>=0.30,<1",
+  "sqlalchemy>=2.0,<3",
+  # 驱动选 pg8000（纯 Python）：psycopg[binary] 无 Windows ARM64 轮子，
+  # 纯 Python psycopg 依赖本机 libpq 动态库，两者在 ARM64 Windows 都不可用。
+  "pg8000>=1.31,<2",
+  # 模型网关（OpenAI 兼容接口）的运行时依赖
+  "httpx>=0.27,<1"
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<9", "httpx>=0.27,<1", "ruff>=0.8,<1"]
+dev = ["pytest>=8,<9", "ruff>=0.8,<1"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mirror_api"]
@@ -27,4 +33,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI 习惯用法：Depends() 出现在参数默认值中
+"src/mirror_api/main.py" = ["B008"]
 

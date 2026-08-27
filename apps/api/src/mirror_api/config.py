@@ -1,0 +1,35 @@
+"""运行配置。
+
+所有配置都可以用环境变量覆盖（前缀 ``MIRROR_``），也可以放在仓库根目录的
+``.env`` 文件中（该文件已被 .gitignore 忽略，禁止提交真实密钥）。
+"""
+
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# apps/api/src/mirror_api/config.py -> 仓库根目录
+REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="MIRROR_", env_file=".env", extra="ignore")
+
+    # 默认驱动选 pg8000：纯 Python 实现，无原生依赖。
+    # psycopg[binary] 没有 Windows ARM64 轮子，纯 Python psycopg 又依赖本机
+    # libpq 动态库；pg8000 在两种环境下都可直接安装。
+    database_url: str = "postgresql+pg8000://mirror:mirror@localhost:5432/mirror"
+
+    coursepack_root: Path = REPO_ROOT / "coursepacks"
+
+    # 模型网关：默认 stub（确定性占位，不需要密钥，便于测试与离线演示）。
+    # 接入真实大模型时设 MIRROR_LLM_PROVIDER=openai_compatible 并配置其余三项
+    # （DeepSeek / 通义 / GLM 等国内模型均提供 OpenAI 兼容接口）。
+    llm_provider: str = "stub"
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model: str | None = None
+
+
+def get_settings() -> Settings:
+    return Settings()
