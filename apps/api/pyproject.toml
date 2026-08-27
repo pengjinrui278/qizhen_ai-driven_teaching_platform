@@ -10,7 +10,9 @@ dependencies = [
   "fastapi>=0.115,<1",
   "pydantic>=2.9,<3",
   "pydantic-settings>=2.5,<3",
-  "uvicorn[standard]>=0.30,<1"
+  # 不用 uvicorn[standard]：其 httptools 在 Windows ARM64 无预编译轮子，
+  # 需要本机 C++ 编译器；standard 中的 uvloop 在 Windows 上本就不可用。
+  "uvicorn>=0.30,<1"
 ]
 
 [project.optional-dependencies]
