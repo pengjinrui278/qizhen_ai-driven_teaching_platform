@@ -21,7 +21,7 @@
 - Student Mirror / Course Mirror / Assignment Workspace 边界；
 - Course Mirror 统一请求、响应与 Learning Evidence 协议；
 - 数分、高代、大物、点拓、常微分五门课程 Profile；
-- 陈纪修《数学分析》第 3 版教材 Profile 和少量自编 Schema 样例；
+- 陈纪修《数学分析》第 3 版教材 Profile 与第一章自建语料（11 个团队转述知识节点 + 10 道全自编题，不含教材原文与原书习题）；
 - 学生端、课程建设端、教师/TA 端页面骨架；
 - PostgreSQL + pgvector、Redis、MinIO 本地基础设施配置；
 - 数据来源、版权范围、证据可追溯和临时 Workspace 生命周期字段。

@@ -1,6 +1,6 @@
 {
-  "coursepack_id": "analysis-chen-jixiu-3e-demo",
-  "status": "schema_trial",
+  "coursepack_id": "analysis-chen-jixiu-3e",
+  "status": "chapter_build",
   "course_id": "mathematical_analysis",
   "profile_id": "chen-jixiu-3e",
   "textbook": {
@@ -11,8 +11,7 @@
     "volume_1_isbn": "978-7-04-051571-8",
     "volume_2_isbn": "978-7-04-051630-2"
   },
-  "content_policy": "当前只含自编示意条目；不含教材原文和原书习题。",
-  "knowledge_file": "knowledge.sample.jsonl",
-  "problems_file": "problems.sample.jsonl"
+  "content_policy": "本包全部为团队自编内容：知识节点是公共数学事实的团队转述，题目为全自编；不含教材原文，不含原书习题全文。正版教材到手后另行按授权范围登记入库。",
+  "knowledge_files": ["knowledge.sample.jsonl", "knowledge.ch1.jsonl"],
+  "problems_files": ["problems.sample.jsonl", "problems.ch1.jsonl"]
 }
-

@@ -8,7 +8,7 @@ from mirror_api.coursepack import import_coursepack
 from mirror_api.domain import CourseMirrorRequest, InteractionMode
 from mirror_api.llm import StubMirrorModel
 from mirror_api.mirror_service import MirrorError, MirrorPipeline
-from mirror_api.models import LearningEvidenceRow, MirrorEvent
+from mirror_api.models import LearningEvidenceRow, MirrorEvent, Problem
 from mirror_api.seed import seed_profiles
 
 SAMPLE_PACK = REPO_ROOT / "coursepacks" / "mathematical_analysis" / "chen-jixiu-3e"
@@ -58,6 +58,19 @@ def test_hint_ladder_climbs_level_by_level(session):
     third = pipeline.handle(session, make_request("req-3", "next_hint", problem_id=PROBLEM_ID))
     assert third.hint_level == 2
     assert "提示阶梯已经用完" in third.answer
+
+
+def test_no_hint_leakage_on_any_problem(session):
+    """语料质量红线：每道题的首级提示都不得泄露解法关键步骤。"""
+    pipeline = MirrorPipeline(StubMirrorModel())
+    problems = session.query(Problem).all()
+    assert len(problems) >= 10
+    for index, problem in enumerate(problems):
+        response = pipeline.handle(
+            session, make_request(f"leak-{index}", "first_hint", problem_id=problem.problem_id)
+        )
+        checks = {c.name: c for c in response.harness.checks}
+        assert checks["answer_leakage"].status == "passed", problem.problem_id
 
 
 def test_unknown_problem_falls_back_without_citations(session):
@@ -146,4 +159,4 @@ def test_http_endpoints(tmp_path):
 
     packs = client.get("/api/v1/coursepacks")
     assert packs.status_code == 200
-    assert [item["coursepack_id"] for item in packs.json()] == ["analysis-chen-jixiu-3e-demo"]
+    assert [item["coursepack_id"] for item in packs.json()] == ["analysis-chen-jixiu-3e"]
