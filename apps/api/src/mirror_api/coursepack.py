@@ -3,7 +3,11 @@
 把 ``coursepacks/<course>/<profile>/`` 目录（manifest + jsonl）校验后写入
 数据库。约束：
 
-- 每一行都必须通过 schema 校验，错误按行号汇报；
+- 每一行都必须通过 schema 校验，错误按文件名与行号汇报；
+- manifest 可同时列出多个知识/题目内容文件（``knowledge_files`` /
+  ``problems_files``，如按章拆分；单文件字段作为向后兼容）；
+- 包内知识节点 id、题目 id 不允许重复；每道题的提示阶梯级别必须
+  从 1 起严格递增（提示级别即学生视角的求助次序）；
 - 题目引用的知识节点必须在同一个包内存在（引用完整性 = 可追溯性）；
 - 来源/授权字段原样保存，运行时与检索环节负责门控；
 - 重复导入同一 ``coursepack_id`` 时替换内容（当前版本覆盖），
@@ -35,6 +39,15 @@ class CoursePackManifest(BaseModel):
     content_policy: str = ""
     knowledge_file: str = "knowledge.jsonl"
     problems_file: str = "problems.jsonl"
+    # 按章/批次拆分内容时使用多文件字段；留空则回退到单文件字段
+    knowledge_files: list[str] = Field(default_factory=list)
+    problems_files: list[str] = Field(default_factory=list)
+
+    def knowledge_file_list(self) -> list[str]:
+        return self.knowledge_files or [self.knowledge_file]
+
+    def problems_file_list(self) -> list[str]:
+        return self.problems_files or [self.problems_file]
 
 
 class KnowledgeSource(BaseModel):
@@ -123,6 +136,35 @@ def _validate_rows(rows: list[tuple[int, dict]], model: type[BaseModel], label: 
     return items
 
 
+def _duplicate_ids(ids: list[str]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    for item_id in ids:
+        if item_id in seen:
+            duplicates.append(item_id)
+        else:
+            seen.add(item_id)
+    return sorted(set(duplicates))
+
+
+def _check_pack_integrity(knowledge_items: list, problem_items: list) -> None:
+    """跨文件的内容完整性：id 唯一、提示阶梯级别从 1 起严格递增。"""
+    duplicates = _duplicate_ids([item.id for item in knowledge_items])
+    if duplicates:
+        raise CoursePackImportError(f"知识节点 id 重复：{duplicates}")
+
+    duplicates = _duplicate_ids([problem.id for problem in problem_items])
+    if duplicates:
+        raise CoursePackImportError(f"题目 id 重复：{duplicates}")
+
+    for problem in problem_items:
+        levels = [step.level for step in problem.hint_ladder]
+        if levels != list(range(1, len(levels) + 1)):
+            raise CoursePackImportError(
+                f"题目 {problem.id} 的提示阶梯级别必须从 1 起严格递增，实际为 {levels}"
+            )
+
+
 def import_coursepack(session: Session, pack_dir: Path) -> ImportReport:
     pack_dir = Path(pack_dir)
     manifest_path = pack_dir / "coursepack.json"
@@ -134,10 +176,18 @@ def import_coursepack(session: Session, pack_dir: Path) -> ImportReport:
     except ValidationError as exc:
         raise CoursePackImportError(f"coursepack.json 不合法：{exc.errors()[:3]}")
 
-    knowledge_rows = _read_jsonl(pack_dir / manifest.knowledge_file)
-    problem_rows = _read_jsonl(pack_dir / manifest.problems_file)
-    knowledge_items = _validate_rows(knowledge_rows, KnowledgeItem, manifest.knowledge_file)
-    problem_items = _validate_rows(problem_rows, ProblemItem, manifest.problems_file)
+    knowledge_items: list = []
+    for filename in manifest.knowledge_file_list():
+        knowledge_items.extend(
+            _validate_rows(_read_jsonl(pack_dir / filename), KnowledgeItem, filename)
+        )
+    problem_items: list = []
+    for filename in manifest.problems_file_list():
+        problem_items.extend(
+            _validate_rows(_read_jsonl(pack_dir / filename), ProblemItem, filename)
+        )
+
+    _check_pack_integrity(knowledge_items, problem_items)
 
     knowledge_ids = {item.id for item in knowledge_items}
     broken = sorted(
