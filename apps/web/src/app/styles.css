@@ -21,6 +21,8 @@ article, .flow { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); b
 /* 首页入口按钮 */
 .cta { display: inline-block; margin-top: 10px; padding: 12px 22px; border-radius: 999px; background: #71e0ad; color: #07110e; font-weight: 700; text-decoration: none; }
 .cta:hover { background: #8df0c4; }
+.cta.ghost { background: transparent; border: 1px solid #71e0ad; color: #8af0c0; margin-left: 10px; }
+.cta.ghost:hover { background: rgba(113, 224, 173, .12); }
 
 /* 学生端 */
 .studentMain { padding-top: 28px; }
@@ -89,4 +91,47 @@ article, .flow { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); b
 .markdown .katex { font-size: 1.05em; }
 .markdown .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; }
 .agentAnswer .markdown, .statement .markdown { font-size: 14px; }
+
+/* 教师 / TA 端 */
+.teacherMain { padding-top: 28px; }
+.teacherMain h1 { font-size: clamp(28px, 4.5vw, 46px); }
+.privacyNote { border: 1px solid #2c6b4f; background: rgba(20, 67, 47, .35); color: #bff0d8; border-radius: 14px; padding: 12px 16px; margin: 0 0 18px; font-size: 13px; line-height: 1.7; }
+.noticeBar { border: 1px solid #3fae7c; background: rgba(29, 107, 74, .35); color: #8af0c0; border-radius: 14px; padding: 12px 16px; margin: 14px 0; font-size: 14px; line-height: 1.6; }
+.teacherShell { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
+.teacherPanel { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; border: 1px solid #25473a; background: rgba(12, 31, 24, .76); border-radius: 20px; padding: 20px; }
+.teacherPanel h2 { margin: 0 0 12px; font-size: 18px; }
+.createForm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.workspaceCard { border: 1px solid #25473a; background: rgba(9, 24, 19, .9); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.workspaceCard:hover { border-color: #3f7a63; }
+.workspaceCard.active { border-color: #71e0ad; background: linear-gradient(145deg, #173f32, #0c1f18); }
+.workspaceTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.workspaceTitleRow strong { color: #d9eae1; font-size: 14px; }
+.workspaceCard > small { color: #7a978a; font-size: 12px; line-height: 1.6; }
+.joinCode { background: rgba(113, 224, 173, .14); color: #8af0c0; padding: 1px 7px; border-radius: 5px; font-size: 12px; letter-spacing: .08em; }
+.btnSmall { padding: 6px 12px; font-size: 12px; }
+.btnDanger { border-color: #b98a2f; color: #f4d48a; }
+.overviewStats { display: flex; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
+.statBlock { flex: 1; min-width: 120px; border: 1px solid #25473a; border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.statBlock strong { color: #71e0ad; font-size: 26px; }
+.statBlock span { color: #7a978a; font-size: 12px; }
+.overviewTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.overviewTable th { text-align: left; color: #71e0ad; font-size: 12px; letter-spacing: .06em; padding: 8px 10px; border-bottom: 1px solid #25473a; }
+.overviewTable td { color: #d9eae1; padding: 8px 10px; border-bottom: 1px dashed rgba(37, 71, 58, .7); }
+.findingCard { border: 1px solid #25473a; background: rgba(12, 31, 24, .92); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.findingHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.statusChip { border-radius: 999px; padding: 2px 10px; font-size: 12px; border: 1px solid #44554d; color: #93a89d; }
+.statusChip.ta-confirmed { border-color: #3fae7c; color: #8af0c0; }
+.statusChip.ta-rejected, .statusChip.ta-ignored { border-color: #b98a2f; color: #f4d48a; }
+.statusChip.teacher-accepted { border-color: #71e0ad; background: #173f32; color: #baf7dd; }
+.statusChip.teacher-ignored { border-color: #7c3b4d; color: #ffb9c6; }
+.phenomenon { margin: 0; color: #e8f5ee; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.basisNote { color: #7a978a; font-size: 12px; line-height: 1.6; }
+.noteLine { font-size: 12px; color: #9db8ab; background: rgba(21, 61, 49, .35); border-radius: 8px; padding: 6px 10px; }
+.decisionRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.decisionLabel { color: #7a978a; font-size: 13px; }
+.noteInput { flex: 1; min-width: 180px; border-radius: 999px; border: 1px solid #2c5a47; background: #081a13; color: #edf8f3; padding: 9px 14px; font: inherit; font-size: 13px; }
+.reportPanel { border: 1px solid #71e0ad; background: linear-gradient(145deg, rgba(23, 63, 50, .55), rgba(12, 31, 24, .9)); border-radius: 20px; padding: 20px; }
+.reportPanel h2 { margin: 0 0 8px; font-size: 18px; }
+.reportItem { border-top: 1px dashed #25473a; padding: 12px 0 4px; display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 900px) { .teacherShell { grid-template-columns: 1fr; } .teacherPanel { position: static; max-height: none; } }
 

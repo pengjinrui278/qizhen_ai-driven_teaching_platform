@@ -7,7 +7,8 @@ export default function Home() {
         <p className="eyebrow">比赛版 · 阶段 0</p>
         <h1>跨课程个性化学习智能体平台</h1>
         <p>Student Mirror 越学越懂人，Course Mirror 越教越懂课，Assignment Workspace 完成阶段任务后退出。</p>
-        <a className="cta" href="/student">进入学生端演示 →</a>
+        <a className="cta" href="/student">进入学生端演示 →</a>{" "}
+        <a className="cta ghost" href="/teacher">进入教师 / TA 端演示 →</a>
       </header>
 
       <section className="grid roles">
