@@ -55,6 +55,16 @@ type ChatItem =
   | { kind: "user"; label: string }
   | { kind: "agent"; response: MirrorResponse };
 
+type JoinedWorkspace = {
+  workspace_id: string;
+  title: string;
+  join_code: string;
+  status: string;
+};
+
+const PARTICIPANT_CODE_KEY = "mirror.participantCode";
+const ACTIVE_WORKSPACE_KEY = "mirror.activeWorkspace";
+
 /** 模型输出的数学公式定界符不统一（\(...\) / \\(...\\) / \[...\]），
  *  统一归一成 remark-math 认得的 $...$ / $$...$$。 */
 function normalizeMathDelimiters(text: string): string {
@@ -88,7 +98,29 @@ export default function StudentPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
+  const [participantCode, setParticipantCode] = useState<string | null>(null);
+  const [joined, setJoined] = useState<JoinedWorkspace | null>(null);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  // 匿名参与码：浏览器随机生成、本地保存，不含姓名学号；
+  // 教师端只允许对它做人数统计，看不到对话内容。
+  useEffect(() => {
+    let code = localStorage.getItem(PARTICIPANT_CODE_KEY);
+    if (!code) {
+      code = crypto.randomUUID();
+      localStorage.setItem(PARTICIPANT_CODE_KEY, code);
+    }
+    setParticipantCode(code);
+    const raw = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
+    if (raw) {
+      try {
+        setJoined(JSON.parse(raw) as JoinedWorkspace);
+      } catch {
+        localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+      }
+    }
+  }, []);
 
   const selected = useMemo(
     () => problems.find((problem) => problem.problem_id === selectedId) ?? null,
@@ -150,6 +182,9 @@ export default function StudentPage() {
           course_profile_id: PROFILE_ID,
           problem,
           interaction_mode: mode,
+          // 已加入作业时：带上匿名参与码与工作区归属，供教师端做班级聚合
+          ...(participantCode ? { participant_code: participantCode } : {}),
+          ...(joined ? { assignment_workspace_id: joined.workspace_id } : {}),
         }),
       });
       if (!response.ok) {
@@ -174,6 +209,46 @@ export default function StudentPage() {
     void callMirror(`想弄懂一个知识点：${text}`, "concept_explanation", { text });
   }
 
+  async function joinAssignment(event: React.FormEvent) {
+    event.preventDefault();
+    const code = joinCodeInput.trim();
+    if (!code || busy) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/workspaces/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ join_code: code }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { detail?: string };
+        throw new Error(body.detail ?? `HTTP ${response.status}`);
+      }
+      const workspace = (await response.json()) as JoinedWorkspace;
+      const active = {
+        workspace_id: workspace.workspace_id,
+        title: workspace.title,
+        join_code: workspace.join_code,
+        status: workspace.status,
+      };
+      setJoined(active);
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(active));
+      setJoinCodeInput("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function leaveAssignment() {
+    setJoined(null);
+    localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+  }
+
   return (
     <main className="studentMain">
       <header className="studentTop">
@@ -190,6 +265,39 @@ export default function StudentPage() {
 
       <div className="studentShell">
         <aside className="problemPanel">
+          <div className="assignmentCard">
+            <small>
+              你的匿名参与码：<code className="joinCode">{participantCode ?? "生成中…"}</code>
+            </small>
+            {joined ? (
+              <>
+                <div className="joinedRow">
+                  ✅ 已加入作业：{joined.title}（{joined.join_code}）
+                </div>
+                <button type="button" className="btn btnSmall" onClick={leaveAssignment} disabled={busy}>
+                  退出这次作业
+                </button>
+              </>
+            ) : (
+              <form className="joinForm" onSubmit={joinAssignment}>
+                <input
+                  className="questionInput"
+                  placeholder="输入老师发的加入码，挂到作业"
+                  value={joinCodeInput}
+                  onChange={(event) => setJoinCodeInput(event.target.value)}
+                  disabled={busy}
+                />
+                <button type="submit" className="btn" disabled={busy || !joinCodeInput.trim()}>
+                  加入作业
+                </button>
+              </form>
+            )}
+            <small className="privacyHint">
+              参与码是随机生成的，不含姓名学号；加入作业后老师只能看到班级层面的统计，
+              看不到你的对话内容。
+            </small>
+          </div>
+
           <h2>第一章题库（{problems.length}）</h2>
           <small>全为团队自编题，不含教材原书习题</small>
           <div className="problemList">
