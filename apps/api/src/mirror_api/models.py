@@ -140,6 +140,53 @@ class ProblemKnowledge(Base):
     knowledge_id: Mapped[str] = mapped_column(String(128), primary_key=True)
 
 
+class AssignmentWorkspace(Base):
+    """作业工作区：某课程 × 某教学班 × 某次作业 × 时间窗口，用完即关闭。
+
+    学生事件通过 ``join_code`` 加入后挂载到工作区；教师/TA 端只消费
+    工作区的聚合统计与候选现象，永远不接触事件里的回答内容。
+    """
+
+    __tablename__ = "assignment_workspaces"
+
+    workspace_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.course_id"), index=True)
+    profile_id: Mapped[str] = mapped_column(String(64))
+    title: Mapped[str] = mapped_column(String(256))
+    class_label: Mapped[str] = mapped_column(String(128), default="")
+    join_code: Mapped[str] = mapped_column(String(32), unique=True)
+    status: Mapped[str] = mapped_column(String(16), default="open")  # open / closed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WorkspaceFinding(Base):
+    """班级现象候选：AI 产出 → TA 三选一校准 → 教师最终决定，全程留痕。
+
+    ``basis`` 是生成时刻的聚合快照：报告数字一律读快照而不重查，
+    保证工作区事件继续增长时周报仍可复现。
+    """
+
+    __tablename__ = "workspace_findings"
+
+    finding_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("assignment_workspaces.workspace_id"), index=True
+    )
+    phenomenon: Mapped[str] = mapped_column(Text)
+    basis: Mapped[dict] = mapped_column(JSON, default=dict)
+    generator: Mapped[str] = mapped_column(String(128))  # 生成模型名（model.name）
+    ta_status: Mapped[str] = mapped_column(String(16), default="candidate")
+    ta_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ta_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    teacher_status: Mapped[str] = mapped_column(String(16), default="pending")
+    teacher_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    teacher_decided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class MirrorEvent(Base):
     __tablename__ = "mirror_events"
 
@@ -149,6 +196,12 @@ class MirrorEvent(Base):
     interaction_mode: Mapped[str] = mapped_column(String(32))
     problem_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     hint_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 匿名参与码（学生端自动生成的随机码，不含姓名/学号）；
+    # 教师端只允许对它做 distinct 计数，禁止按人拆分或展示取值。
+    participant_code: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    assignment_workspace_id: Mapped[str | None] = mapped_column(
+        ForeignKey("assignment_workspaces.workspace_id"), nullable=True, index=True
+    )
     request_payload: Mapped[dict] = mapped_column(JSON, default=dict)
     response_json: Mapped[dict] = mapped_column(JSON, default=dict)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

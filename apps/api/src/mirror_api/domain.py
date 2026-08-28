@@ -54,6 +54,7 @@ class CourseMirrorRequest(BaseModel):
     problem: ProblemInput
     interaction_mode: InteractionMode
     assignment_workspace_id: str | None = None
+    participant_code: str | None = Field(default=None, max_length=64)
 
 
 class CourseCitation(BaseModel):
@@ -94,6 +95,27 @@ class CourseMirrorResponse(BaseModel):
     harness: HarnessResult
     evidence: list[LearningEvidenceDraft] = Field(default_factory=list)
     uncertainty: list[str] = Field(default_factory=list)
+
+
+class WorkspaceCreateRequest(BaseModel):
+    course_id: str
+    course_profile_id: str
+    title: str = Field(min_length=1, max_length=256)
+    class_label: str = Field(default="", max_length=128)
+
+
+class WorkspaceJoinRequest(BaseModel):
+    join_code: str = Field(min_length=1, max_length=32)
+
+
+class TaDecisionRequest(BaseModel):
+    decision: Literal["confirmed", "rejected", "ignored"]
+    note: str | None = Field(default=None, max_length=512)
+
+
+class TeacherDecisionRequest(BaseModel):
+    decision: Literal["accepted", "ignored"]
+    note: str | None = Field(default=None, max_length=512)
 
 
 class CourseProfile(BaseModel):

@@ -21,6 +21,7 @@ from .config import get_settings
 from .coursepack import CoursePackImportError, import_coursepack
 from .db import init_db, make_engine, make_session_factory
 from .models import (
+    AssignmentWorkspace,
     Course,
     CoursePack,
     CourseProfileRow,
@@ -29,6 +30,7 @@ from .models import (
     MirrorEvent,
     Problem,
     ProblemHint,
+    WorkspaceFinding,
 )
 from .seed import seed_profiles
 
@@ -94,6 +96,8 @@ def cmd_status(_args) -> None:
             "problem_hints": ProblemHint,
             "mirror_events": MirrorEvent,
             "learning_evidence": LearningEvidenceRow,
+            "assignment_workspaces": AssignmentWorkspace,
+            "workspace_findings": WorkspaceFinding,
         }
         for label, model in counts.items():
             total = session.execute(select(func.count()).select_from(model)).scalar()
