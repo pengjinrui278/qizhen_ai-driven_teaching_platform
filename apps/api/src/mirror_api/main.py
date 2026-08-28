@@ -279,3 +279,12 @@ async def teacher_decision(
     except MirrorError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
     return workspace_service.finding_public(finding)
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/report")
+async def workspace_report(workspace_id: str, db: Session = Depends(get_db)) -> dict:
+    """周报：仅含教师接受的现象 + 覆盖声明 + 过程证据通道声明。"""
+    try:
+        return workspace_service.build_report(db, workspace_id)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)

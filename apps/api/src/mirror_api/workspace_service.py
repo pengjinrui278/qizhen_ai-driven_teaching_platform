@@ -332,3 +332,47 @@ def decide_teacher(
     finding.teacher_decided_at = datetime.now(UTC)
     session.commit()
     return finding
+
+
+# ---------------------------------------------------------------- 周报
+
+
+def build_report(session: Session, workspace_id: str) -> dict:
+    """教师周报：只呈现教师已接受的现象，附覆盖声明与证据通道声明。
+
+    每条现象自带的数字一律读生成时刻冻结的 ``basis``：
+    工作区事件继续增长，周报仍可复现。
+    """
+    workspace = get_workspace(session, workspace_id)
+    overview = workspace_overview(session, workspace_id)
+    accepted = (
+        session.execute(
+            select(WorkspaceFinding)
+            .where(
+                WorkspaceFinding.workspace_id == workspace_id,
+                WorkspaceFinding.teacher_status == "accepted",
+            )
+            .order_by(WorkspaceFinding.created_at)
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        "workspace_id": workspace_id,
+        "title": workspace.title,
+        "class_label": workspace.class_label,
+        "participants": overview["participants"],
+        "coverage_note": overview["coverage_note"],
+        "channel_note": CHANNEL_NOTE,
+        "findings": [
+            {
+                "finding_id": finding.finding_id,
+                "phenomenon": finding.phenomenon,
+                "coverage_note": finding.basis.get("coverage_note", ""),
+                "generator": finding.generator,
+                "ta_note": finding.ta_note,
+                "teacher_note": finding.teacher_note,
+            }
+            for finding in accepted
+        ],
+    }

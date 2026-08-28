@@ -26,6 +26,8 @@ from mirror_api.mirror_service import MirrorError, MirrorPipeline
 from mirror_api.models import AssignmentWorkspace, MirrorEvent
 from mirror_api.seed import seed_profiles
 from mirror_api.workspace_service import (
+    CHANNEL_NOTE,
+    build_report,
     close_workspace,
     create_workspace,
     decide_ta,
@@ -408,3 +410,40 @@ def test_teacher_decision_requires_confirmed_and_single_shot(session):
     with pytest.raises(MirrorError) as excinfo:
         decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="ignored"))
     assert excinfo.value.status_code == 409
+
+
+# ---------------------------------------------------- 周报与隐私声明
+
+
+def test_report_contains_only_accepted_findings_with_fixed_statements(session):
+    make_workspace(session)
+    seed_workspace_events(session)
+    findings = generate_candidate_findings(session, "ws-test-1", StubMirrorModel())
+    assert len(findings) >= 2
+
+    decide_ta(session, findings[0].finding_id, TaDecisionRequest(decision="confirmed"))
+    decide_teacher(
+        session, findings[0].finding_id, TeacherDecisionRequest(decision="accepted", note="下周讲十分钟")
+    )
+    # 第二条走“教师忽略”通道
+    decide_ta(session, findings[1].finding_id, TaDecisionRequest(decision="confirmed"))
+    decide_teacher(session, findings[1].finding_id, TeacherDecisionRequest(decision="ignored"))
+
+    report = build_report(session, "ws-test-1")
+    assert report["participants"] == 3
+    assert report["coverage_note"] == "仅覆盖 3 名主动参与学生，不外推全班。"
+    assert "仅基于学习镜像过程证据" in report["channel_note"]
+    assert "作业作品证据通道尚未接入" in report["channel_note"]
+    assert report["channel_note"] == CHANNEL_NOTE
+
+    assert len(report["findings"]) == 1
+    item = report["findings"][0]
+    assert item["phenomenon"] == findings[0].phenomenon
+    assert item["teacher_note"] == "下周讲十分钟"
+    # 每条现象的覆盖数字读冻结快照
+    assert "3 名主动参与学生" in item["coverage_note"]
+
+    # 周报响应中同样不许出现参与码取值
+    text = "".join(finding["phenomenon"] for finding in report["findings"])
+    for code in ("stu-a", "stu-b", "stu-c"):
+        assert code not in text
