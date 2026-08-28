@@ -28,7 +28,14 @@ from .domain import (
     LearningEvidenceDraft,
 )
 from .llm import LanguageModel, MirrorContext
-from .models import Course, CourseProfileRow, LearningEvidenceRow, MirrorEvent, ProblemHint
+from .models import (
+    AssignmentWorkspace,
+    Course,
+    CourseProfileRow,
+    LearningEvidenceRow,
+    MirrorEvent,
+    ProblemHint,
+)
 from .retrieval import (
     course_pack_ids,
     find_problem,
@@ -64,6 +71,10 @@ class MirrorPipeline:
         profile = session.get(CourseProfileRow, (request.course_id, request.course_profile_id))
         if profile is None:
             raise MirrorError(404, f"课程 Profile 不存在：{request.course_profile_id}")
+
+        # 工作区校验只对新事件生效（回放检查在上面已返回）：
+        # 已落库 request_id 的回放无条件成功，即使工作区后来被关闭。
+        self._validate_workspace(session, request)
 
         pack_ids = course_pack_ids(session, request.course_id, request.course_profile_id)
         uncertainty: list[str] = []
@@ -150,6 +161,8 @@ class MirrorPipeline:
                 interaction_mode=request.interaction_mode.value,
                 problem_ref=problem.problem_id if problem else None,
                 hint_level=hint_level,
+                participant_code=request.participant_code,
+                assignment_workspace_id=request.assignment_workspace_id,
                 request_payload=request.model_dump(mode="json"),
                 response_json=response.model_dump(mode="json"),
             )
@@ -174,6 +187,19 @@ class MirrorPipeline:
             )
         session.commit()
         return response
+
+    def _validate_workspace(self, session: Session, request: CourseMirrorRequest) -> None:
+        if request.assignment_workspace_id is None:
+            return
+        workspace = session.get(AssignmentWorkspace, request.assignment_workspace_id)
+        if workspace is None:
+            raise MirrorError(404, f"作业工作区不存在：{request.assignment_workspace_id}")
+        if workspace.status != "open":
+            raise MirrorError(404, "作业工作区已关闭，不再接收新请求")
+        if workspace.course_id != request.course_id:
+            raise MirrorError(400, "作业工作区所属课程与请求课程不一致")
+        if not request.participant_code:
+            raise MirrorError(400, "挂到作业工作区的请求必须携带匿名参与码")
 
     def _decide_hint_level(self, session, request, problem) -> tuple[int | None, bool]:
         """返回 (本次提示级别, 提示阶梯是否已用完)。"""
