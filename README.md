@@ -1,6 +1,6 @@
-# Learning Mirror Platform（暂用仓库名）
+# Learning Mirror（学镜）
 
-这是 Student Mirror、Course Mirror 与 Assignment Workspace 的比赛版工程骨架。产品正式名称尚未确定；仓库名只用于开发，不代表品牌决策。
+面向数学类课程的个性化学习智能体平台：Student Mirror / Course Mirror / Assignment Workspace 三端协同的比赛版工程。
 
 ## 快速了解
 
@@ -89,6 +89,39 @@ python -m mirror_api.cli status                  # 核对各表计数
   `GET /api/v1/workspaces/{id}/report`（周报，仅教师接受项）
 
 模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`，本机已用 `deepseek-v4-flash` 验证可用。
+
+## 生产部署（云服务器）
+
+项目已配置 `compose.prod.yml` + `nginx.conf`，可一键部署到 Linux 云服务器，通过域名 `learningmirror.cn` / `learningmirror.xyz` 访问。
+
+```powershell
+# 1. 服务器上安装 Docker、Node.js、pnpm
+# 2. 域名 A 记录指向服务器 IP
+# 3. 构建前端静态站点
+pnpm install
+pnpm build:web
+
+# 4. 复制 .env.example 为 .env，按需修改密码和模型配置
+# 5. 启动生产服务
+docker compose -f compose.prod.yml up -d --build
+```
+
+详细步骤、HTTPS 配置与维护命令见 `docs/deploy.md`。
+
+## 教材语料入库（已授权 PDF）
+
+```powershell
+# 批量导入已登记的 7 本授权教材（数分上下册、高代上下册、大物上册、拓扑、常微分）
+python -m mirror_api.cli import-all-textbooks
+
+# 或导入单个 PDF
+python -m mirror_api.cli import-textbook </path/to/book.pdf> \
+  --course-id mathematical_analysis \
+  --source-id textbook-chen-jixiu-3e-vol1 \
+  --license-note "团队已获授权用于 RAG 检索"
+```
+
+导入前建议先用 `--chunk-size 800` 抽检数分第一章，确认公式/符号抽取质量。
 
 ## 重要约束
 

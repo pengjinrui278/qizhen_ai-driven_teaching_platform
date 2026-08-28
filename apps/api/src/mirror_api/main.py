@@ -52,13 +52,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 允许本机前端（pnpm dev:web 默认 3000 端口）跨域调用；生产部署另行收紧。
+# 允许本机前端（pnpm dev:web 默认 3000 端口）跨域调用；生产环境由 nginx 同域代理，
+# 可通过 MIRROR_CORS_ORIGINS 环境变量覆盖。
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

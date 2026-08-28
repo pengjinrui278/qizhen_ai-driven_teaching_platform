@@ -6,6 +6,7 @@
 
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # apps/api/src/mirror_api/config.py -> 仓库根目录
@@ -22,6 +23,9 @@ class Settings(BaseSettings):
 
     coursepack_root: Path = REPO_ROOT / "coursepacks"
 
+    # CORS 来源；生产环境通常由 nginx 同域代理，可设为空字符串。
+    cors_origins: list[str] = ["http://localhost:3000"]
+
     # 模型网关：默认 stub（确定性占位，不需要密钥，便于测试与离线演示）。
     # 接入真实大模型时设 MIRROR_LLM_PROVIDER=openai_compatible 并配置其余三项
     # （DeepSeek / 通义 / GLM 等国内模型均提供 OpenAI 兼容接口）。
@@ -31,6 +35,14 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     # 带推理链的模型生成较长解答可能超过一分钟，给足超时。
     llm_timeout: float = 120.0
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value):
+        """支持环境变量里的逗号分隔字符串，空字符串表示允许同域（nginx 代理）。"""
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 def get_settings() -> Settings:
