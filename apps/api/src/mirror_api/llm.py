@@ -115,6 +115,11 @@ class OpenAICompatibleModel:
         user_lines = [f"交互模式：{context.interaction_mode}"]
         if context.hint_level:
             user_lines.append(f"本次应给第 {context.hint_level} 级提示。")
+        if context.hints_exhausted:
+            user_lines.append(
+                "该题的提示阶梯已经用完：不要再给新提示，"
+                "明确告知学生提示已用完，可请求完整思路或先回顾相关定义。"
+            )
         if context.problem_statement:
             user_lines.append(f"题目：{context.problem_statement}")
         if context.hints:
@@ -123,6 +128,8 @@ class OpenAICompatibleModel:
             user_lines.append(f"可用课程知识：{context.knowledge}")
         if context.solution_paths and context.interaction_mode == "full_solution":
             user_lines.append(f"解法路径：{context.solution_paths}")
+        if context.common_mistakes and context.interaction_mode == "solution_review":
+            user_lines.append(f"常见错误清单：{context.common_mistakes}")
 
         response = httpx.post(
             f"{self.base_url}/chat/completions",
@@ -148,5 +155,10 @@ def build_model(settings: Settings) -> LanguageModel:
             raise ValueError(
                 "openai_compatible 需要配置 MIRROR_LLM_BASE_URL / MIRROR_LLM_API_KEY / MIRROR_LLM_MODEL"
             )
-        return OpenAICompatibleModel(settings.llm_base_url, settings.llm_api_key, settings.llm_model)
+        return OpenAICompatibleModel(
+            settings.llm_base_url,
+            settings.llm_api_key,
+            settings.llm_model,
+            timeout=settings.llm_timeout,
+        )
     raise ValueError(f"未知模型提供方：{settings.llm_provider}")

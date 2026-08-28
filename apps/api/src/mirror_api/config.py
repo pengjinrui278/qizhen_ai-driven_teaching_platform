@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     llm_base_url: str | None = None
     llm_api_key: str | None = None
     llm_model: str | None = None
+    # 带推理链的模型生成较长解答可能超过一分钟，给足超时。
+    llm_timeout: float = 120.0
 
 
 def get_settings() -> Settings:
