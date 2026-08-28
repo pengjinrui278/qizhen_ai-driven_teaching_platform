@@ -187,6 +187,27 @@ class WorkspaceFinding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class TextbookChunk(Base):
+    """教材文本块：经授权的课程 PDF / 电子教材切分后的 RAG 语料。
+
+    每个块都携带完整的来源与授权字段（allowed_for_rag / allowed_for_eval /
+    allowed_for_training / retention_policy / license_note），检索与运行时
+    必须按授权门控使用。
+    """
+
+    __tablename__ = "textbook_chunks"
+
+    chunk_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    course_id: Mapped[str] = mapped_column(String(64), index=True)
+    source_id: Mapped[str] = mapped_column(String(128), index=True)
+    locator: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    content: Mapped[str] = mapped_column(Text)
+    source: Mapped[dict] = mapped_column(JSON, default=dict)
+    embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class MirrorEvent(Base):
     __tablename__ = "mirror_events"
 

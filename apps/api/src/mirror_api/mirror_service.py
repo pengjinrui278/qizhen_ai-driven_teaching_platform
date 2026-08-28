@@ -43,6 +43,7 @@ from .retrieval import (
     rag_allowed,
     runtime_allowed,
     search_knowledge,
+    search_textbook_chunks,
 )
 
 HINT_MODES = (InteractionMode.FIRST_HINT, InteractionMode.NEXT_HINT)
@@ -95,6 +96,11 @@ class MirrorPipeline:
                 if rag_allowed(node)
             ]
 
+        # 补充教材文本块（授权 RAG 门控后）作为额外上下文
+        chunks = search_textbook_chunks(
+            session, request.course_id, request.problem.text or "", limit=3
+        )
+
         hint_level, hints_exhausted = self._decide_hint_level(session, request, problem)
 
         hints: list[dict] = []
@@ -124,6 +130,10 @@ class MirrorPipeline:
             knowledge=[
                 {"knowledge_id": node.knowledge_id, "title": node.title, "statement": node.statement}
                 for node in knowledge
+            ]
+            + [
+                {"knowledge_id": chunk.chunk_id, "title": chunk.title or chunk.source_id, "statement": chunk.content}
+                for chunk in chunks
             ],
             common_mistakes=list(problem.common_mistakes) if problem else [],
         )
@@ -136,6 +146,13 @@ class MirrorPipeline:
                 locator=node.title,
             )
             for node in knowledge
+        ] + [
+            CourseCitation(
+                source_id=chunk.source_id,
+                knowledge_id=chunk.chunk_id,
+                locator=chunk.locator or chunk.title,
+            )
+            for chunk in chunks
         ]
 
         harness = self._run_harness(profile.harnesses, request, problem, answer, citations)

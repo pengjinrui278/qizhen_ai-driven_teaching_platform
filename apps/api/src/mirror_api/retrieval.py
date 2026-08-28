@@ -9,11 +9,39 @@
 
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .domain import ProblemInput
-from .models import CoursePack, KnowledgeNode, Problem, ProblemKnowledge
+from .models import CoursePack, KnowledgeNode, Problem, ProblemKnowledge, TextbookChunk
+
+# 查询词切分：中英文/数字保留；中文按字级二元组（bigram）切分，避免整句无法匹配
+_CJK_RE = re.compile(r"[一-龥]")
+_ALNUM_RE = re.compile(r"[a-zA-Z0-9]+")
+
+
+def _query_tokens(text: str) -> list[str]:
+    """把查询拆成有效检索 token（中文 bigram + 英文单词/数字）。"""
+    seen: set[str] = set()
+    result: list[str] = []
+
+    # 英文/数字原词保留
+    for token in _ALNUM_RE.findall(text):
+        if token not in seen:
+            seen.add(token)
+            result.append(token)
+
+    # 中文按字级 bigram 切分
+    chars = _CJK_RE.findall(text)
+    for i in range(len(chars) - 1):
+        bigram = chars[i] + chars[i + 1]
+        if bigram not in seen:
+            seen.add(bigram)
+            result.append(bigram)
+
+    return result
 
 
 def course_pack_ids(session: Session, course_id: str, profile_id: str) -> list[str]:
@@ -96,3 +124,42 @@ def rag_allowed(node: KnowledgeNode) -> bool:
 
 def runtime_allowed(problem: Problem) -> bool:
     return bool(problem.rights.get("allowed_for_runtime"))
+
+
+def search_textbook_chunks(
+    session: Session, course_id: str, text: str, limit: int = 3
+) -> list[TextbookChunk]:
+    """按关键词搜索某课程的教材文本块（仅返回授权允许 RAG 的块）。
+
+    策略：先把查询拆成有效 token，再按任一 token 做 ilike 匹配，
+    命中 token 越多的块排名越靠前。
+    """
+    tokens = _query_tokens(text)
+    if not tokens:
+        return []
+
+    conditions = [
+        or_(
+            TextbookChunk.title.ilike(f"%{token}%"),
+            TextbookChunk.content.ilike(f"%{token}%"),
+        )
+        for token in tokens
+    ]
+    rows = session.execute(
+        select(TextbookChunk)
+        .where(TextbookChunk.course_id == course_id, or_(*conditions))
+        .limit(limit * 3)
+    ).scalars()
+
+    allowed = [row for row in rows if rag_allowed_chunk(row)]
+
+    def score(chunk: TextbookChunk) -> int:
+        haystack = f"{chunk.title or ''} {chunk.content}"
+        return sum(1 for token in tokens if token in haystack)
+
+    allowed.sort(key=score, reverse=True)
+    return allowed[:limit]
+
+
+def rag_allowed_chunk(chunk: TextbookChunk) -> bool:
+    return bool(chunk.source.get("allowed_for_rag"))
