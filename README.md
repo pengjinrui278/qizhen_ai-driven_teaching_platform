@@ -43,7 +43,9 @@ pnpm install
 pnpm dev:web
 ```
 
-启动后访问 `http://localhost:3000/student` 进入学生端演示页（选题 → 渐进提示 → 完整解答 → 知识点答疑，回答全程经过质检与证据落库）。
+启动后访问 `http://localhost:3000/student` 进入学生端演示页（选题 → 渐进提示 → 完整解答 → 知识点答疑，回答全程经过质检与证据落库；浏览器本地生成匿名参与码，输入教师加入码即可把求助挂到作业）。
+
+访问 `http://localhost:3000/teacher` 进入教师/TA 端（创建作业工作区 → 查看班级聚合 → 生成 AI 候选现象 → TA 三选一校准 → 教师最终决定 → 周报只呈现教师接受的现象；教师端只见聚合统计，不见学生对话内容）。
 
 基础设施：
 
@@ -70,14 +72,21 @@ docker compose up -d postgres redis minio
 python -m mirror_api.cli init-db                 # 建表
 python -m mirror_api.cli seed-profiles           # 写入五门课程注册表
 python -m mirror_api.cli import-all-coursepacks  # 导入 coursepacks/ 全部课程包
+python -m mirror_api.cli seed-demo-workspace     # 播种演示作业工作区（8 名学生模拟求助，--stub 不耗模型调用）
 python -m mirror_api.cli status                  # 核对各表计数
 ```
 
 阶段 1 的 API：
 
-- `POST /api/v1/course-mirror/requests`：统一课程请求管线（检索→提示→质检→证据落库，按 `request_id` 幂等）
+- `POST /api/v1/course-mirror/requests`：统一课程请求管线（检索→提示→质检→证据落库，按 `request_id` 幂等；可携带匿名参与码与工作区归属）
 - `GET /api/v1/problems?course_id=...&course_profile_id=...`：学生端选题（仅运行时授权题目，含提示阶梯级数）
 - `GET /api/v1/coursepacks`：已导入课程包列表
+- 作业工作区（教师/TA 端，仅聚合、不返回学生回答内容）：
+  `POST /api/v1/workspaces`（创建）、`GET /api/v1/workspaces`（列表）、`POST /api/v1/workspaces/join`（学生加入）、
+  `POST /api/v1/workspaces/{id}/close`、`GET /api/v1/workspaces/{id}/overview`（聚合总览）、
+  `POST /api/v1/workspaces/{id}/insights/generate`（AI 候选现象）、`GET /api/v1/workspaces/{id}/findings`、
+  `POST /api/v1/findings/{id}/ta-decision`（TA 三选一）、`POST /api/v1/findings/{id}/teacher-decision`（教师最终决定）、
+  `GET /api/v1/workspaces/{id}/report`（周报，仅教师接受项）
 
 模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`，本机已用 `deepseek-v4-flash` 验证可用。
 
