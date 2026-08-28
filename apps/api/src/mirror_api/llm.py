@@ -107,10 +107,17 @@ class OpenAICompatibleModel:
         self.name = f"openai_compatible:{model}"
 
     def generate(self, context: MirrorContext) -> str:
+        mode_rules = {
+            "first_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
+            "next_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
+            "full_solution": "学生已明确请求完整解答思路：请给出完整、清晰、逐步推进的解答。",
+            "solution_review": "学生在请求解答自查：请依据常见错误清单指出需要核对的方向，不要直接重写完整解答。",
+            "concept_explanation": "学生在问知识点：请依据课程知识准确讲解，如有常见误用一并提醒。",
+        }
         system = (
             f"你是{context.course_name}的课程智能体（{context.mirror_name}）。"
-            "规则：只能使用下面提供的课程材料；提示模式下严禁直接给出答案或完整步骤；"
-            "回答要保持最小有效提示原则。"
+            "规则：优先使用下面提供的课程材料；材料不足时如实说明。"
+            + mode_rules.get(context.interaction_mode, "保持专业、克制的回答。")
         )
         user_lines = [f"交互模式：{context.interaction_mode}"]
         if context.hint_level:
