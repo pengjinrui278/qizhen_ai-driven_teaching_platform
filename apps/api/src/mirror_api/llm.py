@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -33,6 +34,8 @@ class MirrorContext:
     solution_paths: list[dict] = field(default_factory=list)
     knowledge: list[dict] = field(default_factory=list)  # [{knowledge_id,title,statement}]
     common_mistakes: list[str] = field(default_factory=list)
+    # 教师/TA 端候选现象模式专用：班级聚合统计（不含任何个体内容与参与码取值）
+    workspace_stats: dict | None = None
 
 
 class LanguageModel(Protocol):
@@ -48,6 +51,8 @@ class StubMirrorModel:
 
     def generate(self, context: MirrorContext) -> str:
         mode = context.interaction_mode
+        if mode == "teacher_candidate_insight":
+            return self._teacher_insight(context)
         if mode in ("first_hint", "next_hint"):
             return self._hint(context)
         if mode == "full_solution":
@@ -95,6 +100,32 @@ class StubMirrorModel:
         lines.extend(f"- {item}" for item in context.common_mistakes)
         return "\n".join(lines)
 
+    def _teacher_insight(self, context: MirrorContext) -> str:
+        """确定性班级现象候选（假设式措辞、含覆盖数、不指向个体）。"""
+        stats = context.workspace_stats or {}
+        participants = stats.get("participants", 0)
+        per_problem = stats.get("per_problem", [])
+        lines: list[str] = []
+        if per_problem:
+            busiest = per_problem[0]
+            if busiest.get("participants"):
+                lines.append(
+                    f"- 可能存在学生在题目 {busiest['problem_ref']} 上集体卡住的情况："
+                    f"有 {busiest['participants']} 名参与学生就这道题请求过提示，"
+                    f"建议在课堂上观察对应困惑点（假设性判断，待确认）。"
+                )
+        full_requests = sum(item.get("full_solution_requests", 0) for item in per_problem)
+        if full_requests:
+            lines.append(
+                f"- 可能存在直接请求完整解答的倾向（共 {full_requests} 次）："
+                "值得核对是提示阶梯用尽后的正常升级，还是习惯性跳过提示。"
+            )
+        lines.append(
+            f"- 总体说明：本次仅覆盖 {participants} 名主动参与学生，"
+            "以上现象只能描述群体层面趋势，不指向任何具体学生。"
+        )
+        return "\n".join(lines)
+
 
 class OpenAICompatibleModel:
     """OpenAI 兼容接口（DeepSeek / 通义 / GLM 等国内模型均支持）。"""
@@ -113,6 +144,14 @@ class OpenAICompatibleModel:
             "full_solution": "学生已明确请求完整解答思路：请给出完整、清晰、逐步推进的解答。",
             "solution_review": "学生在请求解答自查：请依据常见错误清单指出需要核对的方向，不要直接重写完整解答。",
             "concept_explanation": "学生在问知识点：请依据课程知识准确讲解，如有常见误用一并提醒。",
+            "teacher_candidate_insight": (
+                "本次是教师/TA 端班级现象分析模式，输出对象是教学团队而非学生："
+                "只能依据下方聚合统计推断，严禁虚构统计之外的数字；"
+                "每条现象单独一行、以“- ”开头，共给 2~4 条；"
+                "措辞必须是假设式的（“可能”“值得核对”），并写明覆盖人数；"
+                "严禁定位或暗示任何具体学生，严禁输出题目答案或解法，"
+                "严禁输出参与码、学号、姓名等任何标识符。"
+            ),
         }
         system = (
             f"你是{context.course_name}的课程智能体（{context.mirror_name}）。"
@@ -137,6 +176,10 @@ class OpenAICompatibleModel:
             user_lines.append(f"解法路径：{context.solution_paths}")
         if context.common_mistakes and context.interaction_mode == "solution_review":
             user_lines.append(f"常见错误清单：{context.common_mistakes}")
+        if context.workspace_stats is not None:
+            user_lines.append(
+                f"班级聚合统计（JSON，仅含聚合数字）：{json.dumps(context.workspace_stats, ensure_ascii=False)}"
+            )
 
         response = httpx.post(
             f"{self.base_url}/chat/completions",

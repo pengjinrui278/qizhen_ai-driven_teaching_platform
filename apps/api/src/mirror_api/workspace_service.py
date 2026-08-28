@@ -13,15 +13,23 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from .domain import WorkspaceCreateRequest
+from .domain import TaDecisionRequest, TeacherDecisionRequest, WorkspaceCreateRequest
+from .llm import LanguageModel, MirrorContext
 from .mirror_service import MirrorError
-from .models import AssignmentWorkspace, Course, CourseProfileRow, MirrorEvent
+from .models import (
+    AssignmentWorkspace,
+    Course,
+    CourseProfileRow,
+    MirrorEvent,
+    WorkspaceFinding,
+)
 
 COVERAGE_NOTE_TEMPLATE = "仅覆盖 {n} 名主动参与学生，不外推全班。"
 CHANNEL_NOTE = (
@@ -176,3 +184,151 @@ def workspace_overview(session: Session, workspace_id: str) -> dict:
         "per_problem": per_problem,
         "coverage_note": COVERAGE_NOTE_TEMPLATE.format(n=participants),
     }
+
+
+# ------------------------------------------------- AI 候选现象 + 两级决策链
+
+
+def generate_candidate_findings(
+    session: Session, workspace_id: str, model: LanguageModel
+) -> list[WorkspaceFinding]:
+    """基于聚合统计产出班级现象候选（假设式），落库供 TA 校准。
+
+    - 直接调模型网关，不走学生请求管线、不落 mirror_events；
+    - 生成时刻的聚合快照冻结进 ``basis``：报告数字一律读快照，
+      工作区事件后续增长不影响已生成候选的可复现性；
+    - 红线自检：模型输出的行里若出现该工作区任何参与码取值，整行丢弃。
+    """
+    workspace = get_workspace(session, workspace_id)
+    overview = workspace_overview(session, workspace_id)
+    if overview["requests"] == 0:
+        raise MirrorError(409, "工作区还没有任何学生请求，无法生成候选现象")
+
+    course = session.get(Course, workspace.course_id)
+    context = MirrorContext(
+        course_name=course.display_name,
+        mirror_name=course.mirror_name,
+        interaction_mode="teacher_candidate_insight",
+        workspace_stats=overview,
+    )
+    raw = model.generate(context)
+
+    codes = {
+        code
+        for code in session.execute(
+            select(MirrorEvent.participant_code)
+            .where(
+                MirrorEvent.assignment_workspace_id == workspace_id,
+                MirrorEvent.participant_code.is_not(None),
+            )
+            .distinct()
+        ).scalars()
+    }
+
+    findings: list[WorkspaceFinding] = []
+    for phenomenon in _parse_phenomena(raw):
+        if any(code and code in phenomenon for code in codes):
+            continue  # 泄露参与码的行一律丢弃
+        finding = WorkspaceFinding(
+            finding_id=uuid.uuid4().hex,
+            workspace_id=workspace_id,
+            phenomenon=phenomenon,
+            basis=overview,
+            generator=model.name,
+        )
+        session.add(finding)
+        findings.append(finding)
+    session.commit()
+    return findings
+
+
+_NUMBERED_LINE = re.compile(r"^\d+[.、)]\s*(.+)$")
+
+
+def _parse_phenomena(raw: str) -> list[str]:
+    """按 “- ” 行拆分模型输出；兜底编号行；再兜底整体作为一条。"""
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    bullets = [line[2:].strip() for line in lines if line.startswith("- ")]
+    bullets = [item for item in bullets if item]
+    if bullets:
+        return bullets
+    numbered = [
+        match.group(1).strip()
+        for line in lines
+        if (match := _NUMBERED_LINE.match(line)) and match.group(1).strip()
+    ]
+    if numbered:
+        return numbered
+    text = raw.strip()
+    return [text] if text else []
+
+
+def get_finding(session: Session, finding_id: str) -> WorkspaceFinding:
+    finding = session.get(WorkspaceFinding, finding_id)
+    if finding is None:
+        raise MirrorError(404, f"候选现象不存在：{finding_id}")
+    return finding
+
+
+def finding_public(finding: WorkspaceFinding) -> dict:
+    return {
+        "finding_id": finding.finding_id,
+        "workspace_id": finding.workspace_id,
+        "phenomenon": finding.phenomenon,
+        "basis": finding.basis,
+        "generator": finding.generator,
+        "ta_status": finding.ta_status,
+        "ta_note": finding.ta_note,
+        "ta_decided_at": finding.ta_decided_at.isoformat() if finding.ta_decided_at else None,
+        "teacher_status": finding.teacher_status,
+        "teacher_note": finding.teacher_note,
+        "teacher_decided_at": finding.teacher_decided_at.isoformat()
+        if finding.teacher_decided_at
+        else None,
+        "created_at": finding.created_at.isoformat() if finding.created_at else None,
+    }
+
+
+def list_findings(session: Session, workspace_id: str) -> list[dict]:
+    get_workspace(session, workspace_id)  # 未知工作区直接 404
+    findings = (
+        session.execute(
+            select(WorkspaceFinding)
+            .where(WorkspaceFinding.workspace_id == workspace_id)
+            .order_by(WorkspaceFinding.created_at)
+        )
+        .scalars()
+        .all()
+    )
+    return [finding_public(finding) for finding in findings]
+
+
+def decide_ta(session: Session, finding_id: str, request: TaDecisionRequest) -> WorkspaceFinding:
+    """TA 三选一校准（确认存在问题 / AI 判断有误 / 忽略）。
+
+    教师尚未处理时允许改判覆盖；留痕取最后一次决策、时间与备注。
+    """
+    finding = get_finding(session, finding_id)
+    if finding.teacher_status != "pending":
+        raise MirrorError(409, "该现象已由教师做过最终决定，TA 不能改判")
+    finding.ta_status = request.decision
+    finding.ta_note = request.note
+    finding.ta_decided_at = datetime.now(UTC)
+    session.commit()
+    return finding
+
+
+def decide_teacher(
+    session: Session, finding_id: str, request: TeacherDecisionRequest
+) -> WorkspaceFinding:
+    """教师最终决定（接受进周报 / 忽略）：仅对 TA 已确认且未处理的候选生效。"""
+    finding = get_finding(session, finding_id)
+    if finding.ta_status != "confirmed":
+        raise MirrorError(409, "教师只能对 TA 确认过的候选现象做最终决定")
+    if finding.teacher_status != "pending":
+        raise MirrorError(409, "该现象已由教师处理过")
+    finding.teacher_status = request.decision
+    finding.teacher_note = request.note
+    finding.teacher_decided_at = datetime.now(UTC)
+    session.commit()
+    return finding

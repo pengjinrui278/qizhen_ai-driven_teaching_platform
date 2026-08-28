@@ -14,7 +14,13 @@ from sqlalchemy import update
 
 from mirror_api.config import REPO_ROOT
 from mirror_api.coursepack import import_coursepack
-from mirror_api.domain import CourseMirrorRequest, InteractionMode, WorkspaceCreateRequest
+from mirror_api.domain import (
+    CourseMirrorRequest,
+    InteractionMode,
+    TaDecisionRequest,
+    TeacherDecisionRequest,
+    WorkspaceCreateRequest,
+)
 from mirror_api.llm import StubMirrorModel
 from mirror_api.mirror_service import MirrorError, MirrorPipeline
 from mirror_api.models import AssignmentWorkspace, MirrorEvent
@@ -22,9 +28,36 @@ from mirror_api.seed import seed_profiles
 from mirror_api.workspace_service import (
     close_workspace,
     create_workspace,
+    decide_ta,
+    decide_teacher,
+    generate_candidate_findings,
     join_workspace,
     list_workspaces,
 )
+
+
+class FakeModel:
+    """受控输出的假模型：用于测试候选解析与参与码泄露自检。"""
+
+    name = "fake"
+
+    def __init__(self, output: str):
+        self._output = output
+
+    def generate(self, context) -> str:
+        return self._output
+
+
+def seed_workspace_events(session, workspace_id: str = "ws-test-1") -> None:
+    pipeline = MirrorPipeline(StubMirrorModel())
+    for index, code in enumerate(["stu-a", "stu-b", "stu-c"], start=1):
+        pipeline.handle(
+            session,
+            make_request(
+                f"gen-{index}", "first_hint", problem_id=PROBLEM_ID,
+                participant_code=code, workspace_id=workspace_id,
+            ),
+        )
 
 SAMPLE_PACK = REPO_ROOT / "coursepacks" / "mathematical_analysis" / "chen-jixiu-3e"
 COURSE = "mathematical_analysis"
@@ -273,3 +306,105 @@ def test_overview_endpoint_numbers_and_privacy(tmp_path):
     )
     assert denied.status_code == 404
     assert client.get(f"/api/v1/workspaces/{workspace_id}/overview").status_code == 200
+
+
+# ---------------------------------------------------- AI 候选现象生成
+
+
+def test_generate_candidate_findings_with_stub(session):
+    make_workspace(session)
+    seed_workspace_events(session)
+
+    findings = generate_candidate_findings(session, "ws-test-1", StubMirrorModel())
+    assert len(findings) >= 2
+    for finding in findings:
+        assert finding.ta_status == "candidate"
+        assert finding.teacher_status == "pending"
+        assert finding.basis["participants"] == 3  # basis 为生成时刻冻结快照
+        assert finding.basis["requests"] == 3
+        assert "stu-" not in finding.phenomenon
+    assert any("3 名主动参与学生" in finding.phenomenon for finding in findings)
+
+    # basis 快照冻结后，新事件不改变已生成候选的数字
+    MirrorPipeline(StubMirrorModel()).handle(
+        session,
+        make_request(
+            "gen-late", "first_hint", problem_id=PROBLEM_ID,
+            participant_code="stu-d", workspace_id="ws-test-1",
+        ),
+    )
+    assert findings[0].basis["participants"] == 3
+
+
+def test_generate_on_empty_workspace_raises_409(session):
+    make_workspace(session, workspace_id="ws-empty", join_code="EMPTY001")
+    with pytest.raises(MirrorError) as excinfo:
+        generate_candidate_findings(session, "ws-empty", StubMirrorModel())
+    assert excinfo.value.status_code == 409
+
+
+def test_model_lines_containing_participant_codes_are_dropped(session):
+    make_workspace(session)
+    MirrorPipeline(StubMirrorModel()).handle(
+        session,
+        make_request(
+            "leak-1", "first_hint", problem_id=PROBLEM_ID,
+            participant_code="stu-secret-42", workspace_id="ws-test-1",
+        ),
+    )
+    bad_model = FakeModel(
+        "- 学生 stu-secret-42 请求了提示（本行必须被丢弃）\n"
+        "- 可能存在学生集体卡住的现象（本行应保留）"
+    )
+    findings = generate_candidate_findings(session, "ws-test-1", bad_model)
+    assert len(findings) == 1
+    assert "stu-secret-42" not in findings[0].phenomenon
+    assert "集体卡住" in findings[0].phenomenon
+
+
+# ---------------------------------------------------- TA / 教师决策链
+
+
+def test_ta_decision_flow_and_freeze_after_teacher(session):
+    make_workspace(session)
+    seed_workspace_events(session)
+    finding = generate_candidate_findings(session, "ws-test-1", StubMirrorModel())[0]
+
+    decided = decide_ta(session, finding.finding_id, TaDecisionRequest(decision="confirmed", note="属实"))
+    assert decided.ta_status == "confirmed"
+    # TA 在教师处理前可改判（留痕取最后一次）
+    decided = decide_ta(session, finding.finding_id, TaDecisionRequest(decision="rejected", note="AI 判断有误"))
+    assert decided.ta_status == "rejected"
+    assert decided.ta_note == "AI 判断有误"
+    assert decided.ta_decided_at is not None
+
+    decide_ta(session, finding.finding_id, TaDecisionRequest(decision="confirmed"))
+    decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="accepted"))
+    with pytest.raises(MirrorError) as excinfo:
+        decide_ta(session, finding.finding_id, TaDecisionRequest(decision="ignored"))
+    assert excinfo.value.status_code == 409
+
+
+def test_teacher_decision_requires_confirmed_and_single_shot(session):
+    make_workspace(session)
+    seed_workspace_events(session)
+    finding = generate_candidate_findings(session, "ws-test-1", StubMirrorModel())[0]
+
+    # TA 尚未确认（candidate / rejected / ignored）时教师不能决定
+    with pytest.raises(MirrorError) as excinfo:
+        decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="accepted"))
+    assert excinfo.value.status_code == 409
+    decide_ta(session, finding.finding_id, TaDecisionRequest(decision="rejected"))
+    with pytest.raises(MirrorError) as excinfo:
+        decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="accepted"))
+    assert excinfo.value.status_code == 409
+
+    decide_ta(session, finding.finding_id, TaDecisionRequest(decision="confirmed", note="属实"))
+    decided = decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="accepted", note="进周报"))
+    assert decided.teacher_status == "accepted"
+    assert decided.teacher_note == "进周报"
+    assert decided.teacher_decided_at is not None
+
+    with pytest.raises(MirrorError) as excinfo:
+        decide_teacher(session, finding.finding_id, TeacherDecisionRequest(decision="ignored"))
+    assert excinfo.value.status_code == 409

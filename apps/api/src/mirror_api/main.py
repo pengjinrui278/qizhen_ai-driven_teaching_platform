@@ -15,6 +15,8 @@ from .domain import (
     HarnessCheck,
     HarnessResult,
     LearningEvidenceDraft,
+    TaDecisionRequest,
+    TeacherDecisionRequest,
     WorkspaceCreateRequest,
     WorkspaceJoinRequest,
 )
@@ -238,3 +240,42 @@ async def workspace_overview(workspace_id: str, db: Session = Depends(get_db)) -
         return workspace_service.workspace_overview(db, workspace_id)
     except MirrorError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+@app.post("/api/v1/workspaces/{workspace_id}/insights/generate")
+async def generate_insights(workspace_id: str, http_request: Request, db: Session = Depends(get_db)):
+    """AI 产出班级现象候选：直接调模型网关，不走学生管线、不落事件。"""
+    pipeline: MirrorPipeline = http_request.app.state.pipeline
+    try:
+        findings = workspace_service.generate_candidate_findings(db, workspace_id, pipeline.model)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return {"workspace_id": workspace_id, "findings": [workspace_service.finding_public(item) for item in findings]}
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/findings")
+async def list_findings(workspace_id: str, db: Session = Depends(get_db)) -> list[dict]:
+    try:
+        return workspace_service.list_findings(db, workspace_id)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+@app.post("/api/v1/findings/{finding_id}/ta-decision")
+async def ta_decision(finding_id: str, request: TaDecisionRequest, db: Session = Depends(get_db)) -> dict:
+    try:
+        finding = workspace_service.decide_ta(db, finding_id, request)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return workspace_service.finding_public(finding)
+
+
+@app.post("/api/v1/findings/{finding_id}/teacher-decision")
+async def teacher_decision(
+    finding_id: str, request: TeacherDecisionRequest, db: Session = Depends(get_db)
+) -> dict:
+    try:
+        finding = workspace_service.decide_teacher(db, finding_id, request)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return workspace_service.finding_public(finding)
