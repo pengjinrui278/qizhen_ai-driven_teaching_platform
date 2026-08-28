@@ -43,6 +43,8 @@ pnpm install
 pnpm dev:web
 ```
 
+启动后访问 `http://localhost:3000/student` 进入学生端演示页（选题 → 渐进提示 → 完整解答 → 知识点答疑，回答全程经过质检与证据落库）。
+
 基础设施：
 
 ```powershell
@@ -74,9 +76,10 @@ python -m mirror_api.cli status                  # 核对各表计数
 阶段 1 的 API：
 
 - `POST /api/v1/course-mirror/requests`：统一课程请求管线（检索→提示→质检→证据落库，按 `request_id` 幂等）
+- `GET /api/v1/problems?course_id=...&course_profile_id=...`：学生端选题（仅运行时授权题目，含提示阶梯级数）
 - `GET /api/v1/coursepacks`：已导入课程包列表
 
-模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`。
+模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`，本机已用 `deepseek-v4-flash` 验证可用。
 
 ## 重要约束
 

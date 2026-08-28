@@ -18,3 +18,56 @@ article, .flow { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); b
 .flow { margin-top: 56px; padding: 28px; }
 @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } .courseGrid { grid-template-columns: repeat(2, 1fr); } main { padding-top: 24px; } }
 
+/* 首页入口按钮 */
+.cta { display: inline-block; margin-top: 10px; padding: 12px 22px; border-radius: 999px; background: #71e0ad; color: #07110e; font-weight: 700; text-decoration: none; }
+.cta:hover { background: #8df0c4; }
+
+/* 学生端 */
+.studentMain { padding-top: 28px; }
+.studentTop { margin-bottom: 26px; }
+.studentTop h1 { font-size: clamp(28px, 4.5vw, 46px); }
+.backLink { display: inline-block; color: #71e0ad; text-decoration: none; font-size: 14px; margin-bottom: 14px; }
+.banner { border: 1px solid #7c3b4d; background: #2a1219; color: #ffb9c6; border-radius: 14px; padding: 12px 16px; margin: 14px 0; font-size: 14px; line-height: 1.6; }
+.studentShell { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+.problemPanel { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; border: 1px solid #25473a; background: rgba(12, 31, 24, .76); border-radius: 20px; padding: 20px; }
+.problemPanel h2 { margin: 0 0 4px; font-size: 18px; }
+.problemPanel > small { color: #7a978a; font-size: 12px; }
+.problemList { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.problemCard { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 2px 10px; text-align: left; font: inherit; color: inherit; border: 1px solid #25473a; background: rgba(9, 24, 19, .9); border-radius: 14px; padding: 12px 14px; cursor: pointer; }
+.problemCard:hover { border-color: #3f7a63; }
+.problemCard.active { border-color: #71e0ad; background: linear-gradient(145deg, #173f32, #0c1f18); }
+.problemIndex { grid-row: span 2; color: #71e0ad; font-weight: 700; }
+.problemStatement { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: #d9eae1; font-size: 13px; line-height: 1.55; }
+.problemCard small { color: #7a978a; font-size: 12px; }
+.workspace { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.emptyTip { border: 1px dashed #25473a; border-radius: 20px; padding: 48px 24px; text-align: center; color: #7a978a; }
+.statementCard { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); border-radius: 20px; padding: 20px; }
+.statementCard small { color: #71e0ad; font-size: 12px; }
+.statement { margin: 8px 0 0; color: #edf8f3; white-space: pre-wrap; line-height: 1.75; }
+.timeline { display: flex; flex-direction: column; gap: 12px; }
+.msg { border-radius: 16px; padding: 14px 16px; }
+.msg.user { align-self: flex-end; max-width: 86%; background: #14432f; border: 1px solid #2c6b4f; color: #dff7ea; font-size: 14px; }
+.msg.agent { align-self: stretch; background: rgba(12, 31, 24, .92); border: 1px solid #25473a; }
+.msg.pending { color: #7a978a; font-style: italic; }
+.agentHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.agentHead strong { color: #edf8f3; font-size: 14px; }
+.levelBadge { border: 1px solid #71e0ad; background: #173f32; color: #71e0ad; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.agentAnswer { margin: 0; color: #e8f5ee; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.chipRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-block; border: 1px solid #2c5a47; background: rgba(21, 61, 49, .5); color: #a9d8c3; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.chip.passed { border-color: #3fae7c; color: #8af0c0; }
+.chip.failed { border-color: #c65b5b; color: #ffb0a6; }
+.chip.uncertain { border-color: #b98a2f; color: #f4d48a; }
+.chip.not_run { border-color: #44554d; color: #93a89d; }
+.harnessRows { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.harnessRow { font-size: 12px; color: #9db8ab; line-height: 1.6; }
+.evidenceNote { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #25473a; font-size: 12px; color: #6f8d80; }
+.actionBar { display: flex; flex-wrap: wrap; gap: 10px; border: 1px solid #25473a; background: rgba(12, 31, 24, .76); border-radius: 20px; padding: 16px; }
+.btn { border-radius: 999px; border: 1px solid #2c6b4f; background: #0f2e23; color: #dff7ea; padding: 10px 16px; font: inherit; font-size: 14px; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: #71e0ad; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btnPrimary { background: #1d6b4a; border-color: #71e0ad; color: #f2fff8; }
+.questionForm { display: flex; gap: 8px; width: 100%; }
+.questionInput { flex: 1; min-width: 0; border-radius: 999px; border: 1px solid #2c5a47; background: #081a13; color: #edf8f3; padding: 10px 16px; font: inherit; font-size: 14px; }
+@media (max-width: 900px) { .studentShell { grid-template-columns: 1fr; } .problemPanel { position: static; max-height: none; } }
+

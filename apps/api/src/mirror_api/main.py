@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from sqlalchemy import select
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from . import retrieval
 from .config import get_settings
 from .db import init_db, make_engine, make_session_factory
 from .domain import (
@@ -16,7 +18,7 @@ from .domain import (
 )
 from .llm import build_model
 from .mirror_service import MirrorError, MirrorPipeline
-from .models import CoursePack
+from .models import CoursePack, Problem, ProblemHint
 from .registry import load_course_profiles, public_profile
 
 
@@ -44,6 +46,17 @@ app = FastAPI(
         "hint ladders, harness checks and learning evidence."
     ),
     lifespan=lifespan,
+)
+
+# 允许本机前端（pnpm dev:web 默认 3000 端口）跨域调用；生产部署另行收紧。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -137,4 +150,40 @@ async def list_coursepacks(db: Session = Depends(get_db)) -> list[dict]:
             "imported_at": pack.imported_at.isoformat() if pack.imported_at else None,
         }
         for pack in packs
+    ]
+
+
+@app.get("/api/v1/problems")
+async def list_problems(
+    course_id: str, course_profile_id: str, db: Session = Depends(get_db)
+) -> list[dict]:
+    """学生端选题：只返回运行时授权开放的题目，并附提示阶梯级数。"""
+    pack_ids = retrieval.course_pack_ids(db, course_id, course_profile_id)
+    if not pack_ids:
+        raise HTTPException(status_code=404, detail="未找到该课程的 CoursePack，请先导入课程包")
+    problems = (
+        db.execute(
+            select(Problem)
+            .where(Problem.coursepack_id.in_(pack_ids))
+            .order_by(Problem.coursepack_id, Problem.problem_id)
+        )
+        .scalars()
+        .all()
+    )
+    hint_counts = dict(
+        db.execute(
+            select(ProblemHint.problem_id, func.count(ProblemHint.level))
+            .where(ProblemHint.coursepack_id.in_(pack_ids))
+            .group_by(ProblemHint.problem_id)
+        ).all()
+    )
+    return [
+        {
+            "problem_id": problem.problem_id,
+            "statement": problem.statement,
+            "answer_type": problem.answer_type,
+            "max_hint_level": hint_counts.get(problem.problem_id, 0),
+        }
+        for problem in problems
+        if retrieval.runtime_allowed(problem)
     ]

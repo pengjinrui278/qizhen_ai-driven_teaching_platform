@@ -160,3 +160,27 @@ def test_http_endpoints(tmp_path):
     packs = client.get("/api/v1/coursepacks")
     assert packs.status_code == 200
     assert [item["coursepack_id"] for item in packs.json()] == ["analysis-chen-jixiu-3e"]
+
+    # 学生端选题接口：只列运行时授权开放的题目，并附提示阶梯级数
+    problems = client.get(
+        "/api/v1/problems",
+        params={"course_id": COURSE, "course_profile_id": PROFILE},
+    )
+    assert problems.status_code == 200
+    items = problems.json()
+    assert len(items) == 10
+    assert PROBLEM_ID in {item["problem_id"] for item in items}
+    assert all(item["max_hint_level"] >= 2 for item in items)
+
+    missing_pack = client.get(
+        "/api/v1/problems",
+        params={"course_id": COURSE, "course_profile_id": "no-such-profile"},
+    )
+    assert missing_pack.status_code == 404
+
+    # 本机前端（3000 端口）跨域预检必须放行
+    preflight = client.options(
+        "/api/v1/problems",
+        headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"},
+    )
+    assert preflight.headers["access-control-allow-origin"] == "http://localhost:3000"
