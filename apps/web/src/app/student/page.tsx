@@ -1,5 +1,9 @@
 "use client";
 
+import "katex/dist/katex.min.css";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -50,6 +54,31 @@ type MirrorResponse = {
 type ChatItem =
   | { kind: "user"; label: string }
   | { kind: "agent"; response: MirrorResponse };
+
+/** 模型输出的数学公式定界符不统一（\(...\) / \\(...\\) / \[...\]），
+ *  统一归一成 remark-math 认得的 $...$ / $$...$$。 */
+function normalizeMathDelimiters(text: string): string {
+  return text
+    .replace(/\\\\\(/g, "\\(")
+    .replace(/\\\\\)/g, "\\)")
+    .replace(/\\\\\[/g, "\\[")
+    .replace(/\\\\\]/g, "\\]")
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_match, body: string) => `$$${body}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_match, body: string) => `$${body}$`);
+}
+
+function Markdown({ text }: { text: string }) {
+  return (
+    <div className="markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
+      >
+        {normalizeMathDelimiters(text)}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 export default function StudentPage() {
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
@@ -189,7 +218,9 @@ export default function StudentPage() {
             <>
               <article className="statementCard">
                 <small>题目 · {selected.problem_id}</small>
-                <p className="statement">{selected.statement}</p>
+                <div className="statement">
+                  <Markdown text={selected.statement} />
+                </div>
               </article>
 
               <div className="timeline">
@@ -209,7 +240,9 @@ export default function StudentPage() {
                           质检：{HARNESS_STATUS_LABELS[item.response.harness.status] ?? item.response.harness.status}
                         </span>
                       </header>
-                      <p className="agentAnswer">{item.response.answer}</p>
+                      <div className="agentAnswer">
+                        <Markdown text={item.response.answer} />
+                      </div>
                       {item.response.citations.length > 0 && (
                         <div className="chipRow">
                           {item.response.citations.map((citation) => (

@@ -71,3 +71,22 @@ article, .flow { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); b
 .questionInput { flex: 1; min-width: 0; border-radius: 999px; border: 1px solid #2c5a47; background: #081a13; color: #edf8f3; padding: 10px 16px; font: inherit; font-size: 14px; }
 @media (max-width: 900px) { .studentShell { grid-template-columns: 1fr; } .problemPanel { position: static; max-height: none; } }
 
+/* Markdown / 公式渲染 */
+.markdown { color: inherit; }
+.markdown > *:first-child { margin-top: 0; }
+.markdown > *:last-child { margin-bottom: 0; }
+.markdown p { margin: 8px 0; color: inherit; line-height: 1.8; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { color: #edf8f3; margin: 16px 0 8px; line-height: 1.4; }
+.markdown h1 { font-size: 18px; } .markdown h2 { font-size: 16px; } .markdown h3, .markdown h4 { font-size: 15px; }
+.markdown ul, .markdown ol { margin: 8px 0; padding-left: 22px; color: inherit; }
+.markdown li { margin: 4px 0; line-height: 1.8; }
+.markdown strong { color: #8af0c0; }
+.markdown code { background: rgba(113, 224, 173, .12); color: #a9d8c3; padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+.markdown pre { background: rgba(21, 61, 49, .45); border: 1px solid #25473a; padding: 10px 14px; border-radius: 10px; overflow-x: auto; }
+.markdown pre code { background: none; padding: 0; }
+.markdown blockquote { border-left: 3px solid #71e0ad; margin: 10px 0; padding: 2px 14px; color: #c2d9cd; background: rgba(21, 61, 49, .3); border-radius: 0 8px 8px 0; }
+.markdown hr { border: none; border-top: 1px dashed #25473a; margin: 12px 0; }
+.markdown .katex { font-size: 1.05em; }
+.markdown .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; }
+.agentAnswer .markdown, .statement .markdown { font-size: 14px; }
+
