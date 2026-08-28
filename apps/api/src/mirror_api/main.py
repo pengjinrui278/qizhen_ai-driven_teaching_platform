@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import retrieval
+from . import retrieval, workspace_service
 from .config import get_settings
 from .db import init_db, make_engine, make_session_factory
 from .domain import (
@@ -15,6 +15,8 @@ from .domain import (
     HarnessCheck,
     HarnessResult,
     LearningEvidenceDraft,
+    WorkspaceCreateRequest,
+    WorkspaceJoinRequest,
 )
 from .llm import build_model
 from .mirror_service import MirrorError, MirrorPipeline
@@ -187,3 +189,52 @@ async def list_problems(
         for problem in problems
         if retrieval.runtime_allowed(problem)
     ]
+
+
+# ---------------------------------------------------------------- 作业工作区（教师/TA 端）
+# 隐私红线：以下端点的响应只包含聚合统计与决策留痕，
+# 永不返回学生回答内容、请求原文或参与码取值。
+
+
+@app.post("/api/v1/workspaces")
+async def create_workspace(request: WorkspaceCreateRequest, db: Session = Depends(get_db)) -> dict:
+    try:
+        workspace = workspace_service.create_workspace(db, request)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return workspace_service.workspace_public(workspace, participants=0)
+
+
+@app.get("/api/v1/workspaces")
+async def list_workspaces(course_id: str | None = None, db: Session = Depends(get_db)) -> list[dict]:
+    return workspace_service.list_workspaces(db, course_id)
+
+
+@app.post("/api/v1/workspaces/join")
+async def join_workspace(request: WorkspaceJoinRequest, db: Session = Depends(get_db)) -> dict:
+    try:
+        workspace = workspace_service.join_workspace(db, request.join_code)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return workspace_service.workspace_public(
+        workspace, workspace_service.participant_count(db, workspace.workspace_id)
+    )
+
+
+@app.post("/api/v1/workspaces/{workspace_id}/close")
+async def close_workspace(workspace_id: str, db: Session = Depends(get_db)) -> dict:
+    try:
+        workspace = workspace_service.close_workspace(db, workspace_id)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return workspace_service.workspace_public(
+        workspace, workspace_service.participant_count(db, workspace.workspace_id)
+    )
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/overview")
+async def workspace_overview(workspace_id: str, db: Session = Depends(get_db)) -> dict:
+    try:
+        return workspace_service.workspace_overview(db, workspace_id)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
