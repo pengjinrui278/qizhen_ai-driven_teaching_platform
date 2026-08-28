@@ -90,7 +90,29 @@ python -m mirror_api.cli status                  # 核对各表计数
 
 模型网关默认使用确定性占位实现（无需密钥）；接入国内通用大模型（DeepSeek/通义/GLM 等 OpenAI 兼容接口）见 `.env.example`，本机已用 `deepseek-v4-flash` 验证可用。
 
-## 生产部署（云服务器）
+## 生产部署
+
+### 方式一：Railway（推荐快速上线）
+
+项目已配置 `railway.json` + `Dockerfile.railway`，可一键部署到 Railway 并绑定 `learningmirror.cn` / `learningmirror.xyz`：
+
+1. 在 [Railway](https://railway.app/) 创建项目，从本 GitHub 仓库部署；
+2. 添加 Railway 的 **pgvector 模板** 作为数据库；
+3. 在主应用服务中设置环境变量：
+   - `MIRROR_DATABASE_URL=${{Postgres.DATABASE_URL}}`
+   - `MIRROR_CORS_ORIGINS=`（留空，同域）
+   - 可选：`MIRROR_LLM_PROVIDER`、`MIRROR_LLM_BASE_URL`、`MIRROR_LLM_API_KEY`、`MIRROR_LLM_MODEL`
+4. 首次部署后在 Console 执行：
+   ```powershell
+   python -m mirror_api.cli init-db
+   python -m mirror_api.cli seed-profiles
+   python -m mirror_api.cli import-all-coursepacks
+   ```
+5. 在 Railway Dashboard 的 Domains 中添加 `learningmirror.cn` 与 `learningmirror.xyz`，按提示配置 DNS CNAME 记录；Railway 会自动签发 HTTPS 证书。
+
+详细步骤与常见问题见 `docs/railway.md`。
+
+### 方式二：自有云服务器（Docker Compose）
 
 项目已配置 `compose.prod.yml` + `nginx.conf`，可一键部署到 Linux 云服务器，通过域名 `learningmirror.cn` / `learningmirror.xyz` 访问。
 

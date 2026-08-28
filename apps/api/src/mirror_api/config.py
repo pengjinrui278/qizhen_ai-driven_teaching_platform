@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     # 带推理链的模型生成较长解答可能超过一分钟，给足超时。
     llm_timeout: float = 120.0
 
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _ensure_pg8000_driver(cls, value: str) -> str:
+        """Railway 等平台提供 postgresql:// 连接串；本项目使用 pg8000 驱动，
+        需要改写成 postgresql+pg8000://。"""
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+pg8000://", 1)
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+pg8000://", 1)
+        return value
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _parse_cors_origins(cls, value):
