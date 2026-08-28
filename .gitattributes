@@ -1,0 +1,3 @@
+/materials/** filter=lfs diff=lfs merge=lfs -text
+/data_exports/**/*.dump filter=lfs diff=lfs merge=lfs -text
+/data_exports/**/*.tar.gz filter=lfs diff=lfs merge=lfs -text
