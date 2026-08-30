@@ -7,8 +7,13 @@ import remarkMath from "remark-math";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
-const COURSE_ID = "mathematical_analysis";
-const PROFILE_ID = "chen-jixiu-3e";
+
+type CourseProfile = {
+  course_id: string;
+  display_name: string;
+  mirror_name: string;
+  profile_id: string;
+};
 
 const ANSWER_TYPE_LABELS: Record<string, string> = {
   first_hint: "渐进提示",
@@ -91,6 +96,9 @@ function Markdown({ text }: { text: string }) {
 }
 
 export default function StudentPage() {
+  const [courses, setCourses] = useState<CourseProfile[]>([]);
+  const [courseId, setCourseId] = useState<string>("");
+  const [profileId, setProfileId] = useState<string>("");
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -102,6 +110,11 @@ export default function StudentPage() {
   const [joined, setJoined] = useState<JoinedWorkspace | null>(null);
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  const selectedCourse = useMemo(
+    () => courses.find((c) => c.course_id === courseId) ?? null,
+    [courses, courseId],
+  );
 
   // 匿名参与码：浏览器随机生成、本地保存，不含姓名学号；
   // 教师端只允许对它做人数统计，看不到对话内容。
@@ -140,22 +153,47 @@ export default function StudentPage() {
   const hintsExhausted =
     selected !== null && lastHintLevel !== null && lastHintLevel >= selected.max_hint_level;
 
+  // 加载课程列表，默认选中数学分析（如果存在），否则选第一门
   useEffect(() => {
-    const url = `${API_BASE}/api/v1/problems?course_id=${COURSE_ID}&course_profile_id=${PROFILE_ID}`;
+    fetch(`${API_BASE}/api/v1/courses`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json() as Promise<CourseProfile[]>;
+      })
+      .then((list) => {
+        setCourses(list);
+        const defaultCourse =
+          list.find((c) => c.course_id === "mathematical_analysis") ?? list[0] ?? null;
+        if (defaultCourse) {
+          setCourseId(defaultCourse.course_id);
+          setProfileId(defaultCourse.profile_id);
+        }
+      })
+      .catch((cause) =>
+        setLoadError(
+          `无法连接后端 API（${API_BASE}）。请先按 README 启动 PostgreSQL 与 uvicorn。原因：${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      );
+  }, []);
+
+  // 课程切换时重新加载题目
+  useEffect(() => {
+    if (!courseId || !profileId) return;
+    setSelectedId(null);
+    setItems([]);
+    const url = `${API_BASE}/api/v1/problems?course_id=${courseId}&course_profile_id=${profileId}`;
     fetch(url)
       .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json() as Promise<ProblemSummary[]>;
       })
       .then(setProblems)
       .catch((cause) =>
         setLoadError(
-          `无法连接后端 API（${API_BASE}）。请先按 README 启动 PostgreSQL 与 uvicorn，并已完成 CoursePack 导入。原因：${cause instanceof Error ? cause.message : String(cause)}`,
+          `无法加载题目（${courseId}）。原因：${cause instanceof Error ? cause.message : String(cause)}`,
         ),
       );
-  }, []);
+  }, [courseId, profileId]);
 
   useEffect(() => {
     timelineRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -178,8 +216,8 @@ export default function StudentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           request_id: crypto.randomUUID(),
-          course_id: COURSE_ID,
-          course_profile_id: PROFILE_ID,
+          course_id: courseId,
+          course_profile_id: profileId,
           problem,
           interaction_mode: mode,
           // 已加入作业时：带上匿名参与码与工作区归属，供教师端做班级聚合
@@ -254,11 +292,35 @@ export default function StudentPage() {
       <header className="studentTop">
         <a href="/" className="backLink">← 返回平台首页</a>
         <p className="eyebrow">Student Mirror · 学生端</p>
-        <h1>数学分析课程智能体</h1>
+        <h1>{selectedCourse?.mirror_name ?? "课程智能体"}</h1>
         <p>
           卡住了先要提示，不直接要答案——系统按提示阶梯一级一级地给，
           每一次求助都会留下一条学习证据。
         </p>
+        {courses.length > 0 && (
+          <div className="courseSelector">
+            <label htmlFor="courseSelect">选择课程：</label>
+            <select
+              id="courseSelect"
+              value={courseId}
+              onChange={(event) => {
+                const id = event.target.value;
+                const course = courses.find((c) => c.course_id === id);
+                if (course) {
+                  setCourseId(course.course_id);
+                  setProfileId(course.profile_id);
+                }
+              }}
+              disabled={busy}
+            >
+              {courses.map((course) => (
+                <option key={course.course_id} value={course.course_id}>
+                  {course.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </header>
 
       {loadError && <div className="banner">{loadError}</div>}

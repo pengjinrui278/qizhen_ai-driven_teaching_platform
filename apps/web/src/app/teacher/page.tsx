@@ -3,8 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
-const COURSE_ID = "mathematical_analysis";
-const PROFILE_ID = "chen-jixiu-3e";
+
+type CourseProfile = {
+  course_id: string;
+  display_name: string;
+  mirror_name: string;
+  profile_id: string;
+};
 
 type Workspace = {
   workspace_id: string;
@@ -198,6 +203,9 @@ function FindingCard({
 }
 
 export default function TeacherPage() {
+  const [courses, setCourses] = useState<CourseProfile[]>([]);
+  const [courseId, setCourseId] = useState<string>("");
+  const [profileId, setProfileId] = useState<string>("");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -209,6 +217,21 @@ export default function TeacherPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newClassLabel, setNewClassLabel] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // 加载课程列表，默认选中数学分析（如果存在），否则选第一门
+  useEffect(() => {
+    void apiJson<CourseProfile[]>("/api/v1/courses")
+      .then((list) => {
+        setCourses(list);
+        const defaultCourse =
+          list.find((c) => c.course_id === "mathematical_analysis") ?? list[0] ?? null;
+        if (defaultCourse) {
+          setCourseId(defaultCourse.course_id);
+          setProfileId(defaultCourse.profile_id);
+        }
+      })
+      .catch((cause) => setError(`无法加载课程列表：${messageOf(cause)}`));
+  }, []);
 
   const loadWorkspaces = useCallback(async () => {
     try {
@@ -246,7 +269,7 @@ export default function TeacherPage() {
 
   async function createWorkspace(event: React.FormEvent) {
     event.preventDefault();
-    if (!newTitle.trim() || busy) {
+    if (!newTitle.trim() || !courseId || busy) {
       return;
     }
     setBusy(true);
@@ -255,8 +278,8 @@ export default function TeacherPage() {
       const created = await apiJson<Workspace>("/api/v1/workspaces", {
         method: "POST",
         body: JSON.stringify({
-          course_id: COURSE_ID,
-          course_profile_id: PROFILE_ID,
+          course_id: courseId,
+          course_profile_id: profileId,
           title: newTitle.trim(),
           class_label: newClassLabel.trim(),
         }),
@@ -377,6 +400,27 @@ export default function TeacherPage() {
         <aside className="teacherPanel">
           <h2>作业工作区（{workspaces.length}）</h2>
           <form className="createForm" onSubmit={createWorkspace}>
+            {courses.length > 0 && (
+              <select
+                className="noteInput"
+                value={courseId}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const course = courses.find((c) => c.course_id === id);
+                  if (course) {
+                    setCourseId(course.course_id);
+                    setProfileId(course.profile_id);
+                  }
+                }}
+                disabled={busy}
+              >
+                {courses.map((course) => (
+                  <option key={course.course_id} value={course.course_id}>
+                    {course.display_name}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               className="noteInput"
               placeholder="作业名称，例如：第一章作业"
@@ -391,7 +435,7 @@ export default function TeacherPage() {
               onChange={(event) => setNewClassLabel(event.target.value)}
               disabled={busy}
             />
-            <button type="submit" className="btn btnPrimary" disabled={busy || !newTitle.trim()}>
+            <button type="submit" className="btn btnPrimary" disabled={busy || !newTitle.trim() || !courseId}>
               创建工作区
             </button>
           </form>

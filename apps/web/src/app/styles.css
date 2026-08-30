@@ -29,6 +29,17 @@ article, .flow { border: 1px solid #25473a; background: rgba(12, 31, 24, .76); b
 .studentTop { margin-bottom: 26px; }
 .studentTop h1 { font-size: clamp(28px, 4.5vw, 46px); }
 .backLink { display: inline-block; color: #71e0ad; text-decoration: none; font-size: 14px; margin-bottom: 14px; }
+.courseSelector { margin-top: 18px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.courseSelector select, .createForm select {
+  background: rgba(9, 24, 19, .9);
+  border: 1px solid #25473a;
+  border-radius: 10px;
+  color: #edf8f3;
+  padding: 8px 12px;
+  font: inherit;
+  min-width: 180px;
+}
+.createForm select { width: 100%; }
 .banner { border: 1px solid #7c3b4d; background: #2a1219; color: #ffb9c6; border-radius: 14px; padding: 12px 16px; margin: 14px 0; font-size: 14px; line-height: 1.6; }
 .studentShell { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
 .problemPanel { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; border: 1px solid #25473a; background: rgba(12, 31, 24, .76); border-radius: 20px; padding: 20px; }
