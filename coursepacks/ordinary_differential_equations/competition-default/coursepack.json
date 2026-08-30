@@ -1,0 +1,15 @@
+{
+  "coursepack_id": "ode-competition-default",
+  "status": "chapter_build",
+  "course_id": "ordinary_differential_equations",
+  "profile_id": "competition-default",
+  "textbook": {
+    "title": "常微分方程",
+    "edition": 1,
+    "authors": ["团队自编"],
+    "publisher": "团队内部试用版"
+  },
+  "content_policy": "本包全部为团队自编内容：知识节点是公共数学事实的团队转述，题目为全自编；不含教材原文，不含原书习题全文。",
+  "knowledge_files": ["knowledge.ch1.jsonl"],
+  "problems_files": ["problems.ch1.jsonl"]
+}
