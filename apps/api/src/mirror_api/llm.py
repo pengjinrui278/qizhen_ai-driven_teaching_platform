@@ -61,7 +61,43 @@ class StubMirrorModel:
             return self._concept(context)
         if mode == "solution_review":
             return self._review(context)
+        if mode == "hint_ladder_generation":
+            return self._hint_ladder(context)
         return "暂不支持该交互模式。"
+
+    def _hint_ladder(self, context: MirrorContext) -> str:
+        knowledge = context.knowledge or []
+        titles = ", ".join(node.get("title", "") for node in knowledge[:2]) or "相关定义"
+        return json.dumps(
+            [
+                {
+                    "level": 1,
+                    "type": "direction",
+                    "content": f"先通读题目，把已知条件和要证/求的结论用式子写下来；可参考{titles}。",
+                },
+                {
+                    "level": 2,
+                    "type": "method",
+                    "content": "判断这道题属于哪种基本类型：计算、证明还是判断？列出可能用到的定理或公式名称。",
+                },
+                {
+                    "level": 3,
+                    "type": "subgoal",
+                    "content": "把原问题拆成两个更小的子问题：先处理最内层的运算或最基础的定义。",
+                },
+                {
+                    "level": 4,
+                    "type": "condition",
+                    "content": "检查题目中的特殊条件（如边界、定义域、零点、可逆性），它们通常是突破口。",
+                },
+                {
+                    "level": 5,
+                    "type": "verification",
+                    "content": "得到中间结果后，回代条件验证是否合理；再尝试把各步串成完整论证。",
+                },
+            ],
+            ensure_ascii=False,
+        )
 
     def _hint(self, context: MirrorContext) -> str:
         if context.problem_statement is None:
@@ -144,6 +180,15 @@ class OpenAICompatibleModel:
             "full_solution": "学生已明确请求完整解答思路：请给出完整、清晰、逐步推进的解答。",
             "solution_review": "学生在请求解答自查：请依据常见错误清单指出需要核对的方向，不要直接重写完整解答。",
             "concept_explanation": "学生在问知识点：请依据课程知识准确讲解，如有常见误用一并提醒。",
+            "hint_ladder_generation": (
+                "你正在为一道学生上传的错题生成提示阶梯。"
+                "输出必须是严格的 JSON 数组，数组元素为对象：{\"level\": int, \"type\": \"direction|method|subgoal|condition|verification\", \"content\": \"...\"}。"
+                "要求："
+                "1) 共 5 级提示，level 从 1 到 5；"
+                "2) 每级只给出引导性问题、子目标或可参考的定义/定理名称，严禁直接给出答案、数值结果或完整推导步骤；"
+                "3) 内容用中文；"
+                "4) 只输出 JSON，不要 markdown 代码块，不要解释。"
+            ),
             "teacher_candidate_insight": (
                 "本次是教师/TA 端班级现象分析模式，输出对象是教学团队而非学生："
                 "只能依据下方聚合统计推断，严禁虚构统计之外的数字；"

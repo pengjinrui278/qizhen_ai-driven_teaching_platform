@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -83,9 +84,36 @@ class MirrorPipeline:
             uncertainty.append("该课程尚未导入任何 CoursePack，回答仅能依据通用策略。")
 
         problem = find_problem(session, pack_ids, request.problem)
+        is_student_upload = problem is not None and problem.provenance == "student_submitted"
         if problem is not None and not runtime_allowed(problem):
-            uncertainty.append("命中的题目授权范围不允许运行时使用，已按未命中处理。")
-            problem = None
+            # 学生上传题允许进入管线（渐进提示 / 完整解答门控），但给出提示
+            if is_student_upload:
+                uncertainty.append("该题为同学上传，正在审核中，仅提供渐进提示。")
+            else:
+                uncertainty.append("命中的题目授权范围不允许运行时使用，已按未命中处理。")
+                problem = None
+
+        # 学生上传题在未审批前禁止直接请求完整解答
+        if (
+            is_student_upload
+            and request.interaction_mode is InteractionMode.FULL_SOLUTION
+            and problem is not None
+            and problem.review.get("status") != "student_approved"
+        ):
+            return CourseMirrorResponse(
+                request_id=request.request_id,
+                course_id=request.course_id,
+                answer="该题尚未完成审校，暂不提供完整解答。你可以继续请求下一级提示，或回顾相关知识点。",
+                answer_type="full_solution",
+                hint_level=None,
+                citations=[],
+                harness=HarnessResult(
+                    status="passed",
+                    checks=[HarnessCheck(name="student_upload_solution_gate", status="passed", detail="已阻止未审批上传题直接泄露完整解答")],
+                ),
+                evidence=[],
+                uncertainty=["学生上传题需审校通过后才开放完整解答。"],
+            )
 
         if problem is not None:
             knowledge = [node for node in knowledge_for_problem(session, problem) if rag_allowed(node)]
@@ -263,6 +291,23 @@ class MirrorPipeline:
                     name="answer_leakage",
                     status="failed" if leaked_steps else "passed",
                     detail="提示中泄露了解法关键步骤" if leaked_steps else "提示未泄露解法关键步骤",
+                )
+            )
+
+        # 动态安全栏：学生上传题的提示中禁止出现直接答案表达。
+        if request.interaction_mode in HINT_MODES and problem is not None and problem.provenance == "student_submitted":
+            direct_answer_patterns = [
+                r"答案是\s*[：:]",
+                r"(?<!不)等于\s*[：:]",
+                r"(?<!不)为\s*[：:]",
+                r"[\d\s]+\s*[=＝]\s*[\d\s]+",
+            ]
+            leaked = any(re.search(p, answer) for p in direct_answer_patterns)
+            checks.append(
+                HarnessCheck(
+                    name="dynamic_hint_safety",
+                    status="failed" if leaked else "passed",
+                    detail="上传题提示包含直接答案表达" if leaked else "上传题提示未直接泄露答案",
                 )
             )
 
