@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import retrieval, workspace_service
+from . import retrieval, upload_service, workspace_service
 from .config import get_settings
 from .db import init_db, make_engine, make_session_factory
 from .domain import (
@@ -15,6 +15,9 @@ from .domain import (
     HarnessCheck,
     HarnessResult,
     LearningEvidenceDraft,
+    StudentProblemReviewRequest,
+    StudentUploadRequest,
+    StudentUploadResponse,
     TaDecisionRequest,
     TeacherDecisionRequest,
     WorkspaceCreateRequest,
@@ -287,3 +290,71 @@ async def workspace_report(workspace_id: str, db: Session = Depends(get_db)) -> 
         return workspace_service.build_report(db, workspace_id)
     except MirrorError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+# ---------------------------------------------------------------- 学生错题上传
+
+
+@app.post("/api/v1/student-uploads", response_model=StudentUploadResponse)
+async def upload_student_problem(
+    request: StudentUploadRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+) -> StudentUploadResponse:
+    """学生上传错题：识别/入库、生成提示阶梯、返回首级提示与相似题。"""
+    pipeline: MirrorPipeline = http_request.app.state.pipeline
+    try:
+        return upload_service.handle_upload(db, request, pipeline.model, pipeline)
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    except upload_service.UploadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+@app.get("/api/v1/student-uploads/pending")
+async def list_pending_uploads(
+    course_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """列出学生上传题（供教师/TA 审校）。"""
+    problems = upload_service.list_pending_uploads(db, course_id=course_id)
+    return [
+        {
+            "coursepack_id": problem.coursepack_id,
+            "problem_id": problem.problem_id,
+            "statement": problem.statement,
+            "answer_type": problem.answer_type,
+            "review": problem.review,
+            "rights": problem.rights,
+        }
+        for problem in problems
+    ]
+
+
+@app.post("/api/v1/student-uploads/{coursepack_id}/{problem_id}/review")
+async def review_student_problem(
+    coursepack_id: str,
+    problem_id: str,
+    request: StudentProblemReviewRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """教师/TA 对学生上传题进行审校。"""
+    try:
+        if request.decision == "approved":
+            problem = upload_service.approve_student_problem(
+                db, coursepack_id, problem_id, request.note
+            )
+        else:
+            problem = upload_service.reject_student_problem(
+                db, coursepack_id, problem_id, request.note
+            )
+    except MirrorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    except upload_service.UploadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    return {
+        "coursepack_id": problem.coursepack_id,
+        "problem_id": problem.problem_id,
+        "review": problem.review,
+        "rights": problem.rights,
+    }
