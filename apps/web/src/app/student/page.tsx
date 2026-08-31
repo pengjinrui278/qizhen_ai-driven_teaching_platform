@@ -60,6 +60,17 @@ type ChatItem =
   | { kind: "user"; label: string }
   | { kind: "agent"; response: MirrorResponse };
 
+type UploadedProblem = {
+  request_id: string;
+  problem_id: string;
+  coursepack_id: string;
+  recognized: boolean;
+  quality_status: "approved" | "pending" | "rejected";
+  max_hint_level: number;
+  first_hint: MirrorResponse;
+  similar_problems: ProblemSummary[];
+};
+
 type JoinedWorkspace = {
   workspace_id: string;
   title: string;
@@ -109,6 +120,9 @@ export default function StudentPage() {
   const [participantCode, setParticipantCode] = useState<string | null>(null);
   const [joined, setJoined] = useState<JoinedWorkspace | null>(null);
   const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [uploadText, setUploadText] = useState("");
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadedProblem, setUploadedProblem] = useState<UploadedProblem | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const selectedCourse = useMemo(
@@ -287,6 +301,59 @@ export default function StudentPage() {
     localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
   }
 
+  async function uploadWrongProblem(event: React.FormEvent) {
+    event.preventDefault();
+    const text = uploadText.trim();
+    if (!text || uploadBusy || !courseId || !profileId) return;
+    setUploadBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/student-uploads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: crypto.randomUUID(),
+          course_id: courseId,
+          course_profile_id: profileId,
+          problem: { text },
+          ...(participantCode ? { participant_code: participantCode } : {}),
+          ...(joined ? { assignment_workspace_id: joined.workspace_id } : {}),
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { detail?: string };
+        throw new Error(body.detail ?? `HTTP ${response.status}`);
+      }
+      const data = (await response.json()) as UploadedProblem;
+      setUploadedProblem(data);
+      setUploadText("");
+      // 将上传题加入左侧列表并选中，便于继续 next_hint / full_solution
+      const summary: ProblemSummary = {
+        problem_id: data.problem_id,
+        statement: text,
+        answer_type: "mixed",
+        max_hint_level: data.max_hint_level,
+      };
+      setProblems((previous) => [summary, ...previous]);
+      setSelectedId(data.problem_id);
+      setItems((previous) => [
+        ...previous,
+        { kind: "user", label: `我上传了一道错题：${text.slice(0, 80)}${text.length > 80 ? "…" : ""}` },
+        { kind: "agent", response: data.first_hint },
+      ]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setUploadBusy(false);
+    }
+  }
+
+  const QUALITY_STATUS_LABELS: Record<string, string> = {
+    approved: "已通过自动审核",
+    pending: "等待审校",
+    rejected: "未通过审核",
+  };
+
   return (
     <main className="studentMain">
       <header className="studentTop">
@@ -336,7 +403,7 @@ export default function StudentPage() {
                 <div className="joinedRow">
                   ✅ 已加入作业：{joined.title}（{joined.join_code}）
                 </div>
-                <button type="button" className="btn btnSmall" onClick={leaveAssignment} disabled={busy}>
+                <button type="button" className="btn btnSmall" onClick={leaveAssignment} disabled={busy || uploadBusy}>
                   退出这次作业
                 </button>
               </>
@@ -347,9 +414,9 @@ export default function StudentPage() {
                   placeholder="输入老师发的加入码，挂到作业"
                   value={joinCodeInput}
                   onChange={(event) => setJoinCodeInput(event.target.value)}
-                  disabled={busy}
+                  disabled={busy || uploadBusy}
                 />
-                <button type="submit" className="btn" disabled={busy || !joinCodeInput.trim()}>
+                <button type="submit" className="btn" disabled={busy || uploadBusy || !joinCodeInput.trim()}>
                   加入作业
                 </button>
               </form>
@@ -358,6 +425,43 @@ export default function StudentPage() {
               参与码是随机生成的，不含姓名学号；加入作业后老师只能看到班级层面的统计，
               看不到你的对话内容。
             </small>
+          </div>
+
+          <div className="assignmentCard uploadPanel">
+            <small>上传一道你做错的题，智能体帮你分析错因、推荐同类练习。</small>
+            <form className="joinForm" onSubmit={uploadWrongProblem}>
+              <textarea
+                className="questionInput uploadTextarea"
+                placeholder="把题目内容粘贴到这里（支持纯文本 / LaTeX）"
+                value={uploadText}
+                onChange={(event) => setUploadText(event.target.value)}
+                disabled={uploadBusy}
+                rows={4}
+              />
+              <button
+                type="submit"
+                className="btn btnPrimary"
+                disabled={uploadBusy || !uploadText.trim()}
+              >
+                {uploadBusy ? "识别中…" : "上传错题"}
+              </button>
+            </form>
+            <small className="privacyHint">
+              上传即视为授权本平台用于当前课程答疑与题库建设。
+            </small>
+
+            {uploadedProblem && (
+              <div className="uploadStatus">
+                <span className={`chip ${uploadedProblem.quality_status}`}>
+                  {QUALITY_STATUS_LABELS[uploadedProblem.quality_status] ?? uploadedProblem.quality_status}
+                </span>
+                {uploadedProblem.recognized ? (
+                  <span className="chip">已匹配到题库中的相似题</span>
+                ) : (
+                  <span className="chip">已作为新题收录</span>
+                )}
+              </div>
+            )}
           </div>
 
           <h2>第一章题库（{problems.length}）</h2>
@@ -505,6 +609,29 @@ export default function StudentPage() {
                   </button>
                 </form>
               </div>
+
+              {uploadedProblem && selectedId === uploadedProblem.problem_id && uploadedProblem.similar_problems.length > 0 && (
+                <div className="similarPanel">
+                  <strong>同类练习（可选）</strong>
+                  <div className="similarList">
+                    {uploadedProblem.similar_problems.map((problem) => (
+                      <button
+                        key={problem.problem_id}
+                        type="button"
+                        className="problemCard"
+                        onClick={() => selectProblem(problem)}
+                        disabled={busy || uploadBusy}
+                      >
+                        <span className="problemStatement">{problem.statement}</span>
+                        <small>
+                          {ANSWER_TYPE_NAMES[problem.answer_type] ?? problem.answer_type} ·{" "}
+                          {problem.max_hint_level} 级提示
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </section>

@@ -766,3 +766,28 @@ article,
   .teacherShell { grid-template-columns: 1fr; }
   .teacherPanel { position: static; max-height: none; }
 }
+
+/* 学生错题上传 */
+.uploadPanel .joinForm { flex-direction: column; align-items: stretch; }
+.uploadTextarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  line-height: 1.6;
+}
+.uploadStatus { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip.approved { border-color: rgba(76, 175, 147, 0.5); color: var(--success); background: rgba(76, 175, 147, 0.12); }
+.chip.pending { border-color: rgba(230, 162, 60, 0.5); color: var(--warning); background: rgba(230, 162, 60, 0.12); }
+.chip.rejected { border-color: rgba(214, 107, 117, 0.5); color: var(--danger); background: rgba(214, 107, 117, 0.1); }
+
+.similarPanel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(88, 159, 208, 0.25);
+  border-radius: 16px;
+}
+.similarPanel > strong { display: block; margin-bottom: 10px; color: var(--title-blue); font-size: 14px; }
+.similarList { display: flex; flex-direction: column; gap: 8px; }
+.similarList .problemCard { text-align: left; }
