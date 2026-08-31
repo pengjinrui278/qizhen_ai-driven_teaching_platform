@@ -163,3 +163,54 @@ def search_textbook_chunks(
 
 def rag_allowed_chunk(chunk: TextbookChunk) -> bool:
     return bool(chunk.source.get("allowed_for_rag"))
+
+
+def find_similar_problems(
+    session: Session,
+    pack_ids: list[str],
+    text: str,
+    knowledge_ids: list[str],
+    limit: int = 3,
+    exclude_ref: tuple[str, str] | None = None,
+) -> list[Problem]:
+    """为上传的错题推荐同类已授权练习题。
+
+    计分：共享 knowledge_id +3；statement 命中查询 token +1。
+    只返回 ``rights.allowed_for_runtime`` 为真的题目。
+    """
+    if not pack_ids or not text.strip():
+        return []
+
+    candidates = session.execute(
+        select(Problem).where(
+            Problem.coursepack_id.in_(pack_ids),
+        )
+    ).scalars().all()
+
+    tokens = _query_tokens(text)
+    knowledge_set = set(knowledge_ids)
+    scored: list[tuple[int, Problem]] = []
+
+    for problem in candidates:
+        if not runtime_allowed(problem):
+            continue
+        if exclude_ref and (problem.coursepack_id, problem.problem_id) == exclude_ref:
+            continue
+
+        score = 0
+        problem_knowledge = session.execute(
+            select(ProblemKnowledge.knowledge_id).where(
+                ProblemKnowledge.coursepack_id == problem.coursepack_id,
+                ProblemKnowledge.problem_id == problem.problem_id,
+            )
+        ).scalars().all()
+        score += len(knowledge_set & set(problem_knowledge)) * 3
+
+        statement = problem.statement or ""
+        score += sum(1 for token in tokens if token in statement)
+
+        if score > 0:
+            scored.append((score, problem))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [problem for _, problem in scored[:limit]]
