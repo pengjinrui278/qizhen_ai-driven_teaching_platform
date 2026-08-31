@@ -97,6 +97,40 @@ class CourseMirrorResponse(BaseModel):
     uncertainty: list[str] = Field(default_factory=list)
 
 
+class StudentUploadRequest(BaseModel):
+    request_id: str
+    course_id: str
+    course_profile_id: str
+    problem: ProblemInput
+    participant_code: str | None = Field(default=None, max_length=64)
+    assignment_workspace_id: str | None = None
+
+
+class ProblemSummary(BaseModel):
+    problem_id: str
+    coursepack_id: str
+    statement: str
+    answer_type: str
+    max_hint_level: int = Field(default=0, ge=0, le=7)
+
+
+class StudentUploadResponse(BaseModel):
+    request_id: str
+    course_id: str
+    problem_id: str
+    coursepack_id: str
+    recognized: bool
+    quality_status: Literal["approved", "pending", "rejected"]
+    max_hint_level: int = Field(default=0, ge=0, le=7)
+    first_hint: CourseMirrorResponse
+    similar_problems: list[ProblemSummary] = Field(default_factory=list)
+
+
+class StudentProblemReviewRequest(BaseModel):
+    decision: Literal["approved", "rejected"]
+    note: str | None = Field(default=None, max_length=512)
+
+
 class WorkspaceCreateRequest(BaseModel):
     course_id: str
     course_profile_id: str
