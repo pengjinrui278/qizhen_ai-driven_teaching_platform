@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { copyText } from "../../lib/id";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 type CourseProfile = {
@@ -371,7 +373,8 @@ export default function TeacherPage() {
   }
 
   function copyJoinCode(code: string) {
-    void navigator.clipboard?.writeText(code).then(() => {
+    void copyText(code).then((ok) => {
+      if (!ok) return;
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
     });

@@ -6,6 +6,8 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { randomId } from "../../lib/id";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 type CourseProfile = {
@@ -135,7 +137,7 @@ export default function StudentPage() {
   useEffect(() => {
     let code = localStorage.getItem(PARTICIPANT_CODE_KEY);
     if (!code) {
-      code = crypto.randomUUID();
+      code = randomId();
       localStorage.setItem(PARTICIPANT_CODE_KEY, code);
     }
     setParticipantCode(code);
@@ -229,7 +231,7 @@ export default function StudentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          request_id: crypto.randomUUID(),
+          request_id: randomId(),
           course_id: courseId,
           course_profile_id: profileId,
           problem,
@@ -312,7 +314,7 @@ export default function StudentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          request_id: crypto.randomUUID(),
+          request_id: randomId(),
           course_id: courseId,
           course_profile_id: profileId,
           problem: { text },
