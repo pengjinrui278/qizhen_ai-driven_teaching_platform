@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./styles.css";
 
 export const metadata: Metadata = {
-  title: "Learning Mirror Platform",
-  description: "Student Mirror, Course Mirror and Assignment Workspace"
+  title: "学镜 Learning Mirror",
+  description: "面向大学数理课程的个性化学习智能体：Student Mirror、Course Mirror、Assignment Workspace"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

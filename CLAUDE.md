@@ -2,7 +2,7 @@
 
 ## 项目概况
 
-本仓库是**第二届全国高校“启真问智”教育教学人工智能大赛**（浙江大学主办）的参赛作品仓库：面向数学类课程的学习镜像平台（Learning Mirror，暂定名），含 Student Mirror / Course Mirror / Assignment Workspace 三大模块，覆盖学生端、课程建设端、教师/TA 端。
+本仓库是**第二届全国高校“启真问智”教育教学人工智能大赛**（浙江大学主办）的参赛作品仓库：面向数学类课程的学习镜像平台（**学镜 / Learning Mirror**），含 Student Mirror / Course Mirror / Assignment Workspace 三大模块，覆盖学生端、课程建设端、教师/TA 端。
 
 关键文档：
 
