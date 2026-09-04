@@ -1,20 +1,23 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 
+// 生产：静态导出到 dist/，由 nginx 提供服务并反代 /api
+// 开发：用默认 .next/ 并把 /api 代理到本机 uvicorn
 const nextConfig = {
-  // 只在生产构建时启用静态导出到 dist/；开发时用默认 .next/，避免 dev server 读错目录
-  ...(isProd ? { output: "export", distDir: "dist" } : {}),
+  ...(isProd
+    ? { output: "export", distDir: "dist" }
+    : {
+        async rewrites() {
+          return [
+            {
+              source: "/api/:path*",
+              destination: "http://localhost:8000/api/:path*",
+            },
+          ];
+        },
+      }),
   images: {
     unoptimized: true,
-  },
-  // 开发时代理 /api 到后端 uvicorn（生产环境由 nginx 反代）
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
-      },
-    ];
   },
 };
 

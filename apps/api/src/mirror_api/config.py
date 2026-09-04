@@ -5,12 +5,16 @@
 """
 
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # apps/api/src/mirror_api/config.py -> 仓库根目录
-REPO_ROOT = Path(__file__).resolve().parents[4]
+_PARENTS = Path(__file__).resolve().parents
+# 本地仓库布局为 apps/api/src/mirror_api/config.py（parents[4] 是仓库根）；
+# 生产容器里源码放在 /app/src/mirror_api/，层级更浅，回退到最上层目录。
+REPO_ROOT = _PARENTS[4] if len(_PARENTS) > 4 else _PARENTS[-2]
 
 
 class Settings(BaseSettings):
@@ -24,7 +28,9 @@ class Settings(BaseSettings):
     coursepack_root: Path = REPO_ROOT / "coursepacks"
 
     # CORS 来源；生产环境通常由 nginx 同域代理，可设为空字符串。
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # NoDecode：关闭 pydantic-settings 对复杂类型的 JSON 解码，
+    # 否则 MIRROR_CORS_ORIGINS="" 会被当成非法 JSON 而报错。
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
     # 模型网关：默认 stub（确定性占位，不需要密钥，便于测试与离线演示）。
     # 接入真实大模型时设 MIRROR_LLM_PROVIDER=openai_compatible 并配置其余三项
