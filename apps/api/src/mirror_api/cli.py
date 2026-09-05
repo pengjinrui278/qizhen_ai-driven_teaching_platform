@@ -3,7 +3,7 @@
 子命令：
 
 - ``init-db``：建表（阶段 1 用 create_all；迁移工具在阶段 3 引入）；
-- ``seed-profiles``：把 ``profiles/*.json`` 五门课程注册表写入数据库；
+- ``seed-profiles``：把 ``profiles/*.json`` 课程注册表写入数据库；
 - ``import-coursepack <目录>``：导入一个 CoursePack；
 - ``import-all-coursepacks``：扫描 coursepacks/ 下全部 CoursePack 导入；
 - ``seed-demo-workspace``：播种演示作业工作区（模拟多名学生求助）；

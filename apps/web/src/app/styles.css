@@ -331,6 +331,141 @@ article,
   box-shadow: 0 4px 16px rgba(88, 159, 208, 0.2);
 }
 
+/* 学生导航 */
+.studentNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 8px 10px 8px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.studentBrand {
+  color: var(--title-blue);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.studentNavLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.studentNavLink {
+  padding: 8px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.studentNavLink.active,
+.studentNavLink:hover {
+  background: var(--title-blue);
+  color: #fff;
+}
+
+.studentHome { padding-bottom: 72px; }
+
+.trackGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.trackCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 280px;
+  padding: 28px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.trackCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: rgba(88, 159, 208, 0.55);
+}
+
+.trackKicker {
+  color: var(--title-blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.trackCard h2 {
+  font-size: clamp(22px, 3vw, 28px);
+  margin: 0;
+}
+
+.trackCard p {
+  margin: 0;
+  flex: 1;
+}
+
+.trackTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+}
+
+.trackTags li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(152, 203, 234, 0.28);
+  color: var(--title-blue-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trackAction {
+  color: var(--title-blue);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.homeNote {
+  margin-top: 24px;
+  padding: 18px 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.homeNote strong { color: var(--title-blue); }
+
+@media (max-width: 800px) {
+  .trackGrid { grid-template-columns: 1fr; }
+  .studentNav { flex-direction: column; align-items: stretch; border-radius: 20px; padding: 12px; }
+  .studentNavLinks { justify-content: flex-start; }
+}
+
 .btn {
   border-radius: 999px;
   border: 1px solid rgba(88, 159, 208, 0.45);

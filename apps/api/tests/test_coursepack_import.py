@@ -17,7 +17,9 @@ PROFILE = "chen-jixiu-3e"
 
 def test_seed_profiles_covers_five_courses(session):
     courses = session.query(Course).all()
-    assert len(courses) == 5
+    ids = {c.course_id for c in courses}
+    assert len(courses) == 6
+    assert "ai_literacy" in ids
     flagship = [c for c in courses if c.stage == "flagship"]
     assert [c.course_id for c in flagship] == [COURSE]
 

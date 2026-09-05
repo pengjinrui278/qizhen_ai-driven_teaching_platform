@@ -1,0 +1,29 @@
+{
+  "course_id": "ai_literacy",
+  "display_name": "AI 教学",
+  "mirror_name": "AI Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": ["definition", "method", "counterexample", "workflow"],
+  "capabilities": ["progressive_hint", "learning_evidence", "prompt_review"],
+  "harnesses": ["answer_leakage"],
+  "source_refs": [
+    {
+      "source_id": "team-authored-ai-literacy",
+      "title": "AI 教学自编语料（Vibe coding / Agent 使用）",
+      "locator": "coursepacks/ai_literacy/competition-default",
+      "rights": {
+        "allowed_for_runtime": true,
+        "allowed_for_rag": true,
+        "allowed_for_eval": true,
+        "allowed_for_training": false,
+        "license_note": "全部为团队自编教学材料，不含第三方教程原文。"
+      }
+    }
+  ],
+  "metadata": {
+    "track": "ai_teaching",
+    "modules": ["vibe_coding", "agent_use"],
+    "pedagogy": "最小有效提示；禁止把生成代码或现成工作流直接当作作业"
+  }
+}

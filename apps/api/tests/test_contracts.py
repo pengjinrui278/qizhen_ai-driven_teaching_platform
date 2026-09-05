@@ -8,8 +8,9 @@ client = TestClient(app)
 
 def test_five_course_mirrors_are_registered() -> None:
     profiles = load_course_profiles()
-    assert len(profiles) == 5
+    assert len(profiles) == 6
     assert profiles["mathematical_analysis"].stage == "flagship"
+    assert profiles["ai_literacy"].display_name == "AI 教学"
 
 
 def test_preview_uses_unified_contract() -> None:
