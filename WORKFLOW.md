@@ -1,7 +1,7 @@
 # 项目工作流
 
 本仓库是参赛作品的主仓库（GitHub：<https://github.com/pengjinrui278/qizhen_ai-driven_teaching_platform>）。
-**所有重大更新必须及时提交并推送到远程**，并在 `docs/progress/进度日志.md` 追加记录。
+**所有重大更新必须及时提交并推送到远程**，同步部署到生产 `http://124.220.5.87/`，并在 `docs/progress/进度日志.md` 追加记录。
 
 ## 分支策略
 
@@ -24,7 +24,19 @@
 
 一次提交只做一件事；提交信息说清改了什么、为什么。
 
-## 什么算“重大更新”（必须推送 + 记进度日志）
+## 生产同步（124.220.5.87）
+
+展示用服务器：`ubuntu@124.220.5.87`，代码目录 `/home/ubuntu/app`（保留服务器上的 `.env` 与 `certbot/`）。
+
+本机推送 `origin/main` 后执行：
+
+```bash
+ssh ubuntu@124.220.5.87 'bash /home/ubuntu/app/scripts/deploy-prod.sh'
+```
+
+脚本会 `git fetch && reset --hard origin/main`，`docker compose -f compose.prod.yml up -d --build`，再 `seed-profiles` + `import-all-coursepacks`。不要在服务器上改业务代码。
+
+## 什么算“重大更新”（必须推送 + 上线 + 记进度日志）
 
 1. 完成 `docs/development-roadmap.md` 中的一个阶段或里程碑；
 2. 智能体/模型能力有实质变化（新链路、新 Harness、Eval 通过率显著变化）；
