@@ -1,0 +1,13 @@
+{
+  "course_id": "university_physics",
+  "display_name": "大学物理",
+  "mirror_name": "大物 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": ["physical_model", "law", "derivation", "numerical_calculation", "experiment"],
+  "capabilities": ["progressive_hint", "model_selection", "calculation_review", "learning_evidence"],
+  "harnesses": ["unit_dimension", "model_assumptions", "direction_sign", "magnitude_check"],
+  "source_refs": [],
+  "metadata": {"scope_status": "教材与代表章节待确认"}
+}
+

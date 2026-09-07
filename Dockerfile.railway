@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+# Railway 一体化部署镜像：构建前端静态站点 + 运行 nginx + uvicorn。
+FROM node:20-slim AS web-builder
+WORKDIR /app
+
+# 安装 pnpm（与 packageManager 字段版本保持一致）
+RUN npm install -g pnpm@10.0.0
+
+# 先复制包管理文件，利用缓存层
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/web/package.json ./apps/web/package.json
+
+# 安装依赖
+RUN pnpm install --frozen-lockfile
+
+# 复制前端源码并构建静态导出
+COPY apps/web ./apps/web
+RUN pnpm build:web
+
+# ---------------------------------------------------------------
+FROM python:3.12-slim
+WORKDIR /app
+
+# 安装 nginx 与 supervisor（同容器内跑两个进程）
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nginx supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装后端依赖
+COPY apps/api/pyproject.toml ./
+RUN pip install --no-cache-dir -e ".[dev]"
+
+# 复制后端源码
+COPY apps/api/src ./src
+
+# 复制构建好的前端静态文件
+COPY --from=web-builder /app/apps/web/dist ./dist
+
+# 复制启动脚本与 nginx 配置模板
+COPY start-railway.sh ./start-railway.sh
+RUN chmod +x ./start-railway.sh
+
+ENV PYTHONPATH=/app/src
+# Railway 会自动注入 PORT，默认 8080
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["./start-railway.sh"]

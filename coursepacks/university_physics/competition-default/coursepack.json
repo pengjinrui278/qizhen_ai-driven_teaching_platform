@@ -1,0 +1,15 @@
+{
+  "coursepack_id": "physics-competition-default",
+  "status": "chapter_build",
+  "course_id": "university_physics",
+  "profile_id": "competition-default",
+  "textbook": {
+    "title": "大学物理",
+    "edition": 3,
+    "authors": ["未知"],
+    "publisher": "待定"
+  },
+  "content_policy": "本包全部为团队自编内容：知识节点是公共物理事实的团队转述，题目为全自编；不含教材原文，不含原书习题全文。",
+  "knowledge_files": ["knowledge.ch1.jsonl"],
+  "problems_files": ["problems.ch1.jsonl"]
+}

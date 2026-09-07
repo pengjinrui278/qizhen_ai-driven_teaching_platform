@@ -1,0 +1,15 @@
+{
+  "coursepack_id": "ai-literacy-competition-default",
+  "status": "chapter_build",
+  "course_id": "ai_literacy",
+  "profile_id": "competition-default",
+  "textbook": {
+    "title": "AI 教学：Vibe coding 与 Agent 使用",
+    "edition": 1,
+    "authors": ["学镜团队"],
+    "publisher": "团队自编"
+  },
+  "content_policy": "本包全部为团队自编教学材料：公共工程实践的团队转述与全自编情景题；不含第三方教程原文。allowed_for_training 全部关闭。",
+  "knowledge_files": ["knowledge.ch1.jsonl"],
+  "problems_files": ["problems.ch1.jsonl"]
+}
