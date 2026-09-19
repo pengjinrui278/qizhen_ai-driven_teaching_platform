@@ -51,8 +51,8 @@ services:
       MIRROR_STAFF_INVITE_CODE: ${MIRROR_STAFF_INVITE_CODE:?Set a private team invite code before deployment}
       MIRROR_SESSION_HOURS: ${MIRROR_SESSION_HOURS:-24}
       MIRROR_CLEANUP_INTERVAL_SECONDS: ${MIRROR_CLEANUP_INTERVAL_SECONDS:-60}
-      # 生产由 nginx 同域代理，CORS 来源置空
-      MIRROR_CORS_ORIGINS: ""
+      # 写请求会校验浏览器 Origin；显式允许正式域名及 www 域名。
+      MIRROR_CORS_ORIGINS: "https://learningmirror.cn,https://www.learningmirror.cn"
     volumes:
       - ./coursepacks:/app/coursepacks:ro
       - ./materials:/app/materials:ro

@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import Link from "next/link";
-import Pilot,{liveApi} from "./Pilot";
+import Pilot,{ApiError,liveApi} from "./Pilot";
 import {demoApi,demoCourses,PortalRole} from "./demoApi";
 import "./portal.css";
 type Row=Record<string,any>;
@@ -45,7 +45,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
   const details=teacher&&!section?await Promise.all(boxes.map(async(b:Row)=>({box:b,submissions:await api("/sandboxes/"+b.id+"/submissions")}))):[];
   if(live)setData({user,courses,boxes,...personal,details});
  }
- load().catch(e=>live&&setError(e.message));return()=>{live=false;};},[demo,role,reload,section]);
+ load().catch(e=>{if(!live)return;if(e instanceof ApiError&&e.status===401)setData({signedOut:true});else setError(e instanceof Error?e.message:String(e));});return()=>{live=false;};},[demo,role,reload,section]);
  const href=(s="")=>base+(s?"/"+s:"")+(demo?"?mode=demo":"?mode=live");
  const title=nav.find(n=>n[0]===section)?.[1]||"首页";
  const initial=teacher?section==="course"?"builder":section==="settings"?"account":"sandboxes":section==="observations"?"memory":section==="privacy"?"account":section==="assignments"?"sandboxes":section==="resources"?"resources":"learn";
@@ -66,7 +66,8 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  {demo?<a href={base+(section?"/"+section:"")+"?mode=live"}>登录</a>:data?.user&&<button onClick={async()=>{await liveApi("/auth/logout","POST");setReload(n=>n+1);}}>退出登录</button>}
  </div></header>
  <main className="portalContent">
- {demo===null?<p role="status">加载中…</p>:error||data?.wrongRole?<><div className="portalError" role="alert">{data?.wrongRole?"请使用教师账号登录":error}</div><Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/></>
+ {demo===null?<p role="status">加载中…</p>:data?.signedOut?<Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/>
+ :error||data?.wrongRole?<><div className="portalError" role="alert">{data?.wrongRole?"请使用教师账号登录":error}</div><Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/></>
  :!data?<p role="status">加载中…</p>
  :section?<Pilot key={role+"-"+section+"-"+demo+"-"+reload} initial={initial as any} portal={role} demonstration={demo} section={section}/>
  :<><div className="pageHeading"><h1>{teacher?"教学总览":"我的课程"}</h1><Link className="solidLink" href={href(teacher?"assignments":"learn")}>{teacher?"布置作业":"开始学习"}</Link></div>

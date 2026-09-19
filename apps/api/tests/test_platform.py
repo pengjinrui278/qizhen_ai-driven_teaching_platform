@@ -114,6 +114,26 @@ def test_auth_roles_csrf_and_cross_account(pilot):
     assert pilot.post("/api/v1/workspaces",json={}).status_code==410
 
 
+def test_production_domain_can_register_and_restore_a_real_session(pilot,monkeypatch):
+    monkeypatch.setenv("MIRROR_CORS_ORIGINS",
+                       "https://learningmirror.cn,https://www.learningmirror.cn")
+    body={"username":"domain_student","nickname":"域名学生",
+          "password":"a-real-test-password","role":"student","invite_code":""}
+    created=pilot.post("/api/v2/auth/register",json=body,
+                       headers={"Origin":"https://learningmirror.cn"})
+    assert created.status_code==200,created.text
+    assert created.json()["username"]=="domain_student"
+    assert created.cookies.get("mirror_session")
+    assert pilot.get("/api/v2/me").json()["nickname"]=="域名学生"
+
+    duplicate=pilot.post("/api/v2/auth/register",json=body,
+                         headers={"Origin":"https://www.learningmirror.cn"})
+    assert duplicate.status_code==409
+    rejected=pilot.post("/api/v2/auth/register",json={**body,"username":"evil_origin"},
+                        headers={"Origin":"https://example.com"})
+    assert rejected.status_code==403
+
+
 def test_hint_attempt_isolation_and_request_replay(pilot):
     register(pilot,"student_a")
     data=pilot.get("/api/v2/problems",params={"course_id":COURSE}).json()

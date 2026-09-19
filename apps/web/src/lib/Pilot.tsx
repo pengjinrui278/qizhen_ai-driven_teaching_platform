@@ -16,10 +16,14 @@ import {demoApi,PortalRole} from "./demoApi";
 type Row=Record<string,any>;
 type Tab="learn"|"memory"|"sandboxes"|"builder"|"account"|"resources";
 const labels:Row={conditions:"定理条件",quantifiers:"量词与依赖",construction:"辅助对象",emerging:"证据积累中",worth_attention:"值得关注",improving:"出现改善证据",weakened:"原假设减弱",approved:"已人工审校",needs_ta_review:"待人工审校",passed:"通过",failed:"未通过",not_run:"未执行",uncertain:"需核对",first_hint:"第一提示",next_hint:"继续提示",full_solution:"完整思路",concept_explanation:"知识答疑",solution_review:"证明自查"};
+export class ApiError extends Error{
+ status:number;
+ constructor(status:number,message:string){super(message);this.name="ApiError";this.status=status;}
+}
 export async function liveApi(path:string,method="GET",body?:unknown){
   const r=await fetch((process.env.NEXT_PUBLIC_API_BASE??"")+"/api/v2"+path,{method,credentials:"include",headers:{"Content-Type":"application/json","X-Mirror-Request":"1"},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const v=await r.json().catch(()=>({detail:"服务没有返回有效数据"}));
-  if(!r.ok)throw new Error(typeof v.detail==="string"?v.detail.replace(/Sandbox/gi,"作业"):"操作失败（"+r.status+"）");return v;
+  if(!r.ok)throw new ApiError(r.status,typeof v.detail==="string"?v.detail.replace(/Sandbox/gi,"作业"):"操作失败（"+r.status+"）");return v;
 }
 function MathText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$")}</ReactMarkdown>;}
 function download(name:string,value:unknown){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
@@ -41,7 +45,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
  const [small,setSmall]=useState(false);
  useEffect(()=>{const query=window.matchMedia("(max-width:680px)");const change=()=>setSmall(query.matches);change();query.addEventListener("change",change);return()=>query.removeEventListener("change",change);},[]);
  useEffect(()=>{if(user&&onLogin&&(portal!=="teacher"||staff))onLogin();},[user?.id]);
- useEffect(()=>{const c=new URLSearchParams(window.location.search).get("course");if(c)setCourse(c);Promise.all([api("/config"),api("/me").catch(e=>{if(e.message.includes("登录"))return null;throw e;})]).then(([c,u])=>{setConfig(c);setUser(u);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+ useEffect(()=>{const c=new URLSearchParams(window.location.search).get("course");if(c)setCourse(c);Promise.all([api("/config"),api("/me").catch(e=>{if(e instanceof ApiError&&e.status===401)return null;throw e;})]).then(([c,u])=>{setConfig(c);setUser(u);}).catch(e=>setError(e instanceof Error?e.message:String(e))).finally(()=>setLoading(false));},[]);
  useEffect(()=>{if(!user)return;let live=true;Promise.all([api("/courses"),api("/attempts"),api("/memory"),api("/sandboxes")]).then(([c,a,m,s])=>{if(live){setCourses(c);setAttempts(a);setMemory(m);setSandboxes(s);}}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[user]);
  useEffect(()=>{if(!user)return;let live=true;setProblems([]);setActive(null);setEvents([]);setMessage("");setSandbox("");pending.current=null;epoch.current++;
   api("/problems?course_id="+encodeURIComponent(course)).then(p=>live&&setProblems(p)).catch(e=>live&&setError(e.message));return()=>{live=false;};},[course,user]);
@@ -64,10 +68,11 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
 
  {error&&<div className="pilotAlert" role="alert">{error}</div>}{notice&&<div className="pilotNotice" role="status">{notice}</div>}
  {loading?<p>正在恢复登录状态…</p>:!user?<section className="pilotCard loginCard"><div className="loginBrand"><span className="loginLogo">镜</span><div><h2>{register?"创建学镜账号":"欢迎回到学镜"}</h2><p>{register?"注册后即可在课程中获得最小提示式引导":"登录后继续你的课程学习与学习档案"}</p></div></div>
- <form className="pilotForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void run(async()=>setUser(await api(register?"/auth/register":"/auth/login","POST",{username:f.get("username"),password:f.get("password"),...(register?{nickname:f.get("nickname"),role,invite_code:f.get("invite")||""}:{})})));}}>
- <label>账号<input name="username" required minLength={3} autoComplete="username" pattern="[a-zA-Z0-9_.-]+"/></label>{register&&<label>昵称<input name="nickname" required maxLength={80}/></label>}
- <label>口令<input name="password" type="password" required minLength={10} maxLength={128} autoComplete={register?"new-password":"current-password"}/></label>
- {register&&<><label>身份<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">学生</option><option value="teacher">教师</option><option value="ta">助教</option></select></label>{role!=="student"&&<label>邀请码<input name="invite" type="password" required/></label>}</>}
+ <form className="pilotForm authForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const password=String(f.get("password")||"");if(register&&password!==String(f.get("password_confirm")||"")){setError("两次输入的口令不一致");return;}void run(async()=>setUser(await api(register?"/auth/register":"/auth/login","POST",{username:String(f.get("username")||"").trim(),password,...(register?{nickname:String(f.get("nickname")||"").trim(),role,invite_code:String(f.get("invite")||"")}:{})})));}}>
+ <label>账号<input name="username" required minLength={3} maxLength={80} autoComplete="username" autoCapitalize="none" spellCheck={false} pattern="[a-zA-Z0-9_.-]+" placeholder="3–80 位字母、数字或 _ . -"/></label>{register&&<label>昵称<input name="nickname" required minLength={1} maxLength={80} autoComplete="nickname" placeholder="在平台中显示的称呼"/></label>}
+ <label>口令<input name="password" type="password" required minLength={10} maxLength={128} autoComplete={register?"new-password":"current-password"} placeholder={register?"至少 10 个字符":"输入账号口令"}/></label>
+ {register&&<label>确认口令<input name="password_confirm" type="password" required minLength={10} maxLength={128} autoComplete="new-password" placeholder="再次输入口令"/></label>}
+ {register&&<><label>身份<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">学生</option><option value="teacher">教师</option><option value="ta">助教</option></select></label>{role!=="student"&&<label>教师/TA 邀请码<input name="invite" type="password" required autoComplete="off" placeholder="由平台管理员提供"/></label>}<p className="authHint">学生账号可直接注册；教师和助教账号需要邀请码。注册即表示你同意平台保存账号及学习档案，可随时在“档案与隐私”中导出或删除。</p></>}
  <button className="primary" disabled={busy}>{busy?"处理中…":register?"创建账号":"登录"}</button></form><button disabled={busy} onClick={()=>setRegister(!register)}>{register?"已有账号，去登录":"注册账号"}</button></section>:<>
  {!portal&&<nav className="pilotTabs" aria-label="工作台">{([["learn","课程学习"],["resources","资源中心"],["memory","我的观察"],["sandboxes","我的作业"],...(staff?[["builder","课程建设"]]:[]),["account","档案与隐私"]] as [Tab,string][]).map(([key,label])=><button key={key} disabled={busy} aria-current={tab===key?"page":undefined} onClick={()=>{epoch.current++;setTab(key);setError("");if(key==="builder")void run(async()=>setBuilder(await api("/builder")));}}>{label}</button>)}</nav>}
  {user.status==="frozen"&&<div className="pilotNotice">档案已冻结。仍可查看、导出、删除，或在档案设置恢复更新。</div>}

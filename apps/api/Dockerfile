@@ -24,4 +24,6 @@ ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
 
-CMD ["uvicorn", "mirror_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "src"]
+# API 只暴露在 Docker 内网，由 Caddy 反代。信任反代头后，FastAPI 能正确识别
+# 对外的 https://learningmirror.cn 来源并执行同源写请求校验。
+CMD ["uvicorn", "mirror_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "src", "--proxy-headers", "--forwarded-allow-ips", "*"]
