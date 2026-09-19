@@ -15,6 +15,16 @@ COURSE = "mathematical_analysis"
 PROFILE = "chen-jixiu-3e"
 
 
+def _manifest_row_count(key: str) -> int:
+    manifest = json.loads((SAMPLE_PACK / "coursepack.json").read_text(encoding="utf-8"))
+    return sum(
+        1
+        for filename in manifest[key]
+        for line in (SAMPLE_PACK / filename).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
+
+
 def test_seed_profiles_covers_five_courses(session):
     courses = session.query(Course).all()
     ids = {c.course_id for c in courses}
@@ -27,8 +37,8 @@ def test_seed_profiles_covers_five_courses(session):
 def test_import_counts_and_rights(session):
     knowledge = session.query(KnowledgeNode).all()
     problems = session.query(Problem).all()
-    assert len(knowledge) == 11
-    assert len(problems) == 10
+    assert len(knowledge) == _manifest_row_count("knowledge_files")
+    assert len(problems) == _manifest_row_count("problems_files")
     assert all(node.source["allowed_for_rag"] for node in knowledge)
     assert all(not node.source["allowed_for_training"] for node in knowledge)
     assert all(problem.rights["allowed_for_runtime"] for problem in problems)
@@ -37,7 +47,12 @@ def test_import_counts_and_rights(session):
 
 def test_chapter1_corpus_shape(session):
     """第一章自建语料的形态约束：类型、来源标注与提示阶梯规模。"""
-    knowledge = session.query(KnowledgeNode).all()
+    knowledge = [
+        node
+        for node in session.query(KnowledgeNode).all()
+        if node.source.get("kind") == "team_authored_ch1_build"
+    ]
+    assert len(knowledge) == 11
     assert {node.type for node in knowledge} == {"definition", "theorem"}
     assert all(node.review["status"] == "needs_math_review" for node in knowledge)
     problems = session.query(Problem).all()
@@ -51,8 +66,8 @@ def test_chapter1_corpus_shape(session):
 def test_import_is_idempotent(session):
     report = import_coursepack(session, SAMPLE_PACK)
     assert "覆盖导入" in report.warnings[0]
-    assert session.query(KnowledgeNode).count() == 11
-    assert session.query(Problem).count() == 10
+    assert session.query(KnowledgeNode).count() == report.knowledge_count
+    assert session.query(Problem).count() == report.problem_count
 
 
 def test_import_rejects_broken_knowledge_reference(tmp_path):

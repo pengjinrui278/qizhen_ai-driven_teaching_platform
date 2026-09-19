@@ -20,4 +20,5 @@ docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli seed-pro
 docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli import-all-coursepacks
 docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli status
 
-echo "已同步到 http://124.220.5.87/  commit=$(git rev-parse --short HEAD)"
+echo "已同步到 https://learningmirror.cn/  commit=$(git rev-parse --short HEAD)"
+echo "DNS 尚未生效时可临时访问 http://124.220.5.87/"

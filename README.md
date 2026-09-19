@@ -112,13 +112,13 @@ python -m mirror_api.cli status                  # 核对各表计数
 
 详细步骤与常见问题见 `docs/railway.md`。
 
-### 方式二：自有云服务器（Docker Compose）
+### 方式二：自有云服务器（Docker Compose，当前生产方案）
 
-项目已配置 `compose.prod.yml` + `nginx.conf`，可一键部署到 Linux 云服务器，通过域名 `learningmirror.cn` / `learningmirror.xyz` 访问。
+项目已配置 `compose.prod.yml` + `Caddyfile`，可部署到 Linux 云服务器。当 `learningmirror.cn` 与 `www.learningmirror.cn` 的 A 记录指向生产 IP 后，Caddy 自动申请和续期 HTTPS 证书。
 
 ```powershell
 # 1. 服务器上安装 Docker、Node.js、pnpm
-# 2. 域名 A 记录指向服务器 IP
+# 2. 域名 @ 与 www 的 A 记录均指向服务器 IP
 # 3. 构建前端静态站点
 pnpm install
 pnpm build:web
@@ -128,7 +128,7 @@ pnpm build:web
 docker compose -f compose.prod.yml up -d --build
 ```
 
-详细步骤、HTTPS 配置与维护命令见 `docs/deploy.md`。
+详细步骤、HTTPS 与维护命令见 `docs/deploy.md`。
 
 ## 教材语料入库（已授权 PDF）
 

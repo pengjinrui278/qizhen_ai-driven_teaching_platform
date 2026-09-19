@@ -1,0 +1,33 @@
+(mirror_app) {
+	encode zstd gzip
+
+	@health path /api/health
+	handle @health {
+		rewrite * /health
+		reverse_proxy api:8000
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000 {
+			transport http {
+				read_timeout 180s
+			}
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} {path}.html {path}/ /index.html
+		file_server
+	}
+}
+
+# DNS 解析生效后，Caddy 会自动申请并续期 HTTPS 证书。
+learningmirror.cn, www.learningmirror.cn {
+	import mirror_app
+}
+
+# 保留服务器 IP 的 HTTP 应急入口，避免在 DNS 尚未生效时中断访问。
+http://124.220.5.87 {
+	import mirror_app
+}

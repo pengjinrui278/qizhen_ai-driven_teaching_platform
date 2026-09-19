@@ -1,6 +1,6 @@
 # 生产部署指南
 
-本指南用于把 Learning Mirror 部署到一台 Linux 云服务器，使组员可通过域名 `learningmirror.cn` / `learningmirror.xyz` 访问。
+本指南用于把 Learning Mirror 部署到生产服务器 `124.220.5.87`，并通过 `learningmirror.cn` / `www.learningmirror.cn` 访问。
 
 ## 1. 服务器准备
 
@@ -11,14 +11,16 @@
 
 ## 2. 域名解析
 
-在域名控制台把以下记录指向服务器公网 IP：
+当前权威 DNS 为阿里云（`dns3.hichina.com` / `dns4.hichina.com`）。在阿里云「云解析 DNS」中添加：
 
 ```
-learningmirror.cn     A  <服务器IP>
-www.learningmirror.cn A  <服务器IP>
-learningmirror.xyz    A  <服务器IP>
-www.learningmirror.xyz A <服务器IP>
+@    A  124.220.5.87
+www  A  124.220.5.87
 ```
+
+解析线路选「默认」，TTL 可保持 10 分钟。不要再为同一主机记录配置冲突的 CNAME/AAAA 记录。
+
+> 服务器位于腾讯云中国大陆节点。如本次 ICP 备案不是通过腾讯云完成，先在腾讯云完成「接入备案」，再解析到该 IP。
 
 ## 3. 克隆代码并构建前端
 
@@ -49,7 +51,7 @@ cp .env.example .env
 # 生产：前端使用相对路径，留空即可
 NEXT_PUBLIC_API_BASE=
 
-# 生产：由 nginx 同域代理，CORS 来源留空
+# 生产：由 Caddy 同域代理，CORS 来源留空
 MIRROR_CORS_ORIGINS=
 
 # 数据库密码建议修改
@@ -57,6 +59,12 @@ MIRROR_POSTGRES_PASSWORD=你的强密码
 
 # MinIO 密码建议修改
 MIRROR_MINIO_ROOT_PASSWORD=你的强密码
+
+# 生产环境必填；教师/TA 注册用的私密邀请码
+MIRROR_STAFF_INVITE_CODE=你的随机强邀请码
+
+# 从备案成功通知原样复制；不要填示例值
+MIRROR_ICP_NUMBER=你的准确ICP备案号
 
 # 模型网关：默认 stub；真实模型请填写 DeepSeek/通义/GLM 配置
 MIRROR_LLM_PROVIDER=stub
@@ -92,8 +100,11 @@ docker compose -f compose.prod.yml up -d --build
 ```
 
 访问：
-- <http://learningmirror.cn> 或 <http://learningmirror.xyz>
-- <http://learningmirror.cn/api/health> 应返回 `{"status":"ok"}`
+- <https://learningmirror.cn>
+- <https://www.learningmirror.cn>
+- <https://learningmirror.cn/api/health> 应返回 `{"status":"ok"}`
+
+DNS 未生效时可用 <http://124.220.5.87> 做应急检查。这个 IP 入口仅用 HTTP，不用于正式登录。
 
 ## 7. 导入教材语料（可选）
 
@@ -106,14 +117,12 @@ python -m mirror_api.cli import-all-textbooks
 
 导入前请先抽检 PDF 文本抽取质量，见 `import-textbook --help`。
 
-## 8. HTTPS（建议上线前配置）
+## 8. HTTPS 与备案号
 
-公网生产建议启用 HTTPS。最简单的方式：
-
-1. 使用云厂商负载均衡或 CDN 的免费证书。
-2. 或在服务器上通过 Let's Encrypt + certbot 获取证书，挂载到 nginx 容器。
-
-compose.prod.yml 中 443 端口已预留，可按需替换 nginx.conf 中的证书路径。
+- Caddy 在 DNS 解析生效且 80/443 可从公网访问后，会自动申请、加载和续期证书，无需手动运行 certbot。
+- 证书状态：`docker compose -f compose.prod.yml logs web`。
+- 备案通过后，首页底部必须显示准确 ICP 备案号并链接到 <https://beian.miit.gov.cn/>。将原样备案号写入 `.env` 的 `MIRROR_ICP_NUMBER` 后重建 web 镜像。
+- 网站开通后 30 日内办理公安备案，通过后再配置 `MIRROR_PUBLIC_SECURITY_NUMBER` 与 `MIRROR_PUBLIC_SECURITY_URL` 并重建 web 镜像。
 
 ## 9. 更新与维护
 
@@ -126,7 +135,7 @@ git lfs pull
 pnpm install
 pnpm build:web
 
-# 重建并重启后端
+# 重建并重启全部服务（包括 Caddy 与自动 HTTPS）
 docker compose -f compose.prod.yml up -d --build
 
 # 查看日志

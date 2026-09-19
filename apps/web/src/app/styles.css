@@ -47,6 +47,14 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
+.complianceFooter{
+  display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;
+  padding:18px 24px;color:#64748b;font-size:12px;background:#fff;
+  border-top:1px solid #e2e8f0;
+}
+.complianceFooter a{color:inherit;text-decoration:none}
+.complianceFooter a:hover{color:var(--brand-600)}
+
 main{width:min(1200px,calc(100% - 48px));margin:auto;padding:32px 0 80px}
 
 h1,h2,h3,h4{color:var(--brand-700);margin:0 0 12px;line-height:1.35;letter-spacing:-.01em}

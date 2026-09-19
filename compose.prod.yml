@@ -67,13 +67,17 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_ICP_NUMBER: ${MIRROR_ICP_NUMBER:-}
+        NEXT_PUBLIC_PUBLIC_SECURITY_NUMBER: ${MIRROR_PUBLIC_SECURITY_NUMBER:-}
+        NEXT_PUBLIC_PUBLIC_SECURITY_URL: ${MIRROR_PUBLIC_SECURITY_URL:-}
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./certbot/www:/var/www/certbot:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - mirror_caddy_data:/data
+      - mirror_caddy_config:/config
     networks:
       - mirror
     depends_on:
@@ -83,6 +87,8 @@ services:
 volumes:
   mirror_postgres:
   mirror_minio:
+  mirror_caddy_data:
+  mirror_caddy_config:
 
 networks:
   mirror:

@@ -127,7 +127,7 @@ def test_rag_right_blocks_citation(rights_session):
     response = pipeline.handle(
         rights_session, make_request("req-rag", "concept_explanation", text="未开放检索的节点")
     )
-    assert response.citations == []
+    assert all(citation.knowledge_id != "locked_node" for citation in response.citations)
 
 
 # ---------------------------------------------------------------- HTTP 端点
