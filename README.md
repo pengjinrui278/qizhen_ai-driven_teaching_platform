@@ -58,6 +58,7 @@ python -m learning_mirror_zju_connector
 ```
 
 随后打开 `http://127.0.0.1:8765`。安全边界、当前范围和测试方法见 `apps/zju-connector/README.md`。
+登录学镜后，在 `/student/resources?mode=live` 切换到“我的课表”，可打开本地连接器并将标准化课表回传到当前浏览器。统一认证凭据不会提交到生产服务器。
 
 基础设施：
 

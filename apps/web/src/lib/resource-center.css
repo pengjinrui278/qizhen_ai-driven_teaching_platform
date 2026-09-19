@@ -78,6 +78,42 @@
 .rcType-definition,.rcType-theorem,.rcType-corollary,.rcType-lemma,.rcType-proposition,.rcType-property{
   background:#f8fafc;border-left:3px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;
 }
+
+/* ZJU schedule: a weekly rail inspired by the compact paper timetables students use. */
+.zjuSchedule{--zju-blue:#315ee7;--zju-ink:#15203a;color:var(--zju-ink)}
+.zjuScheduleHero{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:28px;border:1px solid #d8e0f0;border-radius:22px;background:linear-gradient(120deg,#f8fbff 0%,#f8fbff 68%,#e4f5ef 68%,#e4f5ef 100%)}
+.zjuScheduleEyebrow{margin:0 0 8px!important;color:#2f6b5a!important;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.15em}
+.zjuScheduleHero h2{margin:0;font-size:30px;letter-spacing:-.04em}
+.zjuScheduleHero p:not(.zjuScheduleEyebrow){max-width:610px;margin:10px 0 0;color:#5e687d;line-height:1.7}
+.zjuScheduleActions{display:grid;min-width:190px;gap:8px}
+.zjuScheduleActions button,.zjuScheduleMeta button{height:42px;border:1px solid #cdd7ea;border-radius:11px;background:#fff;color:#26334f;font-weight:700;cursor:pointer}
+.zjuScheduleActions .zjuConnectButton{border-color:var(--zju-blue);background:var(--zju-blue);color:#fff;box-shadow:0 8px 20px rgba(49,94,231,.2)}
+.zjuHiddenInput{display:none}
+.zjuPrivacyRail{display:flex;gap:0;margin:14px 0 22px;border:1px solid #dce3ef;border-radius:12px;background:#fff;overflow:hidden}
+.zjuPrivacyRail span{flex:1;padding:10px 14px;color:#486050;font-size:12px;text-align:center;border-right:1px solid #e5eaf2}
+.zjuPrivacyRail span:last-child{border-right:0}
+.zjuScheduleNotice{padding:11px 14px;border-radius:10px;background:#e8f6ef;color:#146b4c;font-weight:650}
+.zjuScheduleEmpty{position:relative;min-height:320px;padding:60px 32px;text-align:center;border:1px dashed #bdc9dc;border-radius:18px;background:#fbfcff;overflow:hidden}
+.zjuScheduleEmpty h3{position:relative;margin:20px 0 8px;font-size:22px}
+.zjuScheduleEmpty p{position:relative;max-width:580px;margin:0 auto;color:#667087;line-height:1.75}
+.zjuScheduleFallback{margin-top:12px!important;font-size:13px}
+.zjuEmptyWeek{position:relative;display:flex;justify-content:center;gap:5px;color:#fff;font:800 18px/1 ui-monospace,monospace}
+.zjuEmptyWeek,.zjuEmptyWeek span{width:44px;height:58px;padding-top:20px;border-radius:5px;background:#315ee7}
+.zjuEmptyWeek span{margin-top:-20px;background:#c9d6fb;color:#315ee7}
+.zjuEmptyWeek span:nth-child(3){margin-top:-10px;background:#80b8a7;color:#fff}
+.zjuEmptyWeek span:nth-child(4){margin-top:-24px}.zjuEmptyWeek span:nth-child(5){margin-top:-4px}
+.zjuScheduleMeta{display:grid;grid-template-columns:1.2fr .45fr 1fr auto;gap:1px;margin:0 0 14px;border:1px solid #d9e1ee;border-radius:14px;background:#d9e1ee;overflow:hidden}
+.zjuScheduleMeta>div{padding:13px 16px;background:#fff}.zjuScheduleMeta span{display:block;margin-bottom:3px;color:#788296;font-size:11px;text-transform:uppercase}.zjuScheduleMeta strong{font-size:14px}
+.zjuScheduleMeta button{height:auto;margin:0;padding:0 18px;border:0;border-radius:0;background:#f6f8fc;color:#6c3440}
+.zjuWeekGrid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow-x:auto;padding:4px 0 14px}
+.zjuDayColumn{min-width:150px;padding:10px;border:1px solid #dfe5ef;border-radius:14px;background:#f8faff}
+.zjuDayColumn h3{margin:0 0 10px;padding:4px 2px 10px;border-bottom:1px solid #dfe5ef;font-size:14px}
+.zjuCourseSlip{margin:0 0 9px;padding:12px;border-left:4px solid var(--zju-blue);border-radius:9px;background:#fff;box-shadow:0 4px 12px rgba(30,50,90,.07)}
+.zjuCourseSlip:nth-of-type(3n+2){border-left-color:#2c8c6d}.zjuCourseSlip:nth-of-type(3n){border-left-color:#c77852}
+.zjuCourseSlip h4{margin:5px 0 8px;font-size:14px;line-height:1.4}.zjuCourseSlip p{margin:2px 0;color:#677287;font-size:12px}
+.zjuCourseSlip>span{display:inline-block;margin-top:9px;padding:3px 7px;border-radius:999px;background:#eef2fb;color:#53617c;font-size:10px}
+.zjuCoursePeriods{color:var(--zju-blue);font:750 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}.zjuNoCourse{margin:32px 0;color:#a0a8b5;text-align:center;font-size:12px}
+@media(max-width:800px){.zjuScheduleHero{align-items:stretch;flex-direction:column;background:linear-gradient(155deg,#f8fbff 0%,#f8fbff 76%,#e4f5ef 76%)}.zjuScheduleActions{min-width:0}.zjuPrivacyRail{flex-direction:column}.zjuPrivacyRail span{border-right:0;border-bottom:1px solid #e5eaf2}.zjuScheduleMeta{grid-template-columns:1fr 1fr}.zjuScheduleMeta>div:first-child{grid-column:1/-1}.zjuScheduleMeta button{min-height:44px}.zjuWeekGrid{scroll-snap-type:x proximity}.zjuDayColumn{scroll-snap-align:start}}
 .rcType-definition .rcLabelTag,.rcType-theorem .rcLabelTag,.rcType-corollary .rcLabelTag,
 .rcType-lemma .rcLabelTag,.rcType-proposition .rcLabelTag,.rcType-property .rcLabelTag{
   background:#2563eb;

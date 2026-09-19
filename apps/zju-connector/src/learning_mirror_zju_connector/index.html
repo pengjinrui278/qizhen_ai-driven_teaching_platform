@@ -55,6 +55,7 @@
       <label for="season">学季</label>
       <select id="season"><option value="1|秋">秋</option><option value="1|冬">冬</option><option value="2|春">春</option><option value="2|夏">夏</option></select>
       <button id="sync">读取课表与 DDL</button>
+      <button id="send" disabled>同步到学镜工作台</button>
       <button id="download" class="secondary" disabled>下载标准化 JSON</button>
       <button id="logout" class="secondary">断开并清除</button>
       <div id="syncStatus" class="status">连接后即可同步</div>
@@ -69,7 +70,11 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const headers = {"Content-Type":"application/json","X-Learning-Mirror-Local":"1"};
+  const allowedReturnOrigins=new Set(["https://learningmirror.cn","https://www.learningmirror.cn","http://localhost:3000","http://127.0.0.1:3000"]);
+  const requestedReturnOrigin=new URLSearchParams(location.search).get("return_origin");
+  const returnOrigin=requestedReturnOrigin&&allowedReturnOrigins.has(requestedReturnOrigin)?requestedReturnOrigin:null;
   let snapshot = null;
+  if(!returnOrigin) $("send").style.display="none";
   const now = new Date(); $("year").value = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
   async function request(path, body) {
     const response = await fetch(path,{method:"POST",headers,body:body ? JSON.stringify(body) : undefined});
@@ -91,7 +96,7 @@
     try {
       snapshot=await request("/api/sync",{academic_year_start:Number($("year").value),season:$("season").value});
       $("courseCount").textContent=snapshot.courses.length; $("assignmentCount").textContent=snapshot.assignments.length;
-      $("preview").textContent=JSON.stringify(snapshot,null,2); $("download").disabled=false; status.textContent="同步完成，数据只保留在本机内存。";
+      $("preview").textContent=JSON.stringify(snapshot,null,2); $("download").disabled=false; $("send").disabled=!returnOrigin; status.textContent="同步完成，数据只保留在本机内存。";
     } catch(error) { status.className="status error"; status.textContent=error.message; }
     finally { busy(button,false); }
   };
@@ -99,8 +104,12 @@
     if(!snapshot) return; const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`learning-mirror-zju-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
   };
-  $("logout").onclick = async () => { await request("/api/logout"); snapshot=null; $("preview").textContent="尚无数据"; $("courseCount").textContent="0"; $("assignmentCount").textContent="0"; $("download").disabled=true; $("connectStatus").textContent="已断开，会话已清除"; };
+  $("send").onclick = () => {
+    if(!snapshot||!returnOrigin||!window.opener)return;
+    window.opener.postMessage({type:"learning-mirror-zju-snapshot",payload:snapshot},returnOrigin);
+    $("syncStatus").textContent="已同步到学镜工作台，可以关闭本窗口。";
+  };
+  $("logout").onclick = async () => { await request("/api/logout"); snapshot=null; $("preview").textContent="尚无数据"; $("courseCount").textContent="0"; $("assignmentCount").textContent="0"; $("download").disabled=true; $("send").disabled=true; $("connectStatus").textContent="已断开，会话已清除"; };
 </script>
 </body>
 </html>
-

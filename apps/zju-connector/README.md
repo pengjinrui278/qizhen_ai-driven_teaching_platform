@@ -27,6 +27,8 @@ python -m learning_mirror_zju_connector
 
 程序会打开 <http://127.0.0.1:8765>。在本地页面输入本人账号密码，连接后选择学年和学季即可同步。
 
+也可先启动连接器，再在 `https://learningmirror.cn/student/resources?mode=live` 的“我的课表”中点击“在本机连接浙大”。连接器只向允许的学镜页面回传标准化课表，不回传学号、密码或 Cookie。
+
 ## 当前范围
 
 - 本科生统一认证；
