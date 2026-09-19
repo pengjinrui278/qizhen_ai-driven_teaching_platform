@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>学镜 · 浙大本地连接器</title>
+  <style>
+    :root { color-scheme: light; --ink:#14213d; --muted:#657089; --line:#dce3f0; --blue:#315ee7; --green:#15845c; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font:15px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; color:var(--ink); background:linear-gradient(145deg,#f3f7ff,#f7fbf8); }
+    main { width:min(920px,calc(100% - 32px)); margin:42px auto; }
+    header { margin-bottom:24px; }
+    h1 { margin:0 0 6px; font-size:30px; letter-spacing:-.02em; }
+    h2 { margin:0 0 16px; font-size:19px; }
+    p { margin:6px 0; }
+    .safe { color:var(--green); font-weight:700; }
+    .muted { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .card { background:#fff; border:1px solid rgba(49,94,231,.12); border-radius:18px; padding:22px; box-shadow:0 14px 40px rgba(32,57,112,.08); }
+    label { display:block; margin:12px 0 6px; font-weight:650; }
+    input,select,button { width:100%; height:44px; border-radius:11px; border:1px solid var(--line); padding:0 12px; font:inherit; }
+    button { margin-top:16px; border:0; color:#fff; background:var(--blue); font-weight:750; cursor:pointer; }
+    button.secondary { background:#fff; color:var(--ink); border:1px solid var(--line); }
+    button:disabled { opacity:.55; cursor:wait; }
+    .status { min-height:24px; margin-top:12px; color:var(--muted); }
+    .status.error { color:#b42318; }
+    .summary { display:flex; gap:12px; margin-top:16px; }
+    .pill { flex:1; padding:12px; border-radius:12px; background:#f4f7fd; text-align:center; }
+    .pill strong { display:block; font-size:24px; }
+    pre { max-height:280px; overflow:auto; padding:14px; border-radius:12px; background:#0e1730; color:#d9e3ff; font-size:12px; white-space:pre-wrap; }
+    @media (max-width:720px) { .grid { grid-template-columns:1fr; } main{margin:20px auto;} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>学镜 · 浙大本地连接器</h1>
+    <p class="safe">✓ 本页面运行在 127.0.0.1；学号、密码和 Cookie 不会发送到 learningmirror.cn。</p>
+    <p class="muted">程序关闭或点击“断开并清除”后，会话 Cookie 即从内存清除；本 MVP 不保存密码。</p>
+  </header>
+  <div class="grid">
+    <section class="card">
+      <h2>1. 连接统一认证</h2>
+      <label for="username">学号</label>
+      <input id="username" inputmode="numeric" autocomplete="off" />
+      <label for="password">统一认证密码</label>
+      <input id="password" type="password" autocomplete="off" />
+      <button id="connect">在本机连接</button>
+      <div id="connectStatus" class="status">尚未连接</div>
+    </section>
+    <section class="card">
+      <h2>2. 同步课表与 DDL</h2>
+      <label for="year">学年开始年份</label>
+      <input id="year" type="number" min="2000" max="2200" />
+      <label for="season">学季</label>
+      <select id="season"><option value="1|秋">秋</option><option value="1|冬">冬</option><option value="2|春">春</option><option value="2|夏">夏</option></select>
+      <button id="sync">读取课表与 DDL</button>
+      <button id="download" class="secondary" disabled>下载标准化 JSON</button>
+      <button id="logout" class="secondary">断开并清除</button>
+      <div id="syncStatus" class="status">连接后即可同步</div>
+    </section>
+  </div>
+  <section class="card" style="margin-top:18px">
+    <h2>本地快照</h2>
+    <div class="summary"><div class="pill"><strong id="courseCount">0</strong>课表项</div><div class="pill"><strong id="assignmentCount">0</strong>DDL</div></div>
+    <pre id="preview">尚无数据</pre>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const headers = {"Content-Type":"application/json","X-Learning-Mirror-Local":"1"};
+  let snapshot = null;
+  const now = new Date(); $("year").value = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  async function request(path, body) {
+    const response = await fetch(path,{method:"POST",headers,body:body ? JSON.stringify(body) : undefined});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail?.message || data.detail || "操作失败");
+    return data;
+  }
+  function busy(button, value) { button.disabled=value; }
+  $("connect").onclick = async () => {
+    const button=$("connect"), status=$("connectStatus"); busy(button,true); status.className="status"; status.textContent="正在本机建立会话…";
+    try {
+      const data=await request("/api/connect",{username:$("username").value,password:$("password").value});
+      $("password").value=""; status.textContent=`已连接 ${data.account}，密码未保存。`;
+    } catch(error) { $("password").value=""; status.className="status error"; status.textContent=error.message; }
+    finally { busy(button,false); }
+  };
+  $("sync").onclick = async () => {
+    const button=$("sync"), status=$("syncStatus"); busy(button,true); status.className="status"; status.textContent="正在读取官方系统…";
+    try {
+      snapshot=await request("/api/sync",{academic_year_start:Number($("year").value),season:$("season").value});
+      $("courseCount").textContent=snapshot.courses.length; $("assignmentCount").textContent=snapshot.assignments.length;
+      $("preview").textContent=JSON.stringify(snapshot,null,2); $("download").disabled=false; status.textContent="同步完成，数据只保留在本机内存。";
+    } catch(error) { status.className="status error"; status.textContent=error.message; }
+    finally { busy(button,false); }
+  };
+  $("download").onclick = () => {
+    if(!snapshot) return; const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=`learning-mirror-zju-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+  };
+  $("logout").onclick = async () => { await request("/api/logout"); snapshot=null; $("preview").textContent="尚无数据"; $("courseCount").textContent="0"; $("assignmentCount").textContent="0"; $("download").disabled=true; $("connectStatus").textContent="已断开，会话已清除"; };
+</script>
+</body>
+</html>
+

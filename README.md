@@ -47,6 +47,18 @@ pnpm dev:web
 
 访问 `http://localhost:3000/teacher` 进入教师/TA 端（创建作业工作区 → 查看班级聚合 → 生成 AI 候选现象 → TA 三选一校准 → 教师最终决定 → 周报只呈现教师接受的现象；教师端只见聚合统计，不见学生对话内容）。
 
+### ZJU 本地连接器（开发者预览）
+
+本科生可在自己的电脑上完成统一认证，读取教务课表和“学在浙大”DDL。连接器固定监听 `127.0.0.1:8765`，密码不保存，校园 Cookie 只保留在本地进程内存，导出数据不含学号、密码或 Cookie。
+
+```powershell
+cd apps/zju-connector
+python -m pip install -e ".[dev]"
+python -m learning_mirror_zju_connector
+```
+
+随后打开 `http://127.0.0.1:8765`。安全边界、当前范围和测试方法见 `apps/zju-connector/README.md`。
+
 基础设施：
 
 ```powershell
