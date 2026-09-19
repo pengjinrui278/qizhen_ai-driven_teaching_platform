@@ -1,0 +1,242 @@
+/* ============================================================
+   学镜 — CourseChat 课程对话界面
+   ============================================================ */
+.portal .courseChat{
+  display:grid;grid-template-columns:240px minmax(0,1fr);
+  border:1px solid #e2e8f0;border-radius:16px;background:#fff;
+  min-height:620px;height:calc(100dvh - 130px);overflow:hidden;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.05);
+}
+
+/* 对话历史侧栏 */
+.portal .chatHistory{
+  background:#f8fafc;border-right:1px solid #e2e8f0;
+  padding:16px;display:flex;flex-direction:column;gap:14px;min-height:0;
+}
+.portal .chatHistory h2{font-size:13px;font-weight:700;margin:4px 0 0;color:#64748b;text-transform:uppercase;letter-spacing:.06em}
+.portal .chatHistory label{gap:6px;font-size:12px;color:#64748b;font-weight:500}
+.portal .chatHistory select{font-size:12.5px;padding:7px 10px}
+.portal .chatNew{
+  background:#2563eb!important;color:#fff!important;border-color:#2563eb!important;
+  font-weight:600;border-radius:9px;min-height:38px;
+  box-shadow:0 4px 14px rgba(37,99,235,.22);
+}
+.portal .chatNew:hover:not(:disabled){background:#1d4ed8!important}
+.portal .chatSessionList{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:3px}
+.portal .chatSessionList button{
+  border:0;background:transparent;text-align:left;white-space:nowrap;
+  text-overflow:ellipsis;overflow:hidden;color:#475569;
+  display:block;width:100%;padding:8px 10px;border-radius:8px;font-size:12.5px;
+  transition:all .15s;min-height:auto;
+}
+.portal .chatSessionList button:hover:not(:disabled){background:#e2e8f0;transform:none}
+.portal .chatSessionList button[aria-current]{background:#dbeafe;color:#1d4ed8;font-weight:600}
+.portal .chatSessionList p{font-size:12px;color:#94a3b8;padding:8px 10px;margin:0}
+.portal .chatHistory details{margin:0;border:0;padding:0}
+.portal .chatHistory summary{font-size:12px;min-height:auto;color:#64748b;padding:4px 0}
+
+/* 对话主区 */
+.portal .chatWorkspace{min-width:0;display:flex;flex-direction:column;min-height:0;padding:0 24px;background:#fff}
+.portal .chatHeader{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 0;border-bottom:1px solid #f1f5f9;
+}
+.portal .chatHeader h1{font-size:16px;font-weight:700;flex:1;color:#0f172a;margin:0}
+.portal .chatHeader button{
+  background:transparent;border:1px solid #e2e8f0;border-radius:8px;
+  padding:6px 14px;font-size:12.5px;color:#475569;min-height:34px;
+}
+.portal .chatHeader button:hover:not(:disabled){background:#f1f5f9}
+.portal .chatHistoryToggle{display:none;font-size:18px!important;padding:6px 10px!important}
+
+/* 消息区 */
+.portal .chatMessages{
+  flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;
+  padding:24px 8px;scrollbar-gutter:stable;
+}
+
+/* 欢迎空状态 */
+.portal .chatWelcome{
+  height:100%;min-height:200px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;gap:10px;padding:20px;
+}
+.portal .chatWelcome .welcomeIcon{
+  width:56px;height:56px;border-radius:16px;
+  background:linear-gradient(135deg,#dbeafe,#ccfbf1);
+  display:grid;place-items:center;font-size:26px;font-style:italic;
+  color:#2563eb;margin-bottom:6px;
+}
+.portal .chatWelcome h2{font-size:20px;font-weight:700;color:#0f172a;margin:0}
+.portal .chatWelcome p{font-size:13.5px;color:#64748b;max-width:420px;margin:0}
+.portal .chatWelcome .suggestionRow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.portal .chatWelcome .suggestionRow button{
+  padding:8px 14px;border-radius:999px;border:1px solid #e2e8f0;
+  background:#fff;color:#475569;font-size:12.5px;cursor:pointer;transition:all .15s;min-height:auto;
+}
+.portal .chatWelcome .suggestionRow button:hover{border-color:#93c5fd;color:#2563eb;background:#eff6ff;transform:translateY(-1px)}
+
+/* 消息气泡 */
+.portal .chatExchange{margin-bottom:20px}
+.portal .chatUser{
+  max-width:82%;width:fit-content;margin:0 0 12px auto;
+  padding:11px 16px;background:linear-gradient(135deg,#3b82f6,#2563eb);
+  color:#fff;border-radius:14px 14px 4px 14px;font-size:13.5px;line-height:1.7;
+  box-shadow:0 3px 10px rgba(37,99,235,.18);
+}
+.portal .chatUser p{color:#fff!important}
+.portal .chatAssistant{
+  max-width:100%;margin:0 0 12px;padding:16px 18px;
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px 14px 14px 4px;
+}
+.portal .chatMessages p{font-size:13.5px;line-height:1.8;color:#1e293b;margin:6px 0;overflow-wrap:anywhere}
+.portal .chatMessages ul,.portal .chatMessages ol{padding-left:22px}
+.portal .chatMessages li{font-size:13.5px;line-height:1.8;color:#1e293b}
+.portal .chatMessages pre{background:#f1f5f9;padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px}
+.portal .chatMessages code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.portal .chatMessages pre code{background:none;padding:0}
+.portal .chatMessages .katex-display{overflow-x:auto;overflow-y:hidden;max-width:100%}
+.portal .chatMessages strong{color:#1e40af}
+
+/* 消息工具 */
+.portal .chatMessageTools{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.portal .chatMessageTools button,.portal .chatFeedback button{
+  border:1px solid #e2e8f0;background:#fff;padding:4px 10px;color:#64748b;
+  border-radius:7px;font-size:11.5px;min-height:30px;
+}
+.portal .chatMessageTools button:hover{background:#f1f5f9;color:#334155;transform:none}
+.portal .chatMessageTools details{margin:0;padding:0;border:0}
+.portal .chatMessageTools summary{font-size:11.5px;min-height:30px;padding:4px 10px;color:#64748b;cursor:pointer}
+.portal .chatThinking{
+  color:#64748b;font-size:13px;padding:10px 16px;
+  display:flex;align-items:center;gap:8px;
+}
+.portal .chatThinking::before{
+  content:"";width:14px;height:14px;border:2px solid #cbd5e1;border-top-color:#2563eb;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 输入区 */
+.portal .chatComposer{
+  margin:0 auto 12px;width:100%;max-width:820px;
+  border:1px solid #cbd5e1;background:#fff;border-radius:14px;
+  box-shadow:0 2px 8px rgba(15,23,42,.05);padding:10px 12px;transition:all .15s;
+}
+.portal .chatComposer:focus-within{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.portal .chatComposer textarea{
+  border:0;box-shadow:none;outline:none;resize:vertical;
+  min-height:64px;max-height:200px;padding:6px 4px;
+  background:transparent;color:#0f172a;font-size:13.5px;line-height:1.6;
+}
+.portal .chatComposer textarea:focus{box-shadow:none}
+.portal .chatComposerActions{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.portal .chatAttachments{margin:0;padding:0;border:0;flex:1}
+.portal .chatAttachments summary{
+  width:fit-content;padding:6px 10px;min-height:36px;
+  display:flex;align-items:center;color:#475569;font-size:12.5px;font-weight:550;
+  cursor:pointer;border-radius:8px;transition:background .15s;
+}
+.portal .chatAttachments summary:hover{background:#f1f5f9}
+.portal .chatAttachments .photoPreview{grid-template-columns:minmax(0,120px) 1fr}
+.portal .chatComposer .primary{
+  background:#2563eb;color:#fff;border-color:#2563eb;
+  min-width:72px;border-radius:9px;font-weight:600;min-height:38px;
+  box-shadow:0 4px 14px rgba(37,99,235,.22);
+}
+.portal .chatComposer .primary:hover:not(:disabled){background:#1d4ed8}
+.portal .chatComposer .primary:disabled{opacity:.45}
+
+/* 错误 */
+.portal .chatError{
+  padding:11px 14px;margin-bottom:10px;background:#fff1f2;
+  color:#be123c;border-radius:9px;font-size:13px;border:1px solid #ffe4e6;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.portal .chatError button{margin-left:auto;background:#fff1f2;border:1px solid #fecdd3;color:#e11d48}
+.portal .chatFeedback{display:flex;align-items:center;gap:8px;min-height:32px;margin-bottom:10px;flex-wrap:wrap}
+.portal .chatFeedback label{font-size:12px}
+.portal .chatFeedback select{width:auto;font-size:12.5px;padding:6px 10px}
+
+/* 渐进提示工具栏 */
+.portal .hintToolbar{
+  margin:0 auto 8px;width:100%;max-width:820px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+}
+.portal .hintInfo{font-size:12px;color:#64748b;display:flex;align-items:center;gap:6px}
+.portal .hintHint{color:#94a3b8}
+.portal .hintLevelBadge{
+  background:#dbeafe;color:#1d4ed8;font-weight:600;padding:3px 10px;border-radius:999px;font-size:11.5px;
+}
+.portal .hintButtons{display:flex;gap:6px;flex-wrap:wrap}
+.portal .hintBtn{
+  border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:6px 12px;
+  font-size:12px;font-weight:550;cursor:pointer;transition:all .15s;min-height:32px;
+  display:flex;align-items:center;gap:4px;
+}
+.portal .hintBtn:hover:not(:disabled){transform:translateY(-1px)}
+.portal .hintBtn:disabled{opacity:.4;cursor:not-allowed}
+.portal .hintBtn.first{border-color:#bfdbfe;color:#2563eb;background:#eff6ff}
+.portal .hintBtn.first:hover:not(:disabled){background:#dbeafe;border-color:#93c5fd}
+.portal .hintBtn.next{border-color:#99f6e4;color:#0f766e;background:#f0fdfa}
+.portal .hintBtn.next:hover:not(:disabled){background:#ccfbf1;border-color:#5eead4}
+.portal .hintBtn.full{border-color:#e2e8f0;color:#475569;background:#fff}
+.portal .hintBtn.full:hover:not(:disabled){background:#f1f5f9;border-color:#cbd5e1}
+.portal .hintTag{
+  display:inline-block;background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;
+  padding:2px 8px;border-radius:6px;margin-bottom:8px;
+}
+
+/* 关联教材内容面板 */
+.portal .relatedPanel{
+  margin:0 auto 8px;width:100%;max-width:820px;
+  background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;
+  overflow:hidden;
+}
+.portal .relatedHeader{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;background:#ccfbf1;border-bottom:1px solid #99f6e4;
+}
+.portal .relatedTitle{font-size:12.5px;font-weight:600;color:#0f766e}
+.portal .relatedClose{
+  background:none;border:none;color:#0f766e;font-size:18px;cursor:pointer;
+  padding:0 4px;line-height:1;
+}
+.portal .relatedClose:hover{color:#134e4a}
+.portal .relatedList{padding:8px;display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto}
+.portal .relatedItem{
+  background:#fff;border:1px solid #99f6e4;border-radius:8px;padding:8px 10px;
+}
+.portal .relatedMeta{font-size:11px;color:#0f766e;font-weight:600;margin-bottom:4px}
+.portal .relatedContent{font-size:12px;color:#334155;line-height:1.6;margin-bottom:6px}
+.portal .relatedInsert{
+  background:none;border:1px solid #14b8a6;color:#0f766e;font-size:11px;
+  padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:500;
+}
+.portal .relatedInsert:hover{background:#ccfbf1}
+.portal .relatedLoading{padding:12px;text-align:center;font-size:12.5px;color:#0f766e}
+.portal .relatedEmpty{padding:12px;text-align:center;font-size:12.5px;color:#94a3b8}
+
+/* 响应式 */
+@media(max-width:1050px){
+  .portal .courseChat{grid-template-columns:190px minmax(0,1fr)}
+  .portal .chatWorkspace{padding:0 16px}
+}
+@media(max-width:680px){
+  .portal .courseChat{display:block;height:calc(100dvh - 200px);min-height:520px;position:relative;border-radius:12px}
+  .portal .chatHistory{display:none}
+  .portal .chatHistory.isOpen{
+    display:flex;position:absolute;inset:0 40px 0 0;z-index:5;
+    border-right:1px solid #cbd5e1;box-shadow:8px 0 24px rgba(15,23,42,.15);
+  }
+  .portal .chatHistoryToggle{display:block}
+  .portal .chatWorkspace{height:100%;padding:0 12px}
+  .portal .chatHeader{padding:10px 0}
+  .portal .chatHeader h1{font-size:15px}
+  .portal .chatMessages{padding:16px 0}
+  .portal .chatUser{max-width:92%}
+  .portal .chatComposer{padding:8px}
+  .portal .chatAttachments .photoPreview{grid-template-columns:1fr}
+  .portal .chatComposer textarea{font-size:16px}
+  .portal .chatWelcome h2{font-size:18px}
+}

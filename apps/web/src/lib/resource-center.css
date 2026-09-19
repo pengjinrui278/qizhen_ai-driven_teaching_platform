@@ -1,0 +1,121 @@
+/* 资源中心样式 — 学镜 Learning Mirror */
+.rcContainer{padding:0;max-width:1200px;margin:0 auto;}
+.rcTopbar{display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.rcCourseSelect{display:flex;align-items:center;gap:8px;}
+.rcCourseSelect label{font-size:13px;color:#64748b;font-weight:500;}
+.rcCourseSelect select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;background:#fff;cursor:pointer;min-width:160px;}
+.rcCourseSelect select:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.rcSearchBox{flex:1;display:flex;gap:0;min-width:300px;}
+.rcSearchBox input{flex:1;padding:10px 16px;border:1px solid #e2e8f0;border-right:none;border-radius:8px 0 0 8px;font-size:14px;outline:none;transition:border-color .2s;}
+.rcSearchBox input:focus{border-color:#2563eb;}
+.rcSearchBox button{padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:0 8px 8px 0;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s;}
+.rcSearchBox button:hover{background:#1d4ed8;}
+.rcSearchBox button:disabled{background:#94a3b8;cursor:not-allowed;}
+.rcTabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e2e8f0;}
+.rcTabs button{padding:10px 20px;background:none;border:none;font-size:15px;font-weight:500;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.rcTabs button:hover{color:#2563eb;}
+.rcTabs button.active{color:#2563eb;border-bottom-color:#2563eb;}
+.rcCount{background:#f1f5f9;color:#64748b;font-size:12px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.rcTabs button.active .rcCount{background:#dbeafe;color:#2563eb;}
+.rcCardGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+.rcBookCard{display:flex;gap:16px;padding:20px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .2s;}
+.rcBookCard:hover{border-color:#2563eb;box-shadow:0 4px 12px rgba(37,99,235,.1);transform:translateY(-2px);}
+.rcBookCover{width:56px;height:72px;background:linear-gradient(135deg,#2563eb,#14b8a6);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:2px 2px 8px rgba(0,0,0,.1);}
+.rcBookSymbol{color:#fff;font-size:24px;font-weight:700;}
+.rcBookInfo{flex:1;min-width:0;}
+.rcBookInfo h3{font-size:16px;font-weight:600;color:#0f172a;margin:0 0 4px;}
+.rcBookMeta{font-size:13px;color:#64748b;margin:0 0 4px;}
+.rcBookStats{font-size:12px;color:#94a3b8;margin:0 0 8px;}
+.rcBookAction{font-size:13px;color:#2563eb;font-weight:500;}
+.rcExamCard{padding:20px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .2s;}
+.rcExamCard:hover{border-color:#14b8a6;box-shadow:0 4px 12px rgba(20,184,166,.1);transform:translateY(-2px);}
+.rcExamHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.rcExamYear{font-size:24px;font-weight:700;color:#0f172a;}
+.rcExamType{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600;}
+.rcExamType.final{background:#fef3c7;color:#b45309;}
+.rcExamType.mid{background:#dbeafe;color:#2563eb;}
+.rcExamCard h3{font-size:15px;font-weight:600;color:#0f172a;margin:0 0 4px;}
+.rcExamMeta{font-size:13px;color:#64748b;margin:0 0 8px;}
+.rcExamAnswer{font-size:12px;font-weight:500;margin:0;}
+.rcExamAnswer.yes{color:#059669;}
+.rcExamAnswer.no{color:#94a3b8;}
+.rcEmpty{text-align:center;padding:60px 20px;color:#94a3b8;}
+.rcEmpty p{margin:4px 0;}
+.rcEmptyHint{font-size:13px;}
+.rcLoading{text-align:center;padding:40px;color:#64748b;}
+.rcError{background:#fef2f2;color:#dc2626;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;}
+.rcSearchHeader{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
+.rcSearchHeader span{color:#64748b;font-size:14px;}
+.rcBackBtn{background:none;border:1px solid #e2e8f0;color:#475569;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;}
+.rcBackBtn:hover{border-color:#2563eb;color:#2563eb;}
+.rcSearchResults{display:flex;flex-direction:column;gap:12px;}
+.rcSearchItem{padding:16px 20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all .2s;}
+.rcSearchItem:hover{border-color:#2563eb;background:#f8fafc;}
+.rcSearchMeta{font-size:12px;color:#14b8a6;font-weight:600;margin-bottom:4px;}
+.rcSearchTitle{font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px;line-height:1.5;}
+.rcSearchSnippet{font-size:13px;color:#475569;line-height:1.6;margin-bottom:6px;}
+.rcSearchJump{font-size:12px;color:#2563eb;font-weight:500;}
+.rcHighlight{background:#fef08a;padding:0 2px;border-radius:2px;}
+.rcReader{display:flex;gap:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;min-height:600px;}
+.rcReaderSidebar{width:240px;flex-shrink:0;border-right:1px solid #e2e8f0;padding:20px 16px;background:#f8fafc;}
+.rcReaderSidebar .rcBackBtn{margin-bottom:16px;}
+.rcReaderSidebar h3{font-size:14px;font-weight:600;color:#0f172a;margin:0 0 12px;line-height:1.4;}
+.rcChapterList{display:flex;flex-direction:column;gap:2px;}
+.rcChapterList button{text-align:left;padding:8px 12px;background:none;border:none;border-radius:6px;font-size:13px;color:#475569;cursor:pointer;transition:all .15s;line-height:1.4;}
+.rcChapterList button:hover{background:#e2e8f0;color:#0f172a;}
+.rcChapterList button.active{background:#dbeafe;color:#2563eb;font-weight:600;}
+.rcReaderContent{flex:1;padding:28px 36px;overflow-y:auto;max-height:75vh;}
+.rcReaderContent h2{font-size:22px;font-weight:700;color:#0f172a;margin:0 0 24px;padding-bottom:14px;border-bottom:2px solid #e2e8f0;}
+.rcBookContent{line-height:1.9;color:#1e293b;font-size:15px;}
+.rcBookBlock{margin-bottom:22px;}
+.rcBookBlock:last-child{margin-bottom:0;}
+.rcBlockLabel{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+.rcLabelTag{display:inline-block;background:#2563eb;color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:4px;letter-spacing:.5px;flex-shrink:0;}
+.rcBlockName{font-size:15px;font-weight:600;color:#0f172a;}
+.rcBlockBody{font-size:15px;line-height:1.9;}
+.rcBlockBody p{margin:8px 0;}
+/* 定义、定理、推论、引理、命题：左侧竖线 + 浅蓝背景 */
+.rcType-definition,.rcType-theorem,.rcType-corollary,.rcType-lemma,.rcType-proposition,.rcType-property{
+  background:#f8fafc;border-left:3px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;
+}
+.rcType-definition .rcLabelTag,.rcType-theorem .rcLabelTag,.rcType-corollary .rcLabelTag,
+.rcType-lemma .rcLabelTag,.rcType-proposition .rcLabelTag,.rcType-property .rcLabelTag{
+  background:#2563eb;
+}
+/* 例题：左侧青色竖线 */
+.rcType-example{background:#f0fdfa;border-left:3px solid #14b8a6;padding:14px 18px;border-radius:0 8px 8px 0;}
+.rcType-example .rcLabelTag{background:#14b8a6;}
+/* 习题：左侧琥珀色竖线 */
+.rcType-exercise{background:#fffbeb;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;}
+.rcType-exercise .rcLabelTag{background:#f59e0b;}
+/* 证明：缩进 + 斜体标签 */
+.rcType-proof{padding-left:20px;border-left:2px solid #cbd5e1;margin-left:4px;}
+.rcType-proof .rcLabelTag{background:#64748b;}
+/* 正文说明：无特殊样式，连贯阅读 */
+.rcType-explanation{background:transparent;border:none;padding:0;}
+.rcType-explanation .rcBlockLabel{display:none;}
+.rcType-explanation .rcBlockBody{font-size:15px;line-height:1.9;}
+.rcExamDetail{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px 32px;}
+.rcExamDetail .rcBackBtn{margin-bottom:16px;}
+.rcExamDetailHeader{margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #e2e8f0;}
+.rcExamDetailHeader h2{font-size:20px;font-weight:700;color:#0f172a;margin:0 0 6px;}
+.rcExamDetailHeader p{font-size:14px;color:#64748b;margin:0;}
+.rcQuestionList{display:flex;flex-direction:column;gap:24px;}
+.rcQuestion{padding-bottom:20px;border-bottom:1px solid #f1f5f9;}
+.rcQuestion:last-child{border-bottom:none;}
+.rcQuestionHeader{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.rcQNumber{background:#2563eb;color:#fff;font-size:13px;font-weight:600;padding:3px 10px;border-radius:6px;}
+.rcQScore{font-size:12px;color:#64748b;}
+.rcQStatement{font-size:14px;line-height:1.8;color:#334155;margin-bottom:10px;}
+.rcQSolution{margin-top:8px;}
+.rcQSolution summary{font-size:13px;color:#14b8a6;cursor:pointer;font-weight:500;padding:6px 0;}
+.rcQSolution summary:hover{color:#0d9488;}
+.rcQSolution[open] summary{margin-bottom:8px;}
+@media(max-width:768px){
+ .rcReader{flex-direction:column;}
+ .rcReaderSidebar{width:100%;border-right:none;border-bottom:1px solid #e2e8f0;}
+ .rcChapterList{flex-direction:row;flex-wrap:wrap;}
+ .rcChapterList button{font-size:12px;}
+ .rcCardGrid{grid-template-columns:1fr;}
+ .rcSearchBox{min-width:100%;}
+}

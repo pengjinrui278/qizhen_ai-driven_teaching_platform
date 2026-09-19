@@ -34,12 +34,13 @@ def _query_tokens(text: str) -> list[str]:
             result.append(token)
 
     # 中文按字级 bigram 切分
-    chars = _CJK_RE.findall(text)
-    for i in range(len(chars) - 1):
-        bigram = chars[i] + chars[i + 1]
-        if bigram not in seen:
-            seen.add(bigram)
-            result.append(bigram)
+    stopwords = {"完全","没有","见过","过的","的一","一道","道题","一个","这个","什么","怎么","如何","证明","设有","存在","对于"}
+    for segment in re.findall(r"[一-龥]+", text):
+        for i in range(len(segment) - 1):
+            bigram = segment[i:i+2]
+            if bigram not in seen and bigram not in stopwords:
+                seen.add(bigram)
+                result.append(bigram)
 
     return result
 
@@ -56,6 +57,8 @@ def course_pack_ids(session: Session, course_id: str, profile_id: str) -> list[s
 def find_problem(session: Session, pack_ids: list[str], problem: ProblemInput) -> Problem | None:
     if not pack_ids:
         return None
+    if problem.coursepack_id:
+        pack_ids = [p for p in pack_ids if p == problem.coursepack_id]
     if problem.problem_id:
         row = session.execute(
             select(Problem).where(
@@ -72,13 +75,7 @@ def find_problem(session: Session, pack_ids: list[str], problem: ProblemInput) -
         ).scalars().first()
         if exact is not None:
             return exact
-        fuzzy = session.execute(
-            select(Problem).where(
-                Problem.coursepack_id.in_(pack_ids), Problem.statement.ilike(f"%{problem.text.strip()}%")
-            )
-        ).scalars().first()
-        if fuzzy is not None:
-            return fuzzy
+        # 相似题不等于同一道题；私人题干只有完整精确匹配才可复用参考解答。
     return None
 
 
@@ -103,19 +100,21 @@ def search_knowledge(
 ) -> list[KnowledgeNode]:
     if not pack_ids or not text.strip():
         return []
-    needle = text.strip()
+    tokens = _query_tokens(text)[:40]
+    if not tokens:
+        return []
     rows = session.execute(
         select(KnowledgeNode)
         .where(
             KnowledgeNode.coursepack_id.in_(pack_ids),
-            or_(
-                KnowledgeNode.title.ilike(f"%{needle}%"),
-                KnowledgeNode.statement.ilike(f"%{needle}%"),
-            ),
+            or_(*[KnowledgeNode.title.contains(t, autoescape=True) |
+                   KnowledgeNode.statement.contains(t, autoescape=True) for t in tokens]),
         )
-        .limit(limit)
     ).scalars()
-    return list(rows)
+    allowed = [r for r in rows if rag_allowed(r)]
+    allowed.sort(key=lambda r: sum(3 * (t in r.title) + (t in r.statement) for t in tokens),
+                 reverse=True)
+    return allowed[:limit]
 
 
 def rag_allowed(node: KnowledgeNode) -> bool:
@@ -134,21 +133,20 @@ def search_textbook_chunks(
     策略：先把查询拆成有效 token，再按任一 token 做 ilike 匹配，
     命中 token 越多的块排名越靠前。
     """
-    tokens = _query_tokens(text)
+    tokens = _query_tokens(text)[:40]
     if not tokens:
         return []
 
     conditions = [
         or_(
-            TextbookChunk.title.ilike(f"%{token}%"),
-            TextbookChunk.content.ilike(f"%{token}%"),
+            TextbookChunk.title.contains(token, autoescape=True),
+            TextbookChunk.content.contains(token, autoescape=True),
         )
         for token in tokens
     ]
     rows = session.execute(
         select(TextbookChunk)
         .where(TextbookChunk.course_id == course_id, or_(*conditions))
-        .limit(limit * 3)
     ).scalars()
 
     allowed = [row for row in rows if rag_allowed_chunk(row)]

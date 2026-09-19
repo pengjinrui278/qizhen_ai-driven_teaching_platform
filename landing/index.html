@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学镜 Learning Mirror — 面向大学数理课程的 AI 学习平台</title>
+<meta name="description" content="学镜 Learning Mirror 是面向大学数学、物理等基础课程的 AI 学习诊断与辅导平台，通过渐进式提示、教材关联和薄弱点诊断，帮助学生真正理解知识点。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='serif' font-weight='bold'>镜</text></svg>">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  font-family:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+  color:#1e293b;background:#fafbfc;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+/* ===== Layout ===== */
+.container{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* ===== Navigation ===== */
+.nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(12px);
+  border-bottom:1px solid #e2e8f0;
+}
+.nav-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  height:64px;max-width:1080px;margin:0 auto;padding:0 24px;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.nav-logo .mark{
+  width:36px;height:36px;border-radius:9px;
+  background:linear-gradient(135deg,#2563eb,#14b8a6);
+  display:grid;place-items:center;color:#fff;
+  font-family:"Noto Serif SC",serif;font-size:19px;font-weight:700;
+}
+.nav-logo .en{font-size:12px;color:#64748b;font-weight:400;display:block;line-height:1.2}
+.nav-links{display:flex;gap:28px;font-size:14px;color:#475569}
+.nav-links a{transition:color .15s}
+.nav-links a:hover{color:#2563eb}
+.nav-cta{
+  padding:8px 20px;border-radius:8px;font-size:14px;font-weight:500;
+  background:#2563eb;color:#fff;transition:background .15s;
+}
+.nav-cta:hover{background:#1d4ed8}
+@media(max-width:720px){.nav-links{display:none}}
+
+/* ===== Hero ===== */
+.hero{
+  padding:96px 0 80px;text-align:center;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 600px 300px at 50% 0%,rgba(37,99,235,.06),transparent),
+    radial-gradient(ellipse 400px 200px at 80% 30%,rgba(20,184,166,.05),transparent);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-block;padding:6px 16px;border-radius:999px;
+  background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:500;
+  margin-bottom:24px;letter-spacing:.02em;
+}
+.hero h1{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(32px,5vw,52px);font-weight:900;
+  color:#0f172a;line-height:1.25;margin-bottom:20px;
+}
+.hero h1 .accent{
+  background:linear-gradient(135deg,#2563eb,#14b8a6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-sub{
+  max-width:560px;margin:0 auto 36px;
+  font-size:17px;color:#64748b;line-height:1.8;
+}
+.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-primary{
+  padding:13px 32px;border-radius:10px;font-size:15px;font-weight:600;
+  background:#2563eb;color:#fff;
+  box-shadow:0 4px 14px rgba(37,99,235,.25);
+  transition:all .15s;
+}
+.btn-primary:hover{background:#1d4ed8;transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.3)}
+.btn-secondary{
+  padding:13px 32px;border-radius:10px;font-size:15px;font-weight:500;
+  background:#fff;color:#334155;border:1px solid #e2e8f0;
+  transition:all .15s;
+}
+.btn-secondary:hover{border-color:#93c5fd;color:#2563eb;background:#eff6ff}
+
+/* ===== Section Common ===== */
+.section{padding:80px 0}
+.section-label{
+  font-size:13px;font-weight:600;color:#2563eb;
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;
+}
+.section-title{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(24px,3.5vw,34px);font-weight:700;
+  color:#0f172a;margin-bottom:16px;line-height:1.3;
+}
+.section-desc{font-size:16px;color:#64748b;max-width:600px;line-height:1.8}
+
+/* ===== Features ===== */
+.features{background:#fff}
+.features-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px;
+}
+.feature-card{
+  padding:32px 28px;border-radius:14px;background:#f8fafc;
+  border:1px solid #e2e8f0;transition:all .2s;
+}
+.feature-card:hover{
+  border-color:#93c5fd;background:#fff;
+  box-shadow:0 4px 20px rgba(37,99,235,.08);
+  transform:translateY(-2px);
+}
+.feature-icon{
+  width:48px;height:48px;border-radius:12px;
+  display:grid;place-items:center;margin-bottom:18px;
+}
+.feature-icon.blue{background:#dbeafe;color:#2563eb}
+.feature-icon.teal{background:#ccfbf1;color:#0f766e}
+.feature-icon.amber{background:#fef3c7;color:#92400e}
+.feature-icon svg{width:24px;height:24px}
+.feature-card h3{font-size:17px;font-weight:600;color:#0f172a;margin-bottom:8px}
+.feature-card p{font-size:14px;color:#64748b;line-height:1.7}
+@media(max-width:860px){.features-grid{grid-template-columns:1fr;gap:16px}}
+
+/* ===== How It Works ===== */
+.how{background:#fafbfc}
+.how-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:48px;
+}
+.how-step{position:relative;padding:24px 20px}
+.how-step .num{
+  font-family:"Noto Serif SC",serif;font-size:36px;font-weight:900;
+  color:#dbeafe;line-height:1;margin-bottom:12px;
+}
+.how-step h4{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:6px}
+.how-step p{font-size:13.5px;color:#64748b;line-height:1.7}
+.how-step:not(:last-child)::after{
+  content:"";position:absolute;right:-10px;top:36px;
+  width:20px;height:1px;background:#cbd5e1;
+}
+@media(max-width:860px){
+  .how-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+  .how-step:not(:last-child)::after{display:none}
+}
+
+/* ===== Courses ===== */
+.courses{background:#fff}
+.course-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;
+}
+.course-card{
+  padding:24px;border-radius:12px;border:1px solid #e2e8f0;
+  display:flex;align-items:center;gap:16px;transition:all .15s;
+}
+.course-card:hover{border-color:#99f6e4;background:#f0fdfa}
+.course-icon{
+  width:44px;height:44px;border-radius:10px;flex-shrink:0;
+  display:grid;place-items:center;font-size:20px;
+}
+.course-card h4{font-size:15px;font-weight:600;color:#0f172a}
+.course-card p{font-size:13px;color:#64748b;margin-top:2px}
+@media(max-width:860px){.course-grid{grid-template-columns:1fr}}
+
+/* ===== CTA ===== */
+.cta{
+  padding:80px 0;text-align:center;
+  background:linear-gradient(135deg,#1e3a8a,#0f766e);
+  color:#fff;
+}
+.cta h2{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(24px,3.5vw,36px);font-weight:700;margin-bottom:12px;
+}
+.cta p{font-size:16px;opacity:.85;margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto}
+.cta .btn-white{
+  padding:13px 36px;border-radius:10px;font-size:15px;font-weight:600;
+  background:#fff;color:#1e3a8a;transition:all .15s;
+}
+.cta .btn-white:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+
+/* ===== Footer ===== */
+.footer{
+  padding:32px 0;border-top:1px solid #e2e8f0;
+  background:#fff;font-size:13px;color:#94a3b8;
+}
+.footer-inner{
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;
+}
+.footer a{color:#64748b}
+.footer a:hover{color:#2563eb}
+.icp{margin-top:4px}
+
+/* ===== Responsive ===== */
+@media(max-width:720px){
+  .hero{padding:64px 0 56px}
+  .section{padding:56px 0}
+  .nav-cta{padding:6px 14px;font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Navigation ===== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <span class="mark">镜</span>
+      <span>学镜<span class="en">Learning Mirror</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">平台特色</a>
+      <a href="#how">使用方式</a>
+      <a href="#courses">课程覆盖</a>
+      <a href="#contact">联系我们</a>
+    </div>
+    <a href="http://localhost:3000/student" class="nav-cta">进入平台</a>
+  </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">AI 学业诊断与辅导平台</div>
+    <h1>不替你答题，<br>帮你<span class="accent">真正学会</span>每一个知识点</h1>
+    <p class="hero-sub">
+      学镜 Learning Mirror 面向大学数学、物理等基础课程，通过渐进式提示阶梯、教材全文关联和薄弱点诊断，帮助学生理解自己"为什么不会"，而不是直接给出答案。
+    </p>
+    <div class="hero-actions">
+      <a href="http://localhost:3000/student" class="btn-primary">进入学习平台</a>
+      <a href="#features" class="btn-secondary">了解更多</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Features ===== -->
+<section class="section features" id="features">
+  <div class="container">
+    <div class="section-label">平台特色</div>
+    <h2 class="section-title">三个核心能力，让学习更高效</h2>
+    <p class="section-desc">不同于通用聊天机器人，学镜围绕大学数理课程的学习场景设计，聚焦"理解"而非"答案"。</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>
+          </svg>
+        </div>
+        <h3>渐进式提示阶梯</h3>
+        <p>学生遇到难题时，平台不会直接给出完整解答，而是从方向性提示开始，逐步深入，引导学生自己完成推导，保护思考过程。</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <h3>教材全文关联</h3>
+        <p>内置数学分析等教材全文内容，支持全文搜索和在线阅读。拍题识别后自动关联教材中的定义、定理和例题，减少翻书查找时间。</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><path d="M7 16l4-4 3 3 5-6"/>
+          </svg>
+        </div>
+        <h3>薄弱点诊断</h3>
+        <p>基于学生的提问和反馈记录，自动识别知识薄弱环节，生成学习档案和诊断报告，帮助学生了解自己的学习状态和改进方向。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== How It Works ===== -->
+<section class="section how" id="how">
+  <div class="container">
+    <div class="section-label">使用方式</div>
+    <h2 class="section-title">四步开始高效学习</h2>
+
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="num">01</div>
+        <h4>输入题目</h4>
+        <p>手动输入或拍摄上传题目，支持 LaTeX 公式和图片识别。</p>
+      </div>
+      <div class="how-step">
+        <div class="num">02</div>
+        <h4>请求提示</h4>
+        <p>遇到卡点时点击"我卡住了"，系统给出方向性提示而非完整答案。</p>
+      </div>
+      <div class="how-step">
+        <div class="num">03</div>
+        <h4>深入理解</h4>
+        <p>逐步请求更深入的提示，或查看关联的教材定义与定理，完成推导。</p>
+      </div>
+      <div class="how-step">
+        <div class="num">04</div>
+        <h4>查看诊断</h4>
+        <p>在学习档案中查看薄弱点分析和学习进度，针对性复习。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Courses ===== -->
+<section class="section courses" id="courses">
+  <div class="container">
+    <div class="section-label">课程覆盖</div>
+    <h2 class="section-title">从核心基础课程开始</h2>
+    <p class="section-desc">目前已完成数学分析教材全文录入，持续扩展更多课程。</p>
+
+    <div class="course-grid">
+      <div class="course-card">
+        <div class="course-icon" style="background:#dbeafe;color:#2563eb">∑</div>
+        <div>
+          <h4>数学分析</h4>
+          <p>教材全文已录入 · 6300+ 知识点</p>
+        </div>
+      </div>
+      <div class="course-card">
+        <div class="course-icon" style="background:#ccfbf1;color:#0f766e">M</div>
+        <div>
+          <h4>高等代数</h4>
+          <p>规划中 · 知识点框架已建立</p>
+        </div>
+      </div>
+      <div class="course-card">
+        <div class="course-icon" style="background:#fef3c7;color:#92400e">Φ</div>
+        <div>
+          <h4>大学物理</h4>
+          <p>规划中</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="cta">
+  <div class="container">
+    <h2>开始你的高效学习之旅</h2>
+    <p>注册账号即可体验 AI 学业诊断与辅导功能</p>
+    <a href="http://localhost:3000/student" class="btn-white">进入平台</a>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer" id="contact">
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div>学镜 Learning Mirror — AI 学业诊断与辅导平台</div>
+        <div class="icp">京ICP备XXXXXXXX号-X</div>
+      </div>
+      <div>
+        <a href="#contact">联系我们</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

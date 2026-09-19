@@ -56,7 +56,7 @@ def _setup():
 def cmd_init_db(_args) -> None:
     settings, engine, _ = _setup()
     init_db(engine)
-    print(f"已建表：{settings.database_url}")
+    print("已完成数据库建表检查（连接凭据不输出）")
 
 
 def cmd_seed_profiles(_args) -> None:

@@ -1,0 +1,5 @@
+# Credentials must never enter the image build context.
+.env
+**/.env
+data/
+artifacts/

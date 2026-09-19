@@ -51,6 +51,7 @@ class CoursePackManifest(BaseModel):
 
 
 class KnowledgeSource(BaseModel):
+    model_config = {"extra": "allow"}
     kind: str
     allowed_for_rag: bool = False
     allowed_for_eval: bool = False
@@ -74,6 +75,7 @@ class KnowledgeItem(BaseModel):
 
 
 class ProblemRights(BaseModel):
+    model_config = {"extra": "allow"}
     allowed_for_runtime: bool = False
     allowed_for_rag: bool = False
     allowed_for_eval: bool = False

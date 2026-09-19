@@ -11,6 +11,7 @@ from collections.abc import Iterator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base
@@ -21,6 +22,8 @@ def make_engine(database_url: str) -> Engine:
     if database_url.startswith("sqlite"):
         # FastAPI TestClient / uvicorn 在独立线程访问 SQLite 连接
         kwargs["connect_args"] = {"check_same_thread": False}
+        if database_url.endswith(":memory:") or database_url=="sqlite://":
+            kwargs["poolclass"] = StaticPool
     engine = create_engine(database_url, **kwargs)
     if database_url.startswith("sqlite"):
         # SQLite 默认不启用外键约束；开启后才能与 PostgreSQL 行为一致，
@@ -35,6 +38,7 @@ def make_engine(database_url: str) -> Engine:
 
 
 def init_db(engine: Engine) -> None:
+    from . import platform_models  # noqa: F401 -- additive migration tables
     Base.metadata.create_all(engine)
 
 

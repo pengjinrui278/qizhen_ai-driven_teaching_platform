@@ -1,0 +1,42 @@
+const {chromium}=require("playwright");
+const assert=require("node:assert/strict");
+(async()=>{
+ if(process.env.MIRROR_LIVE_MODEL_TEST!=="1")throw Error("Set MIRROR_LIVE_MODEL_TEST=1 for two paid synthetic chat calls.");
+ const browser=await chromium.launch({channel:"msedge",headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.on("pageerror",e=>errors.push(e.message));
+ const base=process.env.MIRROR_BROWSER_URL||"http://127.0.0.1:3010";
+ try{
+ await page.goto(base+"/student/learn");
+ await page.getByRole("button",{name:"注册账号",exact:true}).click();
+ await page.getByLabel("账号",{exact:true}).fill("chat_check_"+Date.now());
+ await page.getByLabel("昵称",{exact:true}).fill("聊天验收合成学生");
+ await page.getByLabel("口令",{exact:true}).fill("synthetic-product-test-2026");
+ await page.getByRole("button",{name:"创建账号",exact:true}).click();
+ const input=page.getByRole("textbox",{name:"发送消息",exact:true});
+ await input.fill("请简短解释数列极限的量词顺序，N可以依赖谁？请参考教材资料。");
+ await page.getByRole("button",{name:"发送",exact:true}).click();
+ await page.locator(".chatAssistant").first().waitFor({timeout:170000});
+ assert.equal(await page.locator(".problemList").count(),0);
+ await input.fill("那有界数列一定收敛吗？给一个反例，不要重复上一问。");
+ await page.getByRole("button",{name:"发送",exact:true}).click();
+ await page.waitForFunction(()=>document.querySelectorAll(".chatAssistant").length===2,{},{timeout:170000});
+ assert.notEqual(await page.locator(".chatAssistant").nth(0).innerText(),await page.locator(".chatAssistant").nth(1).innerText());
+ assert.ok((await page.locator(".chatAssistant").allTextContents()).join(" ").includes("PDF"));
+ await page.screenshot({path:"artifacts/chat-desktop.png",fullPage:true});
+ await page.reload();
+ await page.locator(".chatSessionList button").first().click();
+ await page.locator(".chatAssistant").nth(1).waitFor();
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:"artifacts/chat-mobile.png",fullPage:true});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+ await page.getByRole("button",{name:"新对话",exact:true}).click();
+ assert.equal(await page.locator(".chatAssistant").count(),0);
+ await page.goto(base+"/student/privacy");
+ const download=page.waitForEvent("download");await page.getByRole("button",{name:"导出我的档案"}).click();await download;
+ await page.goto(base+"/teacher");
+ await page.getByRole("heading",{name:"当前账号没有教师权限"}).waitFor();
+ assert.deepEqual(errors,[]);
+ console.log("PASS: default live login, free chat, follow-up, textbook page citations, history, new chat, desktop/mobile, export, teacher privacy.");
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

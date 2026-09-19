@@ -80,7 +80,7 @@ def test_unknown_problem_falls_back_without_citations(session):
     )
     assert response.answer_type == "fallback_guidance"
     assert response.citations == []
-    assert response.hint_level is None
+    assert response.hint_level == 1
     citation_check = next(c for c in response.harness.checks if c.name == "citation_presence")
     assert citation_check.status == "uncertain"
 
@@ -145,17 +145,15 @@ def test_http_endpoints(tmp_path):
     client = TestClient(app)
     payload = make_request("http-1", "first_hint", problem_id=PROBLEM_ID).model_dump(mode="json")
     response = client.post("/api/v1/course-mirror/requests", json=payload)
-    assert response.status_code == 200
-    body = response.json()
-    assert body["request_id"] == "http-1"
-    assert body["hint_level"] == 1
+    # 匿名请求不再允许通过客户端participant_code伪装学生；v2闭环见test_platform。
+    assert response.status_code == 401
 
     missing = client.post(
         "/api/v1/course-mirror/requests",
         json=make_request("http-2", "first_hint", text="任意").model_dump(mode="json")
         | {"course_id": "not_a_course"},
     )
-    assert missing.status_code == 404
+    assert missing.status_code == 401
 
     packs = client.get("/api/v1/coursepacks")
     assert packs.status_code == 200

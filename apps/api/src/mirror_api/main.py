@@ -1,9 +1,14 @@
 from contextlib import asynccontextmanager
+import asyncio
+from collections import defaultdict, deque
+import logging
+import time
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from fastapi.responses import JSONResponse
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from . import retrieval, upload_service, workspace_service
@@ -24,6 +29,7 @@ from .domain import (
     WorkspaceJoinRequest,
 )
 from .llm import build_model
+from .model_transport import ModelError
 from .mirror_service import MirrorError, MirrorPipeline
 from .models import CoursePack, Problem, ProblemHint
 from .registry import load_course_profiles, public_profile
@@ -36,13 +42,33 @@ def configure(app: FastAPI, database_url: str | None = None) -> None:
     init_db(engine)
     app.state.session_factory = make_session_factory(engine)
     app.state.pipeline = MirrorPipeline(build_model(settings))
+    app.state.engine = engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not hasattr(app.state, "session_factory"):
         configure(app)
-    yield
+    from .sandboxes import cleanup
+    from .governance import expire_personal
+    def sweep():
+        with app.state.session_factory() as db:
+            cleanup(db)
+            expire_personal(db)
+    async def worker():
+        while True:
+            try:
+                await asyncio.to_thread(sweep)
+            except Exception:
+                logging.getLogger(__name__).exception("Lifecycle sweep failed")
+            await asyncio.sleep(max(10, get_settings().cleanup_interval_seconds))
+    task=asyncio.create_task(worker())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:await task
+        except asyncio.CancelledError:pass
 
 
 app = FastAPI(
@@ -55,12 +81,66 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from .platform_api import router
+app.include_router(router)
+_auth_attempts=defaultdict(deque)
+
+
+@app.exception_handler(MirrorError)
+@app.exception_handler(ModelError)
+async def mirror_error_handler(request, exc):
+    return JSONResponse(status_code=exc.status_code, content={"detail":exc.detail})
+
+
+@app.middleware("http")
+async def boundary(request: Request, call_next):
+    path=request.url.path
+    if path.startswith("/api/") and request.method in ("POST","PUT","PATCH","DELETE"):
+        if path.startswith("/api/v2/") and request.headers.get("X-Mirror-Request")!="1":
+            return JSONResponse(status_code=403,content={"detail":"请求缺少来源校验标记，请刷新页面"})
+        # 旧AI页面使用JSON请求；保留兼容，但拒绝可被跨站表单发送的内容类型。
+        if path == "/api/v1/course-mirror/requests" and not request.headers.get("content-type", "").startswith("application/json"):
+            return JSONResponse(status_code=415,content={"detail":"只接受JSON请求"})
+        origin=request.headers.get("origin")
+        if origin and origin.rstrip("/") not in {
+            str(request.base_url).rstrip("/"), *get_settings().cors_origins
+        }:
+            # 允许 cloudflared 临时隧道（*.trycloudflare.com）
+            if not origin.rstrip("/").endswith(".trycloudflare.com"):
+                return JSONResponse(status_code=403,content={"detail":"不允许的请求来源"})
+    if path in ("/api/v2/auth/login","/api/v2/auth/register"):
+        key=request.client.host if request.client else "unknown"
+        now=time.monotonic()
+        queue=_auth_attempts[key]
+        while queue and now-queue[0]>60:queue.popleft()
+        if len(queue)>=20:
+            return JSONResponse(status_code=429,content={"detail":"尝试过于频繁，请稍后再试"})
+        queue.append(now)
+    # 旧教师/上传管理接口缺少归属协议，停止写入，统一使用受控v2。
+    if path.startswith(("/api/v1/workspaces","/api/v1/findings","/api/v1/student-uploads")):
+        return JSONResponse(status_code=410,content={"detail":"请使用新的Sandbox/私人学习工作台"})
+    if path=="/api/v1/course-mirror/requests":
+        from .auth import current_account
+        try:
+            with request.app.state.session_factory() as db:
+                current_account(request,db)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code,content={"detail":exc.detail})
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        import httpx
+        if isinstance(exc,(httpx.HTTPError,TimeoutError)):
+            return JSONResponse(status_code=503,content={"detail":"模型暂时不可用，请稍后重试；不会将失败判断写为学习结论"})
+        raise
+
 # 允许本机前端（pnpm dev:web 默认 3000 端口）跨域调用；生产环境由 nginx 同域代理，
 # 可通过 MIRROR_CORS_ORIGINS 环境变量覆盖。
 settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -75,8 +155,10 @@ def get_db(request: Request) -> Session:
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "phase": "1-base"}
+def health(request: Request) -> dict[str, str]:
+    with request.app.state.session_factory() as db:
+        db.execute(text("SELECT 1"))
+    return {"status": "ok", "phase": "controlled-pilot"}
 
 
 @app.get("/api/v1/courses")
@@ -132,10 +214,18 @@ async def preview_course_mirror(request: CourseMirrorRequest) -> CourseMirrorRes
 
 
 @app.post("/api/v1/course-mirror/requests", response_model=CourseMirrorResponse)
-async def course_mirror_request(
+def course_mirror_request(
     request: CourseMirrorRequest, http_request: Request, db: Session = Depends(get_db)
 ) -> CourseMirrorResponse:
     pipeline: MirrorPipeline = http_request.app.state.pipeline
+    from .auth import current_account, require_active
+    user=current_account(http_request,db)
+    require_active(user)
+    # 老AI教学页面复用账号cookie；不允许客户端伪装他人或注入个人模型。
+    request.participant_code=user.id
+    request.assignment_workspace_id=None
+    if request.course_id!="ai_literacy":
+        raise HTTPException(410,"数理课程请通过新的学习会话接口")
     try:
         return pipeline.handle(db, request)
     except MirrorError as exc:
@@ -191,7 +281,7 @@ async def list_problems(
             "max_hint_level": hint_counts.get(problem.problem_id, 0),
         }
         for problem in problems
-        if retrieval.runtime_allowed(problem)
+        if retrieval.runtime_allowed(problem) and problem.provenance!="student_submitted"
     ]
 
 

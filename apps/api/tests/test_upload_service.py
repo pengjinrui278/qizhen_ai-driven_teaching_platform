@@ -120,93 +120,14 @@ def test_find_similar_problems_excludes_self(session):
     assert all((p.coursepack_id, p.problem_id) != (problem.coursepack_id, problem.problem_id) for p in similar)
 
 
-def test_review_approve_makes_problem_public(session, app_client):
-    # 通过 API 上传新题
-    text = "证明：若数列 {a_n} 收敛，则其极限唯一。"
-    upload = app_client.post(
-        "/api/v1/student-uploads",
-        json=make_upload_request("up-5", text).model_dump(mode="json"),
-    )
-    assert upload.status_code == 200
-    body = upload.json()
-    coursepack_id = body["coursepack_id"]
-    problem_id = body["problem_id"]
-
-    # 审批前不在 /api/v1/problems 中
-    problems_before = app_client.get(
-        "/api/v1/problems",
-        params={"course_id": COURSE, "course_profile_id": PROFILE},
-    )
-    assert problem_id not in {item["problem_id"] for item in problems_before.json()}
-
-    # 人工审批
-    review = app_client.post(
-        f"/api/v1/student-uploads/{coursepack_id}/{problem_id}/review",
-        json={"decision": "approved", "note": "符合课程范围"},
-    )
-    assert review.status_code == 200
-    assert review.json()["review"]["status"] == "student_approved"
-    assert review.json()["rights"]["allowed_for_runtime"] is True
-
-    # 审批后出现在 /api/v1/problems 中
-    problems_after = app_client.get(
-        "/api/v1/problems",
-        params={"course_id": COURSE, "course_profile_id": PROFILE},
-    )
-    assert problem_id in {item["problem_id"] for item in problems_after.json()}
-
-
-def test_review_reject_blocks_problem(session, app_client):
-    text = "完全没有数学内容的一段文本"
-    upload = app_client.post(
-        "/api/v1/student-uploads",
-        json=make_upload_request("up-6", text).model_dump(mode="json"),
-    )
-    assert upload.status_code == 200
-    body = upload.json()
-    coursepack_id = body["coursepack_id"]
-    problem_id = body["problem_id"]
-
-    review = app_client.post(
-        f"/api/v1/student-uploads/{coursepack_id}/{problem_id}/review",
-        json={"decision": "rejected", "note": "质量不达标"},
-    )
-    assert review.status_code == 200
-    assert review.json()["rights"]["allowed_for_runtime"] is False
-
-
-def test_pending_upload_can_still_receive_hints(app_client):
-    text = "证明：若数列 {a_n} 收敛，则其极限唯一。"
-    upload = app_client.post(
-        "/api/v1/student-uploads",
-        json=make_upload_request("up-7", text).model_dump(mode="json"),
-    )
-    assert upload.status_code == 200
-    body = upload.json()
-    problem_id = body["problem_id"]
-
-    next_hint = app_client.post(
-        "/api/v1/course-mirror/requests",
-        json={
-            "request_id": "up-7-next",
-            "course_id": COURSE,
-            "course_profile_id": PROFILE,
-            "problem": {"problem_id": problem_id},
-            "interaction_mode": "next_hint",
-        },
-    )
-    assert next_hint.status_code == 200
-    assert next_hint.json()["hint_level"] == 2
-
-    full_solution = app_client.post(
-        "/api/v1/course-mirror/requests",
-        json={
-            "request_id": "up-7-full",
-            "course_id": COURSE,
-            "course_profile_id": PROFILE,
-            "problem": {"problem_id": problem_id},
-            "interaction_mode": "full_solution",
-        },
-    )
-    assert full_solution.status_code == 200
-    assert "尚未完成审校" in full_solution.json()["answer"]
+@pytest.mark.parametrize("path,method", [
+    ("/api/v1/student-uploads", "post"),
+    ("/api/v1/student-uploads/analysis-chen-jixiu-3e/private/review", "post"),
+    ("/api/v1/student-uploads/pending", "get"),
+])
+def test_legacy_private_upload_management_is_retired(app_client, path, method):
+    # 私人提问与共享贡献已分离；旧匿名审批不能再改变题库授权。
+    response = getattr(app_client, method)(path)
+    assert response.status_code == 410
+    assert "Sandbox" in response.json()["detail"]
+    # 完整v2贡献/私人解答/审校发布闭环由test_platform覆盖。

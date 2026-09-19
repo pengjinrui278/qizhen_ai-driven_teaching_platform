@@ -16,6 +16,11 @@ http {
     server {
         listen ${PORT};
         server_name _;
+        client_max_body_size 6m;
+        proxy_read_timeout 150s;
+        location = /health {
+            proxy_pass http://127.0.0.1:8000/health;
+        }
 
         location /api {
             proxy_pass http://127.0.0.1:8000;

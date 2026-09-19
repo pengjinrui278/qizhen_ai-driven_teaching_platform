@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class InteractionMode(StrEnum):
+    CHAT = "chat"
     FIRST_HINT = "first_hint"
     NEXT_HINT = "next_hint"
     FULL_SOLUTION = "full_solution"
@@ -41,9 +42,10 @@ class MinimalStudentContext(BaseModel):
 
 
 class ProblemInput(BaseModel):
-    text: str | None = None
+    text: str | None = Field(default=None, max_length=12000)
     image_ids: list[str] = Field(default_factory=list)
     problem_id: str | None = None
+    coursepack_id: str | None = None
 
 
 class CourseMirrorRequest(BaseModel):
@@ -55,6 +57,9 @@ class CourseMirrorRequest(BaseModel):
     interaction_mode: InteractionMode
     assignment_workspace_id: str | None = None
     participant_code: str | None = Field(default=None, max_length=64)
+    attempt_id: str | None = None
+    message: str = Field(default="", max_length=6000)
+    history: list[dict] = Field(default_factory=list, max_length=12)
 
 
 class CourseCitation(BaseModel):
@@ -95,6 +100,8 @@ class CourseMirrorResponse(BaseModel):
     harness: HarnessResult
     evidence: list[LearningEvidenceDraft] = Field(default_factory=list)
     uncertainty: list[str] = Field(default_factory=list)
+    model: str = ""
+    decision: dict = Field(default_factory=dict)
 
 
 class StudentUploadRequest(BaseModel):
@@ -163,4 +170,3 @@ class CourseProfile(BaseModel):
     harnesses: list[str]
     source_refs: list[SourceRef] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-

@@ -241,3 +241,37 @@ class LearningEvidenceRow(Base):
     strength: Mapped[str] = mapped_column(String(16))
     source_event_ids: Mapped[list] = mapped_column(JSON, default=list)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ExamPaper(Base):
+    """历年真题卷元数据。"""
+
+    __tablename__ = "exam_papers"
+
+    paper_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    course_id: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(256))
+    year: Mapped[int] = mapped_column(Integer)
+    semester: Mapped[str] = mapped_column(String(32))  # 秋冬学期 / 春夏学期 / 短学期
+    exam_type: Mapped[str] = mapped_column(String(32))  # 期末考试 / 期中考试 / 小测
+    question_count: Mapped[int] = mapped_column(Integer, default=0)
+    has_answers: Mapped[bool] = mapped_column(Boolean, default=False)
+    total_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ExamQuestion(Base):
+    """真题卷中的题目。"""
+
+    __tablename__ = "exam_questions"
+
+    question_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    paper_id: Mapped[str] = mapped_column(String(64), index=True)
+    number: Mapped[str] = mapped_column(String(32))  # 题号，如 "一、1" 或 "1"
+    statement: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    solution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    knowledge_tags: Mapped[list] = mapped_column(JSON, default=list)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

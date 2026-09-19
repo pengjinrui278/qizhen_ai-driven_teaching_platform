@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 import uuid
+import threading
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -49,6 +50,7 @@ from .retrieval import (
 
 HINT_MODES = (InteractionMode.FIRST_HINT, InteractionMode.NEXT_HINT)
 MAX_HINT_LEVEL = 7
+_LOCKS = [threading.RLock() for _ in range(64)]
 
 
 class MirrorError(Exception):
@@ -63,8 +65,22 @@ class MirrorPipeline:
         self.model = model
 
     def handle(self, session: Session, request: CourseMirrorRequest) -> CourseMirrorResponse:
+        key=(request.participant_code,request.attempt_id,request.course_id)
+        with _LOCKS[hash(key)%len(_LOCKS)]:
+            return self._handle(session,request)
+
+    def _handle(self, session: Session, request: CourseMirrorRequest) -> CourseMirrorResponse:
         existing = session.get(MirrorEvent, request.request_id)
         if existing is not None:
+            old = existing.request_payload
+            if (existing.participant_code != request.participant_code
+                or existing.course_id != request.course_id
+                or existing.profile_id != request.course_profile_id
+                or old.get("attempt_id") != request.attempt_id
+                or old.get("interaction_mode") != request.interaction_mode.value
+                or old.get("problem") != request.problem.model_dump(mode="json")
+                or old.get("message", "") != request.message):
+                raise MirrorError(409, "请求编号已用于另一次操作，请勿复用")
             return CourseMirrorResponse.model_validate(existing.response_json)
 
         course = session.get(Course, request.course_id)
@@ -87,52 +103,33 @@ class MirrorPipeline:
         is_student_upload = problem is not None and problem.provenance == "student_submitted"
         if problem is not None and not runtime_allowed(problem):
             # 学生上传题允许进入管线（渐进提示 / 完整解答门控），但给出提示
-            if is_student_upload:
+            if is_student_upload and problem.review.get("owner_id") == request.participant_code:
                 uncertainty.append("该题为同学上传，正在审核中，仅提供渐进提示。")
             else:
                 uncertainty.append("命中的题目授权范围不允许运行时使用，已按未命中处理。")
                 problem = None
 
-        # 学生上传题在未审批前禁止直接请求完整解答
-        if (
-            is_student_upload
-            and request.interaction_mode is InteractionMode.FULL_SOLUTION
-            and problem is not None
-            and problem.review.get("status") != "student_approved"
-        ):
-            return CourseMirrorResponse(
-                request_id=request.request_id,
-                course_id=request.course_id,
-                answer="该题尚未完成审校，暂不提供完整解答。你可以继续请求下一级提示，或回顾相关知识点。",
-                answer_type="full_solution",
-                hint_level=None,
-                citations=[],
-                harness=HarnessResult(
-                    status="passed",
-                    checks=[HarnessCheck(name="student_upload_solution_gate", status="passed", detail="已阻止未审批上传题直接泄露完整解答")],
-                ),
-                evidence=[],
-                uncertainty=["学生上传题需审校通过后才开放完整解答。"],
-            )
-
-        if problem is not None:
+        retrieval_query=(request.message+" "+(request.problem.text or ""))[:2200]
+        if problem is not None and request.interaction_mode is not InteractionMode.CHAT:
             knowledge = [node for node in knowledge_for_problem(session, problem) if rag_allowed(node)]
         else:
             knowledge = [
                 node
-                for node in search_knowledge(session, pack_ids, request.problem.text or "")
+                for node in search_knowledge(session, pack_ids, retrieval_query)
                 if rag_allowed(node)
             ]
 
         # 补充教材文本块（授权 RAG 门控后）作为额外上下文
         chunks = search_textbook_chunks(
-            session, request.course_id, request.problem.text or "", limit=3
+            session, request.course_id,
+            retrieval_query or (problem.statement if problem else ""), limit=3
         )
 
         hint_level, hints_exhausted = self._decide_hint_level(session, request, problem)
 
+        dynamic_hints = bool(getattr(self.model, "dynamic_hints", False)) and request.course_id != "ai_literacy"
         hints: list[dict] = []
-        if problem is not None:
+        if problem is not None and not dynamic_hints:
             hint_rows = session.execute(
                 select(ProblemHint)
                 .where(
@@ -147,16 +144,20 @@ class MirrorPipeline:
             ]
 
         context = MirrorContext(
+            course_id=request.course_id,
             course_name=course.display_name,
             mirror_name=course.mirror_name,
             interaction_mode=request.interaction_mode.value,
             hint_level=hint_level,
             hints_exhausted=hints_exhausted,
+            dynamic_hints=dynamic_hints,
             problem_statement=problem.statement if problem else request.problem.text,
             hints=hints,
             solution_paths=list(problem.solution_paths) if problem else [],
             knowledge=[
-                {"knowledge_id": node.knowledge_id, "title": node.title, "statement": node.statement}
+                {"knowledge_id": node.knowledge_id, "title": node.title, "statement": node.statement,
+                 "conditions": node.conditions, "prerequisites": node.prerequisites,
+                 "locator": node.source.get("locator") or node.title}
                 for node in knowledge
             ]
             + [
@@ -164,6 +165,9 @@ class MirrorPipeline:
                 for chunk in chunks
             ],
             common_mistakes=list(problem.common_mistakes) if problem else [],
+            student_context=request.student_context.model_dump(),
+            message=request.message,
+            history=request.history,
         )
         answer = self.model.generate(context)
 
@@ -171,7 +175,7 @@ class MirrorPipeline:
             CourseCitation(
                 source_id=node.coursepack_id,
                 knowledge_id=node.knowledge_id,
-                locator=node.title,
+                locator=node.source.get("locator") or node.title,
             )
             for node in knowledge
         ] + [
@@ -184,6 +188,9 @@ class MirrorPipeline:
         ]
 
         harness = self._run_harness(profile.harnesses, request, problem, answer, citations)
+        if harness.status == "failed":
+            answer = "这次生成的内容没有通过检查，已停止展示。请换一种问法，或请教师/TA核对。"
+            uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
         evidence = self._draft_evidence(request, problem, knowledge)
 
         response = CourseMirrorResponse(
@@ -196,6 +203,13 @@ class MirrorPipeline:
             harness=harness,
             evidence=evidence,
             uncertainty=uncertainty,
+            model=self.model.name,
+            decision={
+                "policy_version": "course-student-v2",
+                "context": request.student_context.model_dump(),
+                "attempt_id": request.attempt_id,
+                "coursepack": problem.coursepack_id if problem else None,
+            },
         )
 
         session.add(
@@ -243,28 +257,37 @@ class MirrorPipeline:
             raise MirrorError(404, "作业工作区已关闭，不再接收新请求")
         if workspace.course_id != request.course_id:
             raise MirrorError(400, "作业工作区所属课程与请求课程不一致")
+        if workspace.profile_id != request.course_profile_id:
+            raise MirrorError(400, "Sandbox教材版本与请求不一致")
         if not request.participant_code:
             raise MirrorError(400, "挂到作业工作区的请求必须携带匿名参与码")
 
     def _decide_hint_level(self, session, request, problem) -> tuple[int | None, bool]:
         """返回 (本次提示级别, 提示阶梯是否已用完)。"""
-        if request.interaction_mode not in HINT_MODES or problem is None:
+        if request.interaction_mode not in HINT_MODES:
             return None, False
         if request.interaction_mode is InteractionMode.FIRST_HINT:
             return 1, False
-        past_max = session.execute(
-            select(func.max(MirrorEvent.hint_level)).where(
+        past = session.execute(
+            select(MirrorEvent).where(
                 MirrorEvent.course_id == request.course_id,
-                MirrorEvent.problem_ref == problem.problem_id,
+                MirrorEvent.profile_id == request.course_profile_id,
+                MirrorEvent.participant_code == request.participant_code,
+                MirrorEvent.problem_ref == (problem.problem_id if problem else None),
                 MirrorEvent.interaction_mode.in_([mode.value for mode in HINT_MODES]),
             )
-        ).scalar()
+        ).scalars().all()
+        past_max = max((row.hint_level or 0 for row in past
+                        if row.request_payload.get("attempt_id") == request.attempt_id
+                        and row.response_json.get("harness", {}).get("status") != "failed"), default=0)
+        if getattr(self.model, "dynamic_hints", False) and request.course_id != "ai_literacy":
+            return min(past_max + 1, MAX_HINT_LEVEL), False
         max_available = session.execute(
             select(func.max(ProblemHint.level)).where(
                 ProblemHint.coursepack_id == problem.coursepack_id,
                 ProblemHint.problem_id == problem.problem_id,
             )
-        ).scalar()
+        ).scalar() if problem else MAX_HINT_LEVEL
         cap = min(max_available or MAX_HINT_LEVEL, MAX_HINT_LEVEL)
         if (past_max or 0) >= cap:
             return cap, True

@@ -7,14 +7,14 @@
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # apps/api/src/mirror_api/config.py -> 仓库根目录
 _PARENTS = Path(__file__).resolve().parents
 # 本地仓库布局为 apps/api/src/mirror_api/config.py（parents[4] 是仓库根）；
 # 生产容器里源码放在 /app/src/mirror_api/，层级更浅，回退到最上层目录。
-REPO_ROOT = _PARENTS[4] if len(_PARENTS) > 4 else _PARENTS[-2]
+REPO_ROOT = next((p for p in _PARENTS if (p / "coursepacks").is_dir()), _PARENTS[2])
 
 
 class Settings(BaseSettings):
@@ -36,11 +36,23 @@ class Settings(BaseSettings):
     # 接入真实大模型时设 MIRROR_LLM_PROVIDER=openai_compatible 并配置其余三项
     # （DeepSeek / 通义 / GLM 等国内模型均提供 OpenAI 兼容接口）。
     llm_provider: str = "stub"
+    # Only automated tests may explicitly enable prerecorded learning responses.
+    allow_stub_learning: bool = False
     llm_base_url: str | None = None
     llm_api_key: str | None = None
     llm_model: str | None = None
     # 带推理链的模型生成较长解答可能超过一分钟，给足超时。
     llm_timeout: float = 120.0
+    llm_max_tokens: int = Field(default=4096,ge=128,le=16384)
+    llm_reasoning_effort: str = "high"
+    # Official text models cannot read images. Keep the vision task separate.
+    vision_model: str = "deepseek-v4-flash-vision-exp"
+    environment: str = "test"
+    staff_invite_code: str = ""
+    secure_cookie: bool = False
+    session_hours: int = 24
+    # 后台生命周期任务；教师创建时仍必须确认保留时长。
+    cleanup_interval_seconds: int = 60
 
     @field_validator("database_url", mode="after")
     @classmethod

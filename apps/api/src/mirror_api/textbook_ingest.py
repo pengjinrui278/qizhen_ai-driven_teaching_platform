@@ -36,6 +36,12 @@ class PypdfExtractor:
     def extract_text(self, path: Path) -> list[tuple[int, str]]:
         from pypdf import PdfReader
 
+        with path.open("rb") as stream:
+            header = stream.read(128)
+        if header.startswith(b"version https://git-lfs"):
+            raise ValueError("此文件是 Git LFS 指针，请先取得教材PDF正文")
+        if not header.startswith(b"%PDF"):
+            raise ValueError("文件不是可识别的PDF")
         reader = PdfReader(str(path))
         pages: list[tuple[int, str]] = []
         for index, page in enumerate(reader.pages, start=1):
@@ -135,8 +141,8 @@ def ingest_textbook(
     source = _default_source(license_note)
     written = 0
 
-    for chunk in chunks:
-        locator = chunk["locator"]
+    for index, chunk in enumerate(chunks):
+        locator = f"{chunk['locator']} · 块 {index + 1}"
         existing = session.query(TextbookChunk).filter_by(
             course_id=course_id, source_id=source_id, locator=locator
         ).first()
