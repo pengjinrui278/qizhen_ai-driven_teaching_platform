@@ -134,6 +134,24 @@ def test_production_domain_can_register_and_restore_a_real_session(pilot,monkeyp
     assert rejected.status_code==403
 
 
+def test_six_character_password_and_public_login_wording(pilot):
+    anonymous=TestClient(app,headers=HEADERS)
+    unauthenticated=anonymous.get("/api/v2/me")
+    assert unauthenticated.status_code==401
+    assert unauthenticated.json()["detail"]=="请先登录账号"
+    too_short=anonymous.post("/api/v2/auth/register",json={
+        "username":"short_password","nickname":"短密码测试","password":"12345",
+        "role":"student","invite_code":""})
+    assert too_short.status_code==422
+    created=anonymous.post("/api/v2/auth/register",json={
+        "username":"six_password","nickname":"六位密码测试","password":"123456",
+        "role":"student","invite_code":""})
+    assert created.status_code==200,created.text
+    anonymous.post("/api/v2/auth/logout")
+    assert anonymous.post("/api/v2/auth/login",json={
+        "username":"six_password","password":"123456"}).status_code==200
+
+
 def test_hint_attempt_isolation_and_request_replay(pilot):
     register(pilot,"student_a")
     data=pilot.get("/api/v2/problems",params={"course_id":COURSE}).json()

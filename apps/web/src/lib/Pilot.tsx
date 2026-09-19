@@ -20,10 +20,23 @@ export class ApiError extends Error{
  status:number;
  constructor(status:number,message:string){super(message);this.name="ApiError";this.status=status;}
 }
+function apiErrorMessage(value:any,status:number){
+ if(typeof value?.detail==="string")return value.detail.replace(/Sandbox/gi,"作业");
+ const issue=Array.isArray(value?.detail)?value.detail[0]:null;
+ if(issue){
+  const field=String(issue.loc?.at?.(-1)||"");
+  const names:Row={username:"账号",password:"口令",nickname:"昵称",invite_code:"邀请码",role:"身份"};
+  if(issue.type==="string_too_short")return `${names[field]||"内容"}至少需要 ${issue.ctx?.min_length||6} 个字符`;
+  if(issue.type==="string_too_long")return `${names[field]||"内容"}不能超过 ${issue.ctx?.max_length||128} 个字符`;
+  if(issue.type==="string_pattern_mismatch")return "账号只能包含字母、数字、下划线、点和短横线";
+  if(issue.type==="missing")return `请填写${names[field]||"完整注册信息"}`;
+ }
+ return "请检查填写内容后重试（"+status+"）";
+}
 export async function liveApi(path:string,method="GET",body?:unknown){
   const r=await fetch((process.env.NEXT_PUBLIC_API_BASE??"")+"/api/v2"+path,{method,credentials:"include",headers:{"Content-Type":"application/json","X-Mirror-Request":"1"},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const v=await r.json().catch(()=>({detail:"服务没有返回有效数据"}));
-  if(!r.ok)throw new ApiError(r.status,typeof v.detail==="string"?v.detail.replace(/Sandbox/gi,"作业"):"操作失败（"+r.status+"）");return v;
+  if(!r.ok)throw new ApiError(r.status,apiErrorMessage(v,r.status));return v;
 }
 function MathText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$")}</ReactMarkdown>;}
 function download(name:string,value:unknown){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
@@ -70,8 +83,8 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
  {loading?<p>正在恢复登录状态…</p>:!user?<section className="pilotCard loginCard"><div className="loginBrand"><span className="loginLogo">镜</span><div><h2>{register?"创建学镜账号":"欢迎回到学镜"}</h2><p>{register?"注册后即可在课程中获得最小提示式引导":"登录后继续你的课程学习与学习档案"}</p></div></div>
  <form className="pilotForm authForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const password=String(f.get("password")||"");if(register&&password!==String(f.get("password_confirm")||"")){setError("两次输入的口令不一致");return;}void run(async()=>setUser(await api(register?"/auth/register":"/auth/login","POST",{username:String(f.get("username")||"").trim(),password,...(register?{nickname:String(f.get("nickname")||"").trim(),role,invite_code:String(f.get("invite")||"")}:{})})));}}>
  <label>账号<input name="username" required minLength={3} maxLength={80} autoComplete="username" autoCapitalize="none" spellCheck={false} pattern="[a-zA-Z0-9_.-]+" placeholder="3–80 位字母、数字或 _ . -"/></label>{register&&<label>昵称<input name="nickname" required minLength={1} maxLength={80} autoComplete="nickname" placeholder="在平台中显示的称呼"/></label>}
- <label>口令<input name="password" type="password" required minLength={10} maxLength={128} autoComplete={register?"new-password":"current-password"} placeholder={register?"至少 10 个字符":"输入账号口令"}/></label>
- {register&&<label>确认口令<input name="password_confirm" type="password" required minLength={10} maxLength={128} autoComplete="new-password" placeholder="再次输入口令"/></label>}
+ <label>口令<input name="password" type="password" required minLength={6} maxLength={128} autoComplete={register?"new-password":"current-password"} placeholder={register?"至少 6 个字符":"输入账号口令"}/></label>
+ {register&&<label>确认口令<input name="password_confirm" type="password" required minLength={6} maxLength={128} autoComplete="new-password" placeholder="再次输入口令"/></label>}
  {register&&<><label>身份<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">学生</option><option value="teacher">教师</option><option value="ta">助教</option></select></label>{role!=="student"&&<label>教师/TA 邀请码<input name="invite" type="password" required autoComplete="off" placeholder="由平台管理员提供"/></label>}<p className="authHint">学生账号可直接注册；教师和助教账号需要邀请码。注册即表示你同意平台保存账号及学习档案，可随时在“档案与隐私”中导出或删除。</p></>}
  <button className="primary" disabled={busy}>{busy?"处理中…":register?"创建账号":"登录"}</button></form><button disabled={busy} onClick={()=>setRegister(!register)}>{register?"已有账号，去登录":"注册账号"}</button></section>:<>
  {!portal&&<nav className="pilotTabs" aria-label="工作台">{([["learn","课程学习"],["resources","资源中心"],["memory","我的观察"],["sandboxes","我的作业"],...(staff?[["builder","课程建设"]]:[]),["account","档案与隐私"]] as [Tab,string][]).map(([key,label])=><button key={key} disabled={busy} aria-current={tab===key?"page":undefined} onClick={()=>{epoch.current++;setTab(key);setError("");if(key==="builder")void run(async()=>setBuilder(await api("/builder")));}}>{label}</button>)}</nav>}
@@ -92,7 +105,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
  {r.status==="published"&&r.content.before&&<button disabled={busy||user.role!=="teacher"} onClick={()=>{const note=window.prompt("回滚理由（至少5字）：");if(note)void run(async()=>{await api("/builder/revisions/"+r.id+"/rollback","POST",{note,confirmed:true});setBuilder(await api("/builder"));});}}>创建回滚版本</button>}</article>)}</>}</section>}
  {tab==="account"&&<section className="pilotCard"><h2>隐私与学习档案</h2><div className="pilotActions"><button disabled={busy} onClick={()=>run(async()=>download("my-mathmirror.json",await api("/me/export")))}>导出我的档案</button></div>
  <form className="pilotForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void run(async()=>{setUser(await api("/me","PATCH",{retention_days:Number(f.get("days")),status:f.get("status")}));setNotice("已保存");});}}><label>个人详细记录保留天数<input type="number" min={1} max={1095} name="days" defaultValue={user.retention_days}/></label><label>档案状态<select name="status" defaultValue={user.status}><option value="active">在用，允许更新</option><option value="frozen">冻结，暂停更新</option></select></label><button disabled={busy}>保存个人策略</button></form>
- <details><summary>删除账号和个人学习记录</summary><p>删除后无法恢复个人记录。</p><form className="pilotForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(window.confirm("确认永久删除账号及个人学习记录？"))void run(async()=>{await api("/me/delete","POST",{password:f.get("password"),confirmed:true});setUser(null);setMemory({observations:[],hypotheses:[]});setActive(null);});}}><input name="password" type="password" required minLength={10} placeholder="再次输入口令"/><button disabled={busy}>删除我的账号</button></form></details></section>}
+ <details><summary>删除账号和个人学习记录</summary><p>删除后无法恢复个人记录。</p><form className="pilotForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(window.confirm("确认永久删除账号及个人学习记录？"))void run(async()=>{await api("/me/delete","POST",{password:f.get("password"),confirmed:true});setUser(null);setMemory({observations:[],hypotheses:[]});setActive(null);});}}><input name="password" type="password" required minLength={6} placeholder="再次输入口令"/><button disabled={busy}>删除我的账号</button></form></details></section>}
  {tab==="resources"&&<ResourceCenter api={api} courses={courses}/>}
  </>}</main>;
 }

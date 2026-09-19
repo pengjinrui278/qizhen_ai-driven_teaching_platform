@@ -1,4 +1,4 @@
-"""本地内测身份提供方。口令PBKDF2、随机会话、HttpOnly cookie；角色不信任客户端。"""
+"""平台身份提供方。口令 PBKDF2、随机会话、HttpOnly cookie；角色不信任客户端。"""
 import hashlib
 import hmac
 import secrets
@@ -41,7 +41,7 @@ def issue_session(db, account: Account) -> str:
 def current_account(request: Request, db) -> Account:
     token = request.cookies.get(COOKIE, "")
     if not token:
-        raise HTTPException(401, "请先登录内测账号")
+        raise HTTPException(401, "请先登录账号")
     row = db.get(LoginSession, hashlib.sha256(token.encode()).hexdigest())
     if not row or aware(row.expires_at) <= datetime.now(UTC):
         raise HTTPException(401, "登录已过期，请重新登录")

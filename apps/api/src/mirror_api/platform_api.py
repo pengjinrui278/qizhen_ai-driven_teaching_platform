@@ -59,7 +59,7 @@ def own_attempt(db, user, aid):
 
 class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
-    password: str = Field(min_length=10, max_length=128)
+    password: str = Field(min_length=6, max_length=128)
 
 
 class Register(Credentials):
@@ -579,7 +579,7 @@ def export_me(db=Depends(db_for),user=Depends(user_for)):
 
 
 class DeleteAccount(BaseModel):
-    password:str=Field(min_length=10,max_length=128)
+    password:str=Field(min_length=6,max_length=128)
     confirmed:Literal[True]
 
 
