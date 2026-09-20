@@ -39,6 +39,7 @@ def make_engine(database_url: str) -> Engine:
 
 def init_db(engine: Engine) -> None:
     from . import platform_models  # noqa: F401 -- additive migration tables
+    from . import ai_learning  # noqa: F401 -- independent AI literacy tables
     Base.metadata.create_all(engine)
 
 

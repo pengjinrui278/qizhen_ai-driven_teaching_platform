@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     llm_timeout: float = 120.0
     llm_max_tokens: int = Field(default=4096,ge=128,le=16384)
     llm_reasoning_effort: str = "high"
-    # Official text models cannot read images. Keep the vision task separate.
-    vision_model: str = "deepseek-v4-flash-vision-exp"
+    # Flash supports images; vision remains separately configurable.
+    vision_model: str = "deepseek-flash"
     environment: str = "test"
     staff_invite_code: str = ""
     secure_cookie: bool = False

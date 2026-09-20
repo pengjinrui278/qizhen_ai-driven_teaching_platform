@@ -36,7 +36,7 @@ def main():
             print(json.dumps({"passed":False,"stage":mode,"status":r.status_code},ensure_ascii=False))
             return
         v=r.json()
-        assert v["model"]=="openai_compatible:deepseek-v4-pro"
+        assert v["model"]=="openai_compatible:"+settings.llm_model
         assert v["decision"]["context"]["relevant_hypotheses"]
         results.append({"mode":mode,"answer":v["answer"],"harness":v["harness"]["status"],
                         "context_present":True,"policy":v["decision"]["policy_version"]})

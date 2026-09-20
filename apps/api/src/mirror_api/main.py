@@ -83,6 +83,8 @@ app = FastAPI(
 
 from .platform_api import router
 app.include_router(router)
+from .ai_learning import router as ai_router
+app.include_router(ai_router)
 _auth_attempts=defaultdict(deque)
 
 
@@ -226,10 +228,8 @@ def course_mirror_request(
     request.assignment_workspace_id=None
     if request.course_id!="ai_literacy":
         raise HTTPException(410,"数理课程请通过新的学习会话接口")
-    try:
-        return pipeline.handle(db, request)
-    except MirrorError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+    # Retire the old AI hint/evidence pipeline; AI literacy must not write assessment.
+    raise HTTPException(410, "AI 学习请使用新的知识问答页面")
 
 
 @app.get("/api/v1/coursepacks")

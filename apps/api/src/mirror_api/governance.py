@@ -10,10 +10,12 @@ from .platform_models import Account, Attempt, Audit, CourseRevision, Hypothesis
 
 
 def export_account(db, user):
+    from .ai_learning import AISession, AIMessage, AINote, public
     attempts=db.execute(select(Attempt).where(Attempt.account_id==user.id)).scalars().all()
     events=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id)).scalars().all()
     return {"format":"mathmirror-personal-v1","exported_at":datetime.now(UTC).isoformat(),
             "account":{"username":user.username,"nickname":user.nickname,"status":user.status},
+            "ai_learning":{model.__tablename__:[public(r) for r in db.scalars(select(model).where(model.account_id==user.id)).all()] for model in (AISession,AIMessage,AINote)},
             "memory":memory_view(db,user.id),
             "attempts":[{"id":a.id,"course_id":a.course_id,"problem":a.problem} for a in attempts],
             "interactions":[{"request":e.request_payload,"response":e.response_json,
@@ -23,6 +25,9 @@ def export_account(db, user):
 
 
 def delete_personal(db, user):
+    from .ai_learning import AISession, AIMessage, AINote
+    for model in (AIMessage,AINote,AISession):
+        db.query(model).filter_by(account_id=user.id).delete(synchronize_session=False)
     submission_ids=set(db.execute(select(Submission.id).where(Submission.account_id==user.id)).scalars())
     for row in db.execute(select(Audit)).scalars():
         if row.detail.get("submission_id") in submission_ids:
@@ -51,9 +56,16 @@ def delete_personal(db, user):
 
 
 def expire_personal(db, now=None):
+    from .ai_learning import AISession, AIMessage, AINote
     now=now or datetime.now(UTC)
     for user in db.execute(select(Account).where(Account.status!="deleted")).scalars():
         cutoff=now-timedelta(days=user.retention_days)
+        for model in (AIMessage,AINote):
+            db.query(model).filter(model.account_id==user.id,model.created_at<cutoff).delete(synchronize_session=False)
+        # Keep an old conversation only while it still has retained messages.
+        active_ids=select(AIMessage.session_id).where(AIMessage.account_id==user.id)
+        db.query(AISession).filter(AISession.account_id==user.id,AISession.created_at<cutoff,
+                                  ~AISession.id.in_(active_ids)).delete(synchronize_session=False)
         observations=db.execute(select(Observation).where(
             Observation.account_id==user.id,Observation.created_at<cutoff)).scalars().all()
         courses={r.course_id for r in observations}

@@ -9,7 +9,7 @@ def test_official_reasoning_payload_and_course_policy(monkeypatch):
         seen.update(url=url,**kwargs)
         return httpx.Response(200,json={"choices":[{"finish_reason":"stop","message":{"content":"先检查量词顺序。"}}]})
     monkeypatch.setattr(httpx,"post",post)
-    model=OpenAICompatibleModel("https://api.deepseek.com","test-secret","deepseek-v4-pro")
+    model=OpenAICompatibleModel("https://api.deepseek.com","test-secret","deepseek-flash")
     answer=model.generate(MirrorContext(course_name="数学分析",mirror_name="数分",interaction_mode="next_hint",
         course_id="mathematical_analysis",dynamic_hints=True,hints=[{"content":"DO_NOT_PLAY"}],
         message="我不懂N的依赖",history=[{"question":"第一步","answer":"先写定义"}]))
@@ -55,9 +55,9 @@ def test_vision_uses_separate_model_without_reasoning(monkeypatch):
         return httpx.Response(200,json={"choices":[{"finish_reason":"stop","message":{"content":"转写"}}]})
     monkeypatch.setattr(httpx,"post",post)
     settings=Settings(_env_file=None,llm_provider="openai_compatible",
-        llm_base_url="https://api.deepseek.com",llm_api_key="test-secret",llm_model="deepseek-v4-pro")
+        llm_base_url="https://api.deepseek.com",llm_api_key="test-secret",llm_model="deepseek-flash")
     assert transcribe(settings,"data:image/png;base64,synthetic")=="转写"
-    assert seen["model"]=="deepseek-v4-flash-vision-exp"
+    assert seen["model"]=="deepseek-flash"
     assert seen["thinking"]=={"type":"disabled"}
 
 def test_memory_database_visible_in_worker_thread():

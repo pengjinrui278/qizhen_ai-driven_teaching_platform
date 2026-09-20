@@ -1,7 +1,7 @@
 "use client";
 
-import StudentStudio from "../../../lib/StudentStudio";
+import Portal from "../../../lib/Portal";
 
 export default function AiTeachingPage() {
-  return <StudentStudio track="ai" />;
+  return <Portal role="student" section="ai" />;
 }

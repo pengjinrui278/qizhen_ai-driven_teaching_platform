@@ -14,7 +14,7 @@ def test_chat_uses_current_question_and_history(monkeypatch):
         seen.update(kwargs["json"])
         return httpx.Response(200,json={"choices":[{"finish_reason":"stop","message":{"content":"回答当前问题"}}]})
     monkeypatch.setattr(httpx,"post",post)
-    model=OpenAICompatibleModel("https://api.deepseek.com","test-secret","deepseek-v4-pro")
+    model=OpenAICompatibleModel("https://api.deepseek.com","test-secret","deepseek-flash")
     assert model.generate(MirrorContext(course_name="数学分析",mirror_name="数分",course_id="mathematical_analysis",
         interaction_mode="chat",message="请解释有界和收敛的区别",history=[{"question":"什么是极限","answer":"此前解释"}]))=="回答当前问题"
     assert "请解释有界和收敛的区别" in str(seen)

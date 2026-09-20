@@ -2,10 +2,11 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 import Pilot,{ApiError,liveApi} from "./Pilot";
+import AILearning from "./AILearning";
 import {demoApi,demoCourses,PortalRole} from "./demoApi";
 import "./portal.css";
 type Row=Record<string,any>;
-const studentNav=[["","学习首页","home"],["learn","课程学习","book"],["resources","资源中心","library"],["assignments","我的作业","file"],["observations","学习反馈","chart"],["privacy","档案与隐私","shield"]];
+const studentNav=[["","学习首页","home"],["learn","课程学习","book"],["ai","AI 学习","spark"],["resources","资源中心","library"],["assignments","我的作业","file"],["observations","学习反馈","chart"],["privacy","档案与隐私","shield"]];
 const teacherNav=[["","教学总览","home"],["assignments","作业管理","file"],["review","作品批改","pen"],["reports","教学报告","chart"],["course","课程建设","book"],["settings","账号与设置","shield"]];
 function Icon({name}:{name:string}){
  const paths:Record<string,string>={
@@ -47,7 +48,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  }
  load().catch(e=>{if(!live)return;if(e instanceof ApiError&&e.status===401)setData({signedOut:true});else setError(e instanceof Error?e.message:String(e));});return()=>{live=false;};},[demo,role,reload,section]);
  const href=(s="")=>base+(s?"/"+s:"")+(demo?"?mode=demo":"?mode=live");
- const title=nav.find(n=>n[0]===section)?.[1]||"首页";
+ const title=section.startsWith("ai")?"AI 学习":nav.find(n=>n[0]===section)?.[1]||"首页";
  const initial=teacher?section==="course"?"builder":section==="settings"?"account":"sandboxes":section==="observations"?"memory":section==="privacy"?"account":section==="assignments"?"sandboxes":section==="resources"?"resources":"learn";
  const works=data?.details?.flatMap((d:Row)=>d.submissions.map((s:Row)=>({...s,title:d.box.title})))||[];
  const ongoing=data?.boxes?.filter((b:Row)=>b.status==="open")||[];
@@ -69,6 +70,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  {demo===null?<p role="status">加载中…</p>:data?.signedOut?<Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/>
  :error||data?.wrongRole?<><div className="portalError" role="alert">{data?.wrongRole?"请使用教师账号登录":error}</div><Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/></>
  :!data?<p role="status">加载中…</p>
+ :!teacher&&section.startsWith("ai")?<AILearning key={section} section={section}/>
  :section?<Pilot key={role+"-"+section+"-"+demo+"-"+reload} initial={initial as any} portal={role} demonstration={demo} section={section}/>
  :<><div className="pageHeading"><h1>{teacher?"教学总览":"我的课程"}</h1><Link className="solidLink" href={href(teacher?"assignments":"learn")}>{teacher?"布置作业":"开始学习"}</Link></div>
  {teacher?<><div className="overviewStats">{[[ongoing.length,"进行中作业"],[works.length,"已提交"],[pending.length,"待批改"]].map(([n,label])=><div key={String(label)}><span>{label}</span><strong>{n}</strong></div>)}</div>
