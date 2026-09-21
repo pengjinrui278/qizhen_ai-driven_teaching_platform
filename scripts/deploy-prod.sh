@@ -20,5 +20,27 @@ docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli seed-pro
 docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli import-all-coursepacks
 docker compose -f compose.prod.yml exec -T api python -m mirror_api.cli status
 
+echo "等待生产入口通过健康检查……"
+healthy=0
+for attempt in {1..30}; do
+  if curl --fail --silent --show-error --max-time 10 \
+    --resolve learningmirror.cn:443:127.0.0.1 \
+    https://learningmirror.cn/api/health | grep -q '"status":"ok"'; then
+    healthy=1
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$healthy" != "1" ]]; then
+  echo "部署后健康检查失败；请查看 docker compose -f compose.prod.yml logs。" >&2
+  exit 1
+fi
+
+curl --fail --silent --show-error --max-time 10 \
+  --resolve learningmirror.cn:443:127.0.0.1 \
+  --output /dev/null \
+  'https://learningmirror.cn/student/resources?mode=live'
+
 echo "已同步到 https://learningmirror.cn/  commit=$(git rev-parse --short HEAD)"
 echo "DNS 尚未生效时可临时访问 http://124.220.5.87/"
