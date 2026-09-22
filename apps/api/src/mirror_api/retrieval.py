@@ -10,12 +10,15 @@
 from __future__ import annotations
 
 import re
+import math
+from collections import Counter
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .domain import ProblemInput
 from .models import CoursePack, KnowledgeNode, Problem, ProblemKnowledge, TextbookChunk
+from .retrieval_terms import concept_groups
 
 # 查询词切分：中英文/数字保留；中文按字级二元组（bigram）切分，避免整句无法匹配
 _CJK_RE = re.compile(r"[一-龥]")
@@ -26,15 +29,22 @@ def _query_tokens(text: str) -> list[str]:
     """把查询拆成有效检索 token（中文 bigram + 英文单词/数字）。"""
     seen: set[str] = set()
     result: list[str] = []
+    for group in concept_groups(text):
+        for alias in group:
+            if alias not in seen:
+                seen.add(alias)
+                result.append(alias)
 
     # 英文/数字原词保留
-    for token in _ALNUM_RE.findall(text):
+    for token in _ALNUM_RE.findall(text.casefold()):
+        if len(token) < 3 or token.isdigit() or token in {"the", "for", "and", "let", "prove", "frac", "left", "right", "begin", "end"}:
+            continue
         if token not in seen:
             seen.add(token)
             result.append(token)
 
     # 中文按字级 bigram 切分
-    stopwords = {"完全","没有","见过","过的","的一","一道","道题","一个","这个","什么","怎么","如何","证明","设有","存在","对于"}
+    stopwords = {"完全","没有","见过","过的","的一","一道","道题","一个","这个","什么","怎么","如何","证明","设有","存在","对于", "请问", "帮我", "一下", "不懂", "理解", "这道", "题目", "需要", "可以", "我们", "这里", "为什", "什么", "尝试"}
     for segment in re.findall(r"[一-龥]+", text):
         for i in range(len(segment) - 1):
             bigram = segment[i:i+2]
@@ -43,6 +53,41 @@ def _query_tokens(text: str) -> list[str]:
                 result.append(bigram)
 
     return result
+
+
+def _rank(rows, text, title_of, body_of, limit):
+    """IDF-weighted lexical ranking with concept gates and duplicate removal.
+
+    This deliberately makes no semantic-search claim. A lone variable/number or
+    generic instruction must not be enough to retrieve a textbook passage.
+    """
+    tokens = _query_tokens(text)[:40]
+    groups = concept_groups(text)
+    documents = [(row, (title_of(row) or "").casefold(), body_of(row).casefold()) for row in rows]
+    df = Counter(token for _, title, body in documents for token in tokens if token in title or token in body)
+    scored = []
+    for row, title, body in documents:
+        if groups and not any(alias in title or alias in body for group in groups for alias in group):
+            continue
+        matched = [token for token in tokens if token in title or token in body]
+        if not matched:
+            continue
+        if not groups and len(tokens) >= 4 and len(matched) < 2 and not any(t in title for t in matched):
+            continue
+        score = sum(math.log(1 + (len(documents) + 1) / (df[t] + 1)) *
+                    (3 * (t in title) + min(body.count(t), 3)) for t in matched)
+        score /= 1 + math.log1p(len(body) / 1500)
+        scored.append((score, row, re.sub(r"\s+", "", body)))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    found, seen = [], set()
+    for _, row, fingerprint in scored:
+        if fingerprint in seen:
+            continue
+        found.append(row)
+        seen.add(fingerprint)
+        if len(found) >= max(1, min(limit, 20)):
+            break
+    return found
 
 
 def course_pack_ids(session: Session, course_id: str, profile_id: str) -> list[str]:
@@ -112,9 +157,7 @@ def search_knowledge(
         )
     ).scalars()
     allowed = [r for r in rows if rag_allowed(r)]
-    allowed.sort(key=lambda r: sum(3 * (t in r.title) + (t in r.statement) for t in tokens),
-                 reverse=True)
-    return allowed[:limit]
+    return _rank(allowed, text, lambda r: r.title, lambda r: r.statement, limit)
 
 
 def rag_allowed(node: KnowledgeNode) -> bool:
@@ -151,12 +194,7 @@ def search_textbook_chunks(
 
     allowed = [row for row in rows if rag_allowed_chunk(row)]
 
-    def score(chunk: TextbookChunk) -> int:
-        haystack = f"{chunk.title or ''} {chunk.content}"
-        return sum(1 for token in tokens if token in haystack)
-
-    allowed.sort(key=score, reverse=True)
-    return allowed[:limit]
+    return _rank(allowed, text, lambda r: r.title, lambda r: r.content, limit)
 
 
 def rag_allowed_chunk(chunk: TextbookChunk) -> bool:
