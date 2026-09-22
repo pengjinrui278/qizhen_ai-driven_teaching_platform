@@ -1,0 +1,53 @@
+[
+  {
+    "key": "codex",
+    "name": "Codex",
+    "id": "OpenAI.Codex",
+    "version": "0.152.0",
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
+    "command": "codex",
+    "docs": "https://learn.chatgpt.com/docs/codex/cli",
+    "next": "重新打开终端，运行 codex --version，再运行 codex 按官方提示登录。"
+  },
+  {
+    "key": "claude",
+    "name": "Claude Code",
+    "id": "Anthropic.ClaudeCode",
+    "version": "2.1.268",
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
+    "command": "claude",
+    "docs": "https://code.claude.com/docs/en/setup",
+    "next": "重新打开终端，运行 claude --version，再运行 claude 按官方提示登录。"
+  },
+  {
+    "key": "workbuddy",
+    "name": "WorkBuddy",
+    "id": "Tencent.WorkBuddy",
+    "version": "5.5.6",
+    "architectures": [
+      "x64"
+    ],
+    "command": "",
+    "docs": "https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Installation-Win-Guide",
+    "next": "从开始菜单打开 WorkBuddy，完成官方登录，只授权需要处理的文件夹。"
+  },
+  {
+    "key": "ccswitch",
+    "name": "CC Switch",
+    "id": "farion1231.CC-Switch",
+    "version": "3.20.3",
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
+    "command": "",
+    "docs": "https://github.com/farion1231/cc-switch",
+    "next": "从开始菜单打开 CC Switch。先备份原配置，再添加兼容的服务商；密钥只在本地填写。"
+  }
+]

@@ -13,6 +13,8 @@ RUN pnpm install --frozen-lockfile
 
 # 再复制源码并静态导出到 apps/web/dist
 COPY apps/web ./apps/web
+COPY apps/windows-helper ./apps/windows-helper
+COPY scripts/build-windows-helper.cjs ./scripts/build-windows-helper.cjs
 ARG NEXT_PUBLIC_ICP_NUMBER=""
 ARG NEXT_PUBLIC_PUBLIC_SECURITY_NUMBER=""
 ARG NEXT_PUBLIC_PUBLIC_SECURITY_URL=""

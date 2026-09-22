@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
+import WindowsInstaller from "./WindowsInstaller";
 import AIToolDirectory from "./AIToolDirectory"; import coursePrompts from "./course-prompts.json";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -11,12 +12,6 @@ import "./ai-learning.css";
 import "./ai-prompts.css";
 type Row=Record<string,any>;
 const tabs=[["","知识问答"],["resources","学习资料"],["notes","我的笔记"],["tools","工具中心"],["setup","本地安装"]];
-const installers=[
- {name:"Codex",url:"https://developers.openai.com/zh-Hans/docs/codex/cli",steps:["在官方文档中选择 Windows、macOS 或 Linux 的安装方式。","安装后在项目目录运行 codex，按提示登录。","先让它解释项目，再在确认权限后修改文件。"],verify:"codex --version"},
- {name:"Claude Code",url:"https://code.claude.com/docs/en/setup",steps:["按官方指引检查系统要求并安装。","运行 claude，选择官方支持的认证方式。","限定项目目录与命令权限，修改前保留版本记录。"],verify:"claude --version"},
- {name:"WorkBuddy",url:"https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Installation-Win-Guide",steps:["从官网选择适合操作系统的安装包。","安装并通过官方页面登录。","仅授权需要处理的文件夹，用副本验证第一个任务。"],verify:"打开客户端，完成一个测试任务"},
- {name:"CC Switch",url:"https://github.com/farion1231/cc-switch",steps:["从原作者仓库的 Releases 下载对应系统版本。","先备份已有配置，再添加服务商和本地密钥。","核对协议、地址与模型兼容性；它不是模型服务本身。"],verify:"切换后在对应工具中发起测试对话"},
-];
 function Markdown({text}:{text:string}){
  const normalized=text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$");
  return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{normalized}</ReactMarkdown>;
@@ -61,7 +56,7 @@ export default function AILearning({section=""}:{section?:string}){
  {tab==="resources"&&<><form className="aiSearch" onSubmit={e=>{e.preventDefault();void run(async()=>{const found=await liveApi("/ai/search?q="+encodeURIComponent(query));setResults(found);if(!found.length)setNotice("未找到已核对的相关内容");});}}><input aria-label="搜索教材" placeholder="搜索知识点" value={query} maxLength={500} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!query.trim()}>搜索</button></form><div className="aiGrid">{resources.map(r=><section className="portalPanel" key={r.id}><h2>{r.title}</h2><p>{r.metadata_json.authors||""}</p><p>{r.metadata_json.total_pages} 页 · 已核对 {r.reviewed_pages} 处节选</p></section>)}{!resources.length&&<p>暂无教材</p>}</div>{results.map(r=><section className="portalPanel" key={r.id}><h3>{r.heading||"教材段落"} · PDF 第 {r.page} 页</h3><Markdown text={r.content}/></section>)}<div className="aiGrid"><section className="portalPanel"><h2>例题与习题</h2><p>暂无已核对的题目</p></section><section className="portalPanel"><h2>课程试卷</h2><p>暂无试卷</p></section></div></>}
  {tab==="notes"&&<><div className="aiActions"><button disabled={busy} onClick={()=>setDraft({title:"",content:""})}>新建笔记</button><button disabled={!notes.length} onClick={()=>saveFile("AI学习笔记.md",notes.map(n=>"# "+n.title+"\n\n"+n.content+"\n\n"+n.citations.map((c:Row)=>c.title+" PDF第"+c.pdf_page+"页").join("\n")).join("\n\n---\n\n"))}>导出全部</button></div><div className="aiGrid">{notes.map(n=><article className="portalPanel" key={n.id}><h2>{n.title}</h2><Markdown text={n.content}/><div className="aiActions"><button disabled={busy} onClick={()=>setDraft(n)}>编辑</button><button disabled={busy} onClick={()=>{if(window.confirm("删除这篇笔记？"))void run(async()=>{await liveApi("/ai/notes/"+n.id,"DELETE");setNotes(await liveApi("/ai/notes"));});}}>删除</button></div></article>)}</div>{!notes.length&&<p>还没有笔记，可以从回答中整理，也可以自己记录。</p>}</>}
  {tab==="tools"&&<AIToolDirectory/>}
- {tab==="setup"&&<><p>选择工具，按官方指引在自己的电脑安装。</p><div className="aiGrid">{installers.map(t=><article className="portalPanel" key={t.name}><h2>{t.name}</h2><ol>{t.steps.map(s=><li key={s}>{s}</li>)}</ol><p>验证：<code>{t.verify}</code></p><a href={t.url} target="_blank" rel="noopener noreferrer">打开安装文档 ↗</a></article>)}</div><section className="portalPanel"><h2>接入与安全</h2><p>在工具本地配置服务商、接口地址、模型和密钥。学镜的 DeepSeek 密钥不会分发给个人工具；并非所有工具都支持同一种接口。</p><p>密钥不要贴进聊天、截图或代码仓库。安装失败先核对系统要求、网络和官方错误说明；卸载使用系统应用管理或官方卸载指引，先备份项目和配置。</p></section></>}
+ {tab==="setup"&&<WindowsInstaller/>}
  {noteEditor}
  </div>;
 }
