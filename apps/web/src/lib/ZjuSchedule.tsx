@@ -1,6 +1,8 @@
 "use client";
 
 import {ChangeEvent,useEffect,useMemo,useRef,useState} from "react";
+import "./resource-center.css";
+import "./home-schedule.css";
 
 type ScheduleCourse={
  id:string;
@@ -91,13 +93,13 @@ export default function ZjuSchedule(){
  const term=snapshot?`${snapshot.academic_year_start}—${snapshot.academic_year_start+1} · ${SEASONS[snapshot.season]||snapshot.season}`:"";
  return <section className="zjuSchedule" aria-labelledby="zju-schedule-title">
   <div className="zjuScheduleHero">
-   <div><p className="zjuScheduleEyebrow">ZJU · PERSONAL TIMETABLE</p><h2 id="zju-schedule-title">我的浙大课表</h2><p>统一认证在你的电脑上完成。工作台只接收整理后的课程时间，不接触学号、密码或校园 Cookie。</p></div>
+   <div><h2 id="zju-schedule-title">我的课表</h2><p>连接浙大课表，或导入已有课表文件。</p></div>
    <div className="zjuScheduleActions"><button className="zjuConnectButton" onClick={openConnector}>在本机连接浙大</button><button onClick={()=>fileRef.current?.click()}>导入连接器 JSON</button><input ref={fileRef} className="zjuHiddenInput" type="file" accept="application/json,.json" onChange={importFile}/></div>
   </div>
   <div className="zjuPrivacyRail"><span>密码不离开电脑</span><span>Cookie 仅在本地内存</span><span>课表仅存当前浏览器</span></div>
   {notice&&<p className="zjuScheduleNotice" role="status">{notice}</p>}
   {error&&<div className="rcError" role="alert">{error}<p>若连接器尚未启动，请先运行仓库中的 <code>apps/zju-connector/start-local.bat</code>。</p></div>}
-  {!snapshot?<div className="zjuScheduleEmpty"><div className="zjuEmptyWeek" aria-hidden="true">一<span>二</span><span>三</span><span>四</span><span>五</span></div><h3>把分散的课程接进今天</h3><p>点击“在本机连接浙大”，在新窗口输入本人统一认证学号和密码。同步完成后，课表会自动回到这里。</p><p className="zjuScheduleFallback">连接器窗口没有自动返回？在本地窗口下载 JSON，再从这里导入。</p></div>:<>
+  {!snapshot?<div className="zjuScheduleEmpty"><div className="zjuEmptyWeek" aria-hidden="true">一<span>二</span><span>三</span><span>四</span><span>五</span></div><h3>还没有课表</h3><p>点击“在本机连接浙大”，在新窗口输入本人统一认证学号和密码。同步完成后，课表会自动回到这里。</p><p className="zjuScheduleFallback">连接器窗口没有自动返回？在本地窗口下载 JSON，再从这里导入。</p></div>:<>
    <div className="zjuScheduleMeta"><div><span>当前学期</span><strong>{term}</strong></div><div><span>课表项</span><strong>{snapshot.courses.length}</strong></div><div><span>更新时间</span><strong>{snapshot.fetched_at?new Date(snapshot.fetched_at).toLocaleString("zh-CN",{hour12:false}):"本地导入"}</strong></div><button onClick={clear}>清除本机课表</button></div>
    <div className="zjuWeekGrid" role="table" aria-label={term+"课表"}>{DAYS.map((day,index)=><section className="zjuDayColumn" role="rowgroup" key={day}><h3>{day}</h3>{byDay[index].length?byDay[index].map(course=><article className="zjuCourseSlip" key={course.id}><div className="zjuCoursePeriods">{course.periods.length===1?`第 ${course.periods[0]} 节`:`${course.periods[0]}—${course.periods.at(-1)} 节`}</div><h4>{course.course_name}</h4><p>{course.teacher}</p><p>{course.location||"地点待定"}</p><span>{WEEK_LABELS[course.week_pattern]||"每周"}{course.first_half&&!course.second_half?" · 前半学季":course.second_half&&!course.first_half?" · 后半学季":""}</span></article>):<p className="zjuNoCourse">无课</p>}</section>)}</div>
   </>}

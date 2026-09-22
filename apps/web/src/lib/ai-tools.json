@@ -1,0 +1,320 @@
+[
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://chat.deepseek.com/",
+    "description": "知识问答、推理与写作",
+    "international": false
+  },
+  {
+    "id": "doubao",
+    "name": "豆包",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://www.doubao.com/chat/",
+    "description": "日常问答与内容创作",
+    "international": false
+  },
+  {
+    "id": "kimi",
+    "name": "Kimi",
+    "categories": [
+      "对话",
+      "文案",
+      "办公"
+    ],
+    "url": "https://www.kimi.com/",
+    "description": "长文阅读、资料整理与写作",
+    "international": false
+  },
+  {
+    "id": "qianwen",
+    "name": "千问",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://www.qianwen.com/",
+    "description": "问答、写作与信息整理",
+    "international": false
+  },
+  {
+    "id": "yuanbao",
+    "name": "腾讯元宝",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://yuanbao.tencent.com/",
+    "description": "问答、搜索与文档辅助",
+    "international": false
+  },
+  {
+    "id": "xinghuo",
+    "name": "讯飞星火",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://xinghuo.xfyun.cn/",
+    "description": "中文问答与写作辅助",
+    "international": false
+  },
+  {
+    "id": "metaso",
+    "name": "秘塔AI搜索",
+    "categories": [
+      "对话",
+      "办公"
+    ],
+    "url": "https://metaso.cn/",
+    "description": "查找资料与梳理信息来源",
+    "international": false
+  },
+  {
+    "id": "jimeng",
+    "name": "即梦",
+    "categories": [
+      "生图",
+      "视频"
+    ],
+    "url": "https://jimeng.jianying.com/",
+    "description": "图像与视频创作",
+    "international": false
+  },
+  {
+    "id": "kling",
+    "name": "可灵AI",
+    "categories": [
+      "视频",
+      "生图"
+    ],
+    "url": "https://klingai.com/",
+    "description": "视频、图像生成与编辑",
+    "international": false
+  },
+  {
+    "id": "wan",
+    "name": "万相",
+    "categories": [
+      "生图",
+      "视频"
+    ],
+    "url": "https://tongyi.aliyun.com/wan/",
+    "description": "图像与视频生成",
+    "international": false
+  },
+  {
+    "id": "liblib",
+    "name": "LiblibAI",
+    "categories": [
+      "生图"
+    ],
+    "url": "https://www.liblib.art/",
+    "description": "图像创作与模型社区",
+    "international": false
+  },
+  {
+    "id": "midjourney",
+    "name": "Midjourney",
+    "categories": [
+      "生图"
+    ],
+    "url": "https://www.midjourney.com/",
+    "description": "视觉设计与图像创作",
+    "international": true
+  },
+  {
+    "id": "hailuo",
+    "name": "海螺AI",
+    "categories": [
+      "视频"
+    ],
+    "url": "https://hailuoai.video/",
+    "description": "文字与图片生成视频",
+    "international": true
+  },
+  {
+    "id": "haimian",
+    "name": "海绵音乐",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://www.haimian.com/",
+    "description": "中文写歌与音乐创作",
+    "international": false
+  },
+  {
+    "id": "suno",
+    "name": "Suno",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://suno.com/",
+    "description": "歌曲生成与音乐创作",
+    "international": true
+  },
+  {
+    "id": "udio",
+    "name": "Udio",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://www.udio.com/",
+    "description": "歌曲与音乐创作",
+    "international": true
+  },
+  {
+    "id": "stableaudio",
+    "name": "Stable Audio",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://stableaudio.com/",
+    "description": "音乐与声音生成",
+    "international": true
+  },
+  {
+    "id": "wps",
+    "name": "WPS AI",
+    "categories": [
+      "办公",
+      "文案"
+    ],
+    "url": "https://ai.wps.cn/",
+    "description": "文档、表格与演示辅助",
+    "international": false
+  },
+  {
+    "id": "canva",
+    "name": "Canva 可画",
+    "categories": [
+      "办公",
+      "生图",
+      "文案"
+    ],
+    "url": "https://www.canva.cn/",
+    "description": "海报、演示与视觉设计",
+    "international": false
+  },
+  {
+    "id": "zhiwen",
+    "name": "讯飞智文",
+    "categories": [
+      "办公"
+    ],
+    "url": "https://zhiwen.xfyun.cn/",
+    "description": "文档与演示文稿制作",
+    "international": false
+  },
+  {
+    "id": "workbuddy",
+    "name": "WorkBuddy",
+    "categories": [
+      "办公",
+      "编程"
+    ],
+    "url": "https://www.workbuddy.cn/",
+    "description": "本地文件与办公任务助手",
+    "international": false
+  },
+  {
+    "id": "trae",
+    "name": "TRAE",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://www.trae.cn/",
+    "description": "AI 编程与项目开发",
+    "international": false
+  },
+  {
+    "id": "codebuddy",
+    "name": "CodeBuddy",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://www.codebuddy.cn/",
+    "description": "AI 编程助手与开发工具",
+    "international": false
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://cursor.com/",
+    "description": "AI 代码编辑与开发",
+    "international": true
+  },
+  {
+    "id": "codex",
+    "name": "Codex",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://developers.openai.com/zh-Hans/docs/codex/cli",
+    "description": "代码理解与开发工具",
+    "international": true
+  },
+  {
+    "id": "claudecode",
+    "name": "Claude Code",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://code.claude.com/docs/en/overview",
+    "description": "终端中的编程助手",
+    "international": true
+  },
+  {
+    "id": "ccswitch",
+    "name": "CC Switch",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://github.com/farion1231/cc-switch",
+    "description": "编程工具的本地配置管理",
+    "international": true
+  },
+  {
+    "id": "chatgpt",
+    "name": "ChatGPT",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://chatgpt.com/",
+    "description": "通用问答与写作辅助",
+    "international": true
+  },
+  {
+    "id": "claude",
+    "name": "Claude",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://claude.ai/",
+    "description": "文本理解与写作辅助",
+    "international": true
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "categories": [
+      "对话",
+      "文案"
+    ],
+    "url": "https://gemini.google.com/",
+    "description": "通用问答与内容辅助",
+    "international": true
+  }
+]

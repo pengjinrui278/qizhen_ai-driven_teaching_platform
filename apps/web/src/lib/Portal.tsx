@@ -1,10 +1,13 @@
 "use client";
 import {useEffect,useState} from "react";
 import Link from "next/link";
+import {useRouter} from "next/navigation";
+import ZjuSchedule from "./ZjuSchedule";
 import Pilot,{ApiError,liveApi} from "./Pilot";
 import AILearning from "./AILearning";
 import {demoApi,demoCourses,PortalRole} from "./demoApi";
 import "./portal.css";
+import "./login.css";
 type Row=Record<string,any>;
 const studentNav=[["","学习首页","home"],["learn","课程学习","book"],["ai","AI 学习","spark"],["resources","资源中心","library"],["assignments","我的作业","file"],["observations","学习反馈","chart"],["privacy","档案与隐私","shield"]];
 const teacherNav=[["","教学总览","home"],["assignments","作业管理","file"],["review","作品批改","pen"],["reports","教学报告","chart"],["course","课程建设","book"],["settings","账号与设置","shield"]];
@@ -33,26 +36,30 @@ function Icon({name}:{name:string}){
  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]||paths.file}/></svg>;
 }
 export default function Portal({role,section=""}:{role:PortalRole;section?:string}){
+ const router=useRouter();
  const [demo,setDemo]=useState<boolean|null>(null),[data,setData]=useState<Row|null>(null),[error,setError]=useState(""),[reload,setReload]=useState(0);
  const teacher=role==="teacher",nav=teacher?teacherNav:studentNav,base="/"+role;
+ useEffect(()=>{const signOut=()=>{setData({signedOut:true});router.replace("/login");};window.addEventListener("mirror:signed-out",signOut);return()=>window.removeEventListener("mirror:signed-out",signOut);},[router]);
  useEffect(()=>{setDemo(["localhost","127.0.0.1"].includes(window.location.hostname)&&new URLSearchParams(window.location.search).get("mode")==="demo");},[]);
  useEffect(()=>{if(demo===null)return;let live=true;setError("");setData(null);
  const api=(p:string)=>demo?demoApi(role,p):liveApi(p);
  async function load(){
-  const user=await api("/me");
-  if(teacher&&!["teacher","ta"].includes(user.role)){if(live)setData({wrongRole:true,user});return;}
+  const user=await liveApi("/me");
+  if(teacher&&!["teacher","ta"].includes(user.role)){if(live)router.replace("/student");return;}
   const [courses,boxes]=await Promise.all([api("/courses"),api("/sandboxes")]);
   const personal=!teacher&&!section?{attempts:await api("/attempts")}:{};
   const details=teacher&&!section?await Promise.all(boxes.map(async(b:Row)=>({box:b,submissions:await api("/sandboxes/"+b.id+"/submissions")}))):[];
   if(live)setData({user,courses,boxes,...personal,details});
  }
- load().catch(e=>{if(!live)return;if(e instanceof ApiError&&e.status===401)setData({signedOut:true});else setError(e instanceof Error?e.message:String(e));});return()=>{live=false;};},[demo,role,reload,section]);
+ load().catch(e=>{if(!live)return;if(e instanceof ApiError&&e.status===401){setData({signedOut:true});router.replace("/login");}else setError(e instanceof Error?e.message:String(e));});return()=>{live=false;};},[demo,role,reload,section]);
  const href=(s="")=>base+(s?"/"+s:"")+(demo?"?mode=demo":"?mode=live");
  const title=section.startsWith("ai")?"AI 学习":nav.find(n=>n[0]===section)?.[1]||"首页";
  const initial=teacher?section==="course"?"builder":section==="settings"?"account":"sandboxes":section==="observations"?"memory":section==="privacy"?"account":section==="assignments"?"sandboxes":section==="resources"?"resources":"learn";
  const works=data?.details?.flatMap((d:Row)=>d.submissions.map((s:Row)=>({...s,title:d.box.title})))||[];
  const ongoing=data?.boxes?.filter((b:Row)=>b.status==="open")||[];
  const pending=works.filter((w:Row)=>!w.review.decision);
+ if(!data&&!error||data?.signedOut)return <main className="loginPage"><p role="status">正在确认登录状态…</p></main>;
+ if(error&&!data)return <main className="loginPage"><section className="loginSurface"><p role="alert">{error}</p><button onClick={()=>setReload(n=>n+1)}>重试</button><p><Link href="/login">返回登录</Link></p></section></main>;
  return <div className={"portal "+(teacher?"teacherPortal":"studentPortal")}>
  <aside className="portalSidebar">
  <Link href={href()} className="portalLogo"><span className="logoMark">镜</span><span>学镜<span className="brandEnglish">Learning Mirror</span></span></Link>
@@ -64,15 +71,15 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  <header className="portalTopbar"><strong>{title}</strong><div className="topbarRight">
  {demo&&<span className="sampleBadge">示例数据</span>}
  <Link className="mobileSwitch" href={"/"+(teacher?"student":"teacher")+(demo?"?mode=demo":"?mode=live")}>{teacher?"学生端":"教师端"}</Link>
- {demo?<a href={base+(section?"/"+section:"")+"?mode=live"}>登录</a>:data?.user&&<button onClick={async()=>{await liveApi("/auth/logout","POST");setReload(n=>n+1);}}>退出登录</button>}
+ {demo?<a href={base+(section?"/"+section:"")+"?mode=live"}>登录</a>:data?.user&&<button onClick={async()=>{await liveApi("/auth/logout","POST");router.replace("/login");setData({signedOut:true});}}>退出登录</button>}
  </div></header>
  <main className="portalContent">
- {demo===null?<p role="status">加载中…</p>:data?.signedOut?<Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/>
+ {demo===null?<p role="status">加载中…</p>
  :error||data?.wrongRole?<><div className="portalError" role="alert">{data?.wrongRole?"请使用教师账号登录":error}</div><Pilot key={role+"-"+reload} initial={initial as any} portal={role} section={section} onLogin={()=>setReload(n=>n+1)}/></>
  :!data?<p role="status">加载中…</p>
  :!teacher&&section.startsWith("ai")?<AILearning key={section} section={section}/>
  :section?<Pilot key={role+"-"+section+"-"+demo+"-"+reload} initial={initial as any} portal={role} demonstration={demo} section={section}/>
- :<><div className="pageHeading"><h1>{teacher?"教学总览":"我的课程"}</h1><Link className="solidLink" href={href(teacher?"assignments":"learn")}>{teacher?"布置作业":"开始学习"}</Link></div>
+ :<><div className="pageHeading"><h1>{teacher?"教学总览":"学习首页"}</h1><Link className="solidLink" href={href(teacher?"assignments":"learn")}>{teacher?"布置作业":"开始学习"}</Link></div>
  {teacher?<><div className="overviewStats">{[[ongoing.length,"进行中作业"],[works.length,"已提交"],[pending.length,"待批改"]].map(([n,label])=><div key={String(label)}><span>{label}</span><strong>{n}</strong></div>)}</div>
  <div className="dashboardColumns">
  <section className="portalPanel"><div className="panelHeading"><h2>待批改</h2><Link href={href("review")}>全部</Link></div>
@@ -80,7 +87,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  {!pending.length&&<p>暂无待批改作品</p>}</section>
  <section className="portalPanel"><div className="panelHeading"><h2>进行中作业</h2><Link href={href("assignments")}>全部</Link></div>{ongoing.slice(0,4).map((b:Row)=><Link className="assignmentPreview" href={href("assignments")} key={b.id}><h3>{b.title}</h3><p>截止：{new Date(b.expires_at).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</p></Link>)}{!ongoing.length&&<p>暂无进行中作业</p>}</section>
  </div></>
- :<><div className="courseTiles">{data.courses.map((c:Row)=>{const v=demoCourses.find(d=>d.course_id===c.course_id);return <Link key={c.course_id} href={href("learn")+"&"+"course="+encodeURIComponent(c.course_id)} className={"courseTile "+(v?.color||"blue")}><span className="courseSymbol">{v?.symbol||"∑"}</span><h2>{c.display_name}</h2>{v?.topic&&<p className="courseTopic">{v.topic}</p>}<span className="courseAction">进入课程 <Icon name="arrow"/></span></Link>;})}</div>
+ :<><div className="homeSchedule" id="schedule"><ZjuSchedule/></div><h2>我的课程</h2><div className="courseTiles">{data.courses.map((c:Row)=>{const v=demoCourses.find(d=>d.course_id===c.course_id);return <Link key={c.course_id} href={href("learn")+"&"+"course="+encodeURIComponent(c.course_id)} className={"courseTile "+(v?.color||"blue")}><span className="courseSymbol">{v?.symbol||"∑"}</span><h2>{c.display_name}</h2>{v?.topic&&<p className="courseTopic">{v.topic}</p>}<span className="courseAction">进入课程 <Icon name="arrow"/></span></Link>;})}</div>
  <div className="dashboardColumns studentBottom"><section className="portalPanel"><div className="panelHeading"><h2>待完成作业</h2><Link href={href("assignments")}>全部</Link></div>{ongoing.slice(0,3).map((b:Row)=><Link className="assignmentPreview" href={href("assignments")} key={b.id}><h3>{b.title}</h3><p>截止：{new Date(b.expires_at).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</p></Link>)}{!ongoing.length&&<p>暂无作业</p>}</section>
  <section className="portalPanel"><div className="panelHeading"><h2>最近学习</h2><Link href={href("learn")}>全部</Link></div>{data.attempts?.slice(0,3).map((a:Row)=><Link className="recentLearning" href={href("learn")+"&"+"attempt="+a.id+"&course="+a.course_id} key={a.id}>{data.courses.find((c:Row)=>c.course_id===a.course_id)?.display_name||"课程学习"}<Icon name="arrow"/></Link>)}{!data.attempts?.length&&<p>暂无学习记录</p>}</section></div></>}
  </>}

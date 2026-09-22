@@ -1,2 +1,2 @@
-import Portal from "../lib/Portal";
-export default function Home(){return <Portal role="student"/>;}
+import LoginPage from "../lib/LoginPage";
+export default function Home(){return <LoginPage/>;}

@@ -1,0 +1,8 @@
+.aiToolCard{display:flex;flex-direction:column;gap:8px}
+.aiToolCard h2,.aiToolCard p{margin:0}
+.aiToolCard p{line-height:1.65;color:#52647d}
+.aiToolTags{display:flex;gap:6px;flex-wrap:wrap}
+.aiToolTags span{background:#f0f5fc;color:#486286;border-radius:5px;padding:4px 8px}
+.aiToolCard>.aiActions{margin-top:auto;padding-top:12px}
+.aiToolCard .aiLinkHelp{margin-top:8px;padding:14px;background:#f6f9fd;border-radius:8px;line-height:1.7}
+.aiLinkHelp p+p{margin-top:8px}

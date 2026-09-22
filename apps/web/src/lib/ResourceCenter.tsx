@@ -5,7 +5,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import "./resource-center.css";
-import ZjuSchedule from "./ZjuSchedule";
+import Link from "next/link";
 type Row=Record<string,any>;
 function MathText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$")}</ReactMarkdown>;}
 function highlight(text:string,q:string){
@@ -37,7 +37,7 @@ function parseChunk(title:string|undefined){
 }
 export default function ResourceCenter({api,courses}:{api:(path:string,method?:string,body?:unknown)=>Promise<any>;courses:Row[]}){
  const [course,setCourse]=useState(courses[0]?.course_id||"mathematical_analysis");
- const [tab,setTab]=useState<"textbooks"|"exams"|"schedule">("textbooks");
+ const [tab,setTab]=useState<"textbooks"|"exams">("textbooks");
  const [view,setView]=useState<"list"|"search"|"reader"|"exam">("list");
  const [query,setQuery]=useState("");
  const [textbooks,setTextbooks]=useState<Row[]>([]);
@@ -113,9 +113,9 @@ export default function ResourceCenter({api,courses}:{api:(path:string,method?:s
    <div className="rcTabs">
     <button className={tab==="textbooks"?"active":""} onClick={()=>setTab("textbooks")}>教材库 <span className="rcCount">{textbooks.length}</span></button>
     <button className={tab==="exams"?"active":""} onClick={()=>setTab("exams")}>真题卷 <span className="rcCount">{exams.length}</span></button>
-    <button className={tab==="schedule"?"active":""} onClick={()=>setTab("schedule")}>我的课表</button>
+    <Link href="/student#schedule">查看首页课表 →</Link>
    </div>
-   {tab==="schedule"?<ZjuSchedule/>:loading?<p className="rcLoading">加载中…</p>:
+   {loading?<p className="rcLoading">加载中…</p>:
    tab==="textbooks"?(
     textbooks.length?<div className="rcCardGrid">
      {textbooks.map(b=><div key={b.source_id} className="rcBookCard" onClick={()=>openReader(b)}>
@@ -166,7 +166,7 @@ export default function ResourceCenter({api,courses}:{api:(path:string,method?:s
    </div>
    <div className="rcReaderContent">
     <h2>{activeChapter}</h2>
-    {tab==="schedule"?<ZjuSchedule/>:loading?<p className="rcLoading">加载中…</p>:
+    {loading?<p className="rcLoading">加载中…</p>:
      chunkContent.length?<div className="rcBookContent">
       {chunkContent.map(c=>{
        const {type,label,name}=parseChunk(c.title);

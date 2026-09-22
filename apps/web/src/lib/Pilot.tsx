@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import {useRouter} from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -36,17 +37,17 @@ function apiErrorMessage(value:any,status:number){
 export async function liveApi(path:string,method="GET",body?:unknown){
   const r=await fetch((process.env.NEXT_PUBLIC_API_BASE??"")+"/api/v2"+path,{method,credentials:"include",headers:{"Content-Type":"application/json","X-Mirror-Request":"1"},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const v=await r.json().catch(()=>({detail:"服务没有返回有效数据"}));
-  if(!r.ok)throw new ApiError(r.status,apiErrorMessage(v,r.status));return v;
+  if(!r.ok){if(r.status===401&&!path.startsWith("/auth/")&&typeof window!=="undefined")window.dispatchEvent(new Event("mirror:signed-out"));throw new ApiError(r.status,apiErrorMessage(v,r.status));}return v;
 }
 function MathText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$")}</ReactMarkdown>;}
 function download(name:string,value:unknown){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
 const themeOptions=["conditions","quantifiers","construction"].map(t=><option key={t} value={t}>{labels[t]}</option>);
 
 export default function Pilot({initial="learn",portal,demonstration=false,section,onLogin}:{initial?:Tab;portal?:PortalRole;demonstration?:boolean;section?:string;onLogin?:()=>void}){
+ const router=useRouter();
  const api=(path:string,method="GET",body?:any)=>demonstration?demoApi(portal||"student",path,method,body):liveApi(path,method,body);
  const [user,setUser]=useState<Row|null>(null),[loading,setLoading]=useState(true),[config,setConfig]=useState<Row>({});
  const [tab,setTab]=useState<Tab>(initial),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
- const [register,setRegister]=useState(false),[role,setRole]=useState<string>(portal||"student");
  const [courses,setCourses]=useState<Row[]>([]),[course,setCourse]=useState("mathematical_analysis"),[problems,setProblems]=useState<Row[]>([]);
  const [attempts,setAttempts]=useState<Row[]>([]),[active,setActive]=useState<Row|null>(null),[events,setEvents]=useState<Row[]>([]);
  const [text,setText]=useState(""),[message,setMessage]=useState(""),[theme,setTheme]=useState("conditions");
@@ -55,6 +56,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
  const [builder,setBuilder]=useState<Row|null>(null),[pack,setPack]=useState(""),[document,setDocument]=useState(""),[reviewNote,setReviewNote]=useState("");
  const epoch=useRef(0),pending=useRef<Row|null>(null),running=useRef(false),resumed=useRef("");
  const staff=user?.role==="teacher"||user?.role==="ta";
+ useEffect(()=>{if(!loading&&!user&&!error&&!demonstration)router.replace("/login");},[loading,user,error,demonstration,router]);
  const [small,setSmall]=useState(false);
  useEffect(()=>{const query=window.matchMedia("(max-width:680px)");const change=()=>setSmall(query.matches);change();query.addEventListener("change",change);return()=>query.removeEventListener("change",change);},[]);
  useEffect(()=>{if(user&&onLogin&&(portal!=="teacher"||staff))onLogin();},[user?.id]);
@@ -80,13 +82,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
 
 
  {error&&<div className="pilotAlert" role="alert">{error}</div>}{notice&&<div className="pilotNotice" role="status">{notice}</div>}
- {loading?<p>正在恢复登录状态…</p>:!user?<section className="pilotCard loginCard"><div className="loginBrand"><span className="loginLogo">镜</span><div><h2>{register?"创建学镜账号":"欢迎回到学镜"}</h2><p>{register?"注册后即可在课程中获得最小提示式引导":"登录后继续你的课程学习与学习档案"}</p></div></div>
- <form className="pilotForm authForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const password=String(f.get("password")||"");if(register&&password!==String(f.get("password_confirm")||"")){setError("两次输入的口令不一致");return;}void run(async()=>setUser(await api(register?"/auth/register":"/auth/login","POST",{username:String(f.get("username")||"").trim(),password,...(register?{nickname:String(f.get("nickname")||"").trim(),role,invite_code:String(f.get("invite")||"")}:{})})));}}>
- <label>账号<input name="username" required minLength={3} maxLength={80} autoComplete="username" autoCapitalize="none" spellCheck={false} pattern="[a-zA-Z0-9_.-]+" placeholder="3–80 位字母、数字或 _ . -"/></label>{register&&<label>昵称<input name="nickname" required minLength={1} maxLength={80} autoComplete="nickname" placeholder="在平台中显示的称呼"/></label>}
- <label>口令<input name="password" type="password" required minLength={6} maxLength={128} autoComplete={register?"new-password":"current-password"} placeholder={register?"至少 6 个字符":"输入账号口令"}/></label>
- {register&&<label>确认口令<input name="password_confirm" type="password" required minLength={6} maxLength={128} autoComplete="new-password" placeholder="再次输入口令"/></label>}
- {register&&<><label>身份<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">学生</option><option value="teacher">教师</option><option value="ta">助教</option></select></label>{role!=="student"&&<label>教师/TA 邀请码<input name="invite" type="password" required autoComplete="off" placeholder="由平台管理员提供"/></label>}<p className="authHint">学生账号可直接注册；教师和助教账号需要邀请码。注册即表示你同意平台保存账号及学习档案，可随时在“档案与隐私”中导出或删除。</p></>}
- <button className="primary" disabled={busy}>{busy?"处理中…":register?"创建账号":"登录"}</button></form><button disabled={busy} onClick={()=>setRegister(!register)}>{register?"已有账号，去登录":"注册账号"}</button></section>:<>
+ {loading?<p>正在恢复登录状态…</p>:!user?<p role="status">正在前往登录…</p>:<>
  {!portal&&<nav className="pilotTabs" aria-label="工作台">{([["learn","课程学习"],["resources","资源中心"],["memory","我的观察"],["sandboxes","我的作业"],...(staff?[["builder","课程建设"]]:[]),["account","档案与隐私"]] as [Tab,string][]).map(([key,label])=><button key={key} disabled={busy} aria-current={tab===key?"page":undefined} onClick={()=>{epoch.current++;setTab(key);setError("");if(key==="builder")void run(async()=>setBuilder(await api("/builder")));}}>{label}</button>)}</nav>}
  {user.status==="frozen"&&<div className="pilotNotice">档案已冻结。仍可查看、导出、删除，或在档案设置恢复更新。</div>}
  {tab==="learn"&&<><CourseChat api={api} courses={courses} user={user} sandboxes={sandboxes}/>

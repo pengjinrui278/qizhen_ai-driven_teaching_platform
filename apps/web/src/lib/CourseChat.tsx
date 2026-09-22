@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import PhotoInput from "./PhotoInput";
+import coursePrompts from "./course-prompts.json";
 import "./course-chat.css";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
@@ -59,19 +60,12 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
  }
  const isInitial=(e:Row,i:number)=>i===0&&e.message===active?.problem?.text;
  const courseSymbol:Record<string,string>={mathematical_analysis:"ε",linear_algebra_analytic_geometry:"⟨⟩",university_physics:"ω",point_set_topology:"τ",ordinary_differential_equations:"y′"};
- const suggestions:Record<string,string[]>={
-  mathematical_analysis:["ε-δ 证明怎么构造？","数列极限的 N 如何选取","帮我理解夹逼定理"],
-  linear_algebra_analytic_geometry:["矩阵的秩怎么求？","线性相关与线性无关","特征值与特征向量"],
-  university_physics:["切向与法向加速度","量纲分析怎么做","牛顿第二定律的应用"],
-  point_set_topology:["开集公理是什么？","连续映射的拓扑定义","有限补拓扑"],
-  ordinary_differential_equations:["分离变量法怎么用？","初值问题解的唯一性","积分因子法"],
- };
- const suggestionList=suggestions[course]||["我卡住了，给个提示","帮我理解这个知识点","这道题的思路是什么"];
+ const suggestionList=(coursePrompts as Record<string,{title:string;question:string}[]>)[course]||[{title:"条件、反例与证明",question:"请帮我分析这个结论的关键条件，区分充分条件与必要条件，并通过反例检验去掉条件后是否仍成立。"}];
  return <section className="courseChat">
  <aside className={"chatHistory "+(historyOpen?"isOpen":"")}><button className="chatNew" disabled={busy||loading} onClick={()=>clear()}>＋ 新对话</button><label>课程<select aria-label="聊天课程" disabled={busy||loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2><div className="chatSessionList">{sessions.filter(s=>s.course_id===course).map(a=><button key={a.id} aria-current={active?.id===a.id?"true":undefined} disabled={busy||loading} onClick={()=>resume(a)}>{a.problem.text?.slice(0,55)||"课程对话"}</button>)}{!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div></aside>
  <section className="chatWorkspace"><header className="chatHeader"><button className="chatHistoryToggle" aria-label="打开对话列表" onClick={()=>setHistoryOpen(!historyOpen)}>☰</button><h1>{name}</h1><button disabled={busy||loading} onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
- {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>卡住时我会给最小有效提示，而不是直接给答案。试试下面的问题，或直接输入你的题目。</p><div className="suggestionRow">{suggestionList.map(s=><button key={s} type="button" disabled={busy||loading} onClick={()=>setDraft(s)}>{s}</button>)}</div></div>}
+ {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>从条件、证明与应用展开讨论。</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}
  {loading&&<p role="status">正在打开对话…</p>}
  {active&&events.length>0&&!isInitial(events[0],0)&&<article className="chatUser"><MessageText text={active.problem.text||"课程问题"}/></article>}
  {events.map((e,i)=><div className="chatExchange" key={e.request_id}><article className="chatUser"><MessageText text={e.message||active?.problem?.text||"继续"}/></article><article className="chatAssistant">{e.response?.hint_level&&<div className="hintTag">提示级别 {e.response.hint_level}/7{e.response.hints_exhausted?" · 已用完":""}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div></article></div>)}
