@@ -23,7 +23,7 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
  async function resume(a:Row){if(lock.current)return;const token=++epoch.current;setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){setCourse(a.course_id);setActive(d);setEvents(d.events);setPending(null);pendingRef.current=null;setDraft("");setHistoryOpen(false);}}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
  async function send(retry=false,mode="chat"){
   if(lock.current||loading||user.status!=="active")return;
-  const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"我想看完整解答":draft.trim());
+  const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"请帮我梳理解题框架，保留关键步骤让我自己完成":draft.trim());
   const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:msg};
   if(!request?.message)return;
   lock.current=true;setBusy(true);setError("");setFeedback("");setPending(request);pendingRef.current=request;
@@ -79,7 +79,7 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
   <div className="hintButtons">
    <button className="hintBtn first" disabled={busy||loading||user.status!=="active"} onClick={()=>send(false,"first_hint")} title="给一个方向提示，不涉及具体解法">💡 我卡住了</button>
    <button className="hintBtn next" disabled={busy||loading||user.status!=="active"||!active||hintsExhausted} onClick={()=>send(false,"next_hint")} title="在当前提示基础上再深入一级">⬆️ 再深入一点</button>
-   <button className="hintBtn full" disabled={busy||loading||user.status!=="active"||!active} onClick={()=>send(false,"full_solution")} title="查看完整解答（建议先尝试提示）">📖 看完整解答</button>
+   <button className="hintBtn full" disabled={busy||loading||user.status!=="active"||!active} onClick={()=>send(false,"full_solution")} title="梳理已有步骤，关键推导由你完成">📖 梳理解题框架</button>
   </div>
  </div>
  {showRelated&&<div className="relatedPanel">

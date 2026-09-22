@@ -96,6 +96,7 @@ class CourseMirrorResponse(BaseModel):
     answer: str
     answer_type: str
     hint_level: int | None = Field(default=None, ge=1, le=7)
+    hints_exhausted: bool = False
     citations: list[CourseCitation] = Field(default_factory=list)
     harness: HarnessResult
     evidence: list[LearningEvidenceDraft] = Field(default_factory=list)

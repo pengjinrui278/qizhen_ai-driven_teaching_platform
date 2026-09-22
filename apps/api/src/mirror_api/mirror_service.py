@@ -30,6 +30,8 @@ from .domain import (
     LearningEvidenceDraft,
 )
 from .llm import LanguageModel, MirrorContext
+from .agent_policy import POLICY_VERSION
+from .context_budget import bounded_context
 from .models import (
     AssignmentWorkspace,
     Course,
@@ -145,6 +147,8 @@ class MirrorPipeline:
 
         context = MirrorContext(
             course_id=request.course_id,
+            course_guidance=(profile.metadata_.get("teaching_guidance", "")
+                             if isinstance(profile.metadata_.get("teaching_guidance", ""), str) else ""),
             course_name=course.display_name,
             mirror_name=course.mirror_name,
             interaction_mode=request.interaction_mode.value,
@@ -155,13 +159,16 @@ class MirrorPipeline:
             hints=hints,
             solution_paths=list(problem.solution_paths) if problem else [],
             knowledge=[
-                {"knowledge_id": node.knowledge_id, "title": node.title, "statement": node.statement,
+                {"knowledge_id": node.knowledge_id, "source_id": node.coursepack_id,
+                 "title": node.title, "statement": node.statement,
                  "conditions": node.conditions, "prerequisites": node.prerequisites,
                  "locator": node.source.get("locator") or node.title}
                 for node in knowledge
             ]
             + [
-                {"knowledge_id": chunk.chunk_id, "title": chunk.title or chunk.source_id, "statement": chunk.content}
+                {"knowledge_id": chunk.chunk_id, "title": chunk.title or chunk.source_id,
+                 "statement": chunk.content, "source_id": chunk.source_id,
+                 "locator": chunk.locator or chunk.title}
                 for chunk in chunks
             ],
             common_mistakes=list(problem.common_mistakes) if problem else [],
@@ -169,6 +176,10 @@ class MirrorPipeline:
             message=request.message,
             history=request.history,
         )
+        context = bounded_context(context)
+        included = {(node.get("source_id"), node["knowledge_id"]) for node in context.knowledge}
+        knowledge = [node for node in knowledge if (node.coursepack_id, node.knowledge_id) in included]
+        chunks = [chunk for chunk in chunks if (chunk.source_id, chunk.chunk_id) in included]
         answer = self.model.generate(context)
 
         citations = [
@@ -200,12 +211,13 @@ class MirrorPipeline:
             answer_type=self._answer_type(request, problem, knowledge),
             hint_level=hint_level,
             citations=citations,
+            hints_exhausted=hints_exhausted,
             harness=harness,
             evidence=evidence,
             uncertainty=uncertainty,
             model=self.model.name,
             decision={
-                "policy_version": "course-student-v2",
+                "policy_version": POLICY_VERSION,
                 "context": request.student_context.model_dump(),
                 "attempt_id": request.attempt_id,
                 "coursepack": problem.coursepack_id if problem else None,
@@ -266,8 +278,6 @@ class MirrorPipeline:
         """返回 (本次提示级别, 提示阶梯是否已用完)。"""
         if request.interaction_mode not in HINT_MODES:
             return None, False
-        if request.interaction_mode is InteractionMode.FIRST_HINT:
-            return 1, False
         past = session.execute(
             select(MirrorEvent).where(
                 MirrorEvent.course_id == request.course_id,
@@ -281,7 +291,11 @@ class MirrorPipeline:
                         if row.request_payload.get("attempt_id") == request.attempt_id
                         and row.response_json.get("harness", {}).get("status") != "failed"), default=0)
         if getattr(self.model, "dynamic_hints", False) and request.course_id != "ai_literacy":
-            return min(past_max + 1, MAX_HINT_LEVEL), False
+            if request.interaction_mode is InteractionMode.FIRST_HINT:
+                return max(1, past_max), past_max >= MAX_HINT_LEVEL
+            return min(past_max + 1, MAX_HINT_LEVEL), past_max >= MAX_HINT_LEVEL
+        if request.interaction_mode is InteractionMode.FIRST_HINT:
+            return max(1, past_max), False
         max_available = session.execute(
             select(func.max(ProblemHint.level)).where(
                 ProblemHint.coursepack_id == problem.coursepack_id,
@@ -302,7 +316,7 @@ class MirrorPipeline:
         checks: list[HarnessCheck] = []
 
         # 平台级安全栏：提示模式严禁泄露解法关键步骤（对所有课程生效）。
-        if request.interaction_mode in HINT_MODES and problem is not None:
+        if request.course_id != "ai_literacy" and problem is not None:
             leaked_steps = [
                 step
                 for path in problem.solution_paths

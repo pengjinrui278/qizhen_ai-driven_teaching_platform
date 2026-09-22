@@ -19,6 +19,8 @@ import httpx
 
 from .config import Settings
 from .agent_policy import teaching_policy
+from .teaching_scaffold import scaffold_policy
+from .context_budget import bounded_context, fit_user_sections
 from .model_transport import complete
 
 
@@ -30,6 +32,7 @@ class MirrorContext:
     mirror_name: str
     interaction_mode: str
     course_id: str = ""
+    course_guidance: str = ""
     hint_level: int | None = None
     hints_exhausted: bool = False
     dynamic_hints: bool = False
@@ -143,14 +146,7 @@ class StubMirrorModel:
         return "这道题暂时没有收录对应级别的提示。"
 
     def _solution(self, context: MirrorContext) -> str:
-        if not context.solution_paths:
-            return "离线演示模式没有这道私人题目的已审核解答。请配置真实模型后继续；当前不会编造完整解答。"
-        parts: list[str] = []
-        for path in context.solution_paths:
-            parts.append(f"策略（{path.get('path_id', 'path')}）：{path.get('strategy', '')}")
-            for idx, step in enumerate(path.get("key_steps", []), start=1):
-                parts.append(f"{idx}. {step}")
-        return "\n".join(parts)
+        return "我们先整理证明框架：写出已知条件、目标和已完成的步骤，再标出尚缺的关键推导。你想先检查哪一环？"
 
     def _concept(self, context: MirrorContext) -> str:
         if not context.knowledge:
@@ -208,11 +204,12 @@ class OpenAICompatibleModel:
         self.name = f"openai_compatible:{model}"
 
     def generate(self, context: MirrorContext) -> str:
+        context = bounded_context(context)
         mode_rules = {
             "chat": (
                 "这是自然连续问答，不是预设题目或固定提示阶梯。以学生最新消息为准，结合上下文理解意图。"
                 "学生问概念就解释概念，提供证明就分析证明，换话题就回答新话题。"
-                "学生只要提示或表示卡住时给最小有效帮助；明确要求解答或完整证明时给完整过程。"
+                "学生只要提示或表示卡住时给最小有效帮助；请求完整证明时仍保留由学生完成的关键步骤。"
                 "问题缺少关键条件时先澄清，不擅自替换成资料库中的相似题。"
                 "不要每次要求先选题或先点击某个模式按钮。"
             ),
@@ -225,7 +222,7 @@ class OpenAICompatibleModel:
             ),
             "first_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
             "next_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
-            "full_solution": "学生已明确请求完整解答思路：请给出完整、清晰、逐步推进的解答。",
+            "full_solution": "学生请求梳理解题框架：整理已知与目标，保留关键推导空缺，不给完整解答或最终答案。",
             "solution_review": "学生在请求解答自查：请依据常见错误清单指出需要核对的方向，不要直接重写完整解答。",
             "concept_explanation": "学生在问知识点：请依据课程知识准确讲解，如有常见误用一并提醒。",
             "hint_ladder_generation": (
@@ -249,23 +246,24 @@ class OpenAICompatibleModel:
         if context.dynamic_hints:
             dynamic_rule = (
                 "根据本题、学生最新问题、近期对话和课程知识进行分析，给出此刻最有帮助的一条提示。"
-                "不要播放预设提示，不按固定层级复述；根据学生已经尝试的步骤调整切入点。"
+                "不要播放预设提示；在本轮提示等级的帮助边界内，根据学生已经尝试的步骤调整切入点。"
                 "保持最小有效帮助，不直接给出完整答案；必要时先询问缺失条件。"
             )
             mode_rules.update(first_hint=dynamic_rule, next_hint=dynamic_rule)
         system = (
-            f"你是{context.course_name}的课程智能体（{context.mirror_name}）。"
+            f"你是{context.course_name[:160]}的课程智能体（{context.mirror_name[:160]}）。"
             "规则：优先使用下面提供的课程材料；材料不足时如实说明。"
             + mode_rules.get(context.interaction_mode, "保持专业、克制的回答。")
-            + teaching_policy(context.course_id)
+            + teaching_policy(context.course_id, context.course_guidance)
+            + scaffold_policy(context.course_id, context.hint_level)
         )
         user_lines = [f"交互模式：{context.interaction_mode}"]
-        if context.hint_level and not context.dynamic_hints:
+        if context.hint_level:
             user_lines.append(f"本次应给第 {context.hint_level} 级提示。")
-        if context.hints_exhausted and not context.dynamic_hints:
+        if context.hints_exhausted:
             user_lines.append(
                 "该题的提示阶梯已经用完：不要再给新提示，"
-                "明确告知学生提示已用完，可请求完整思路或先回顾相关定义。"
+                "邀请学生提交尝试，或先回顾相关定义，不升级为直接代答。"
             )
         if context.problem_statement:
             user_lines.append(f"题目：{context.problem_statement}")
@@ -273,8 +271,6 @@ class OpenAICompatibleModel:
             user_lines.append(f"提示阶梯：{context.hints}")
         if context.knowledge:
             user_lines.append(f"可用课程知识：{context.knowledge}")
-        if context.solution_paths and context.interaction_mode == "full_solution":
-            user_lines.append(f"解法路径：{context.solution_paths}")
         if context.common_mistakes and context.interaction_mode == "solution_review":
             user_lines.append(f"常见错误清单：{context.common_mistakes}")
         if context.workspace_stats is not None:
@@ -297,7 +293,7 @@ class OpenAICompatibleModel:
                 "max_tokens": self.max_tokens,
                 "messages": [
                     {"role": "system", "content": system},
-                    {"role": "user", "content": "\n".join(user_lines)},
+                    {"role": "user", "content": fit_user_sections(user_lines)},
                 ],
             }
         if self.base_url=="https://api.deepseek.com" and context.course_id!="ai_literacy":

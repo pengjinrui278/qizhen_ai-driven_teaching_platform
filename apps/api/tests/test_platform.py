@@ -92,7 +92,9 @@ def test_course_hints_are_generated_from_current_context(pilot):
         result=message(pilot,aid,"dynamic-request-"+str(i),
                        "first_hint" if i==0 else "next_hint","我不理解这里的条件")
         assert result.status_code==200,result.text
-    assert all(c.dynamic_hints and not c.hints and not c.hints_exhausted for c in model.contexts)
+    assert all(c.dynamic_hints and not c.hints for c in model.contexts)
+    assert [c.hint_level for c in model.contexts] == [1, 2, 3, 4, 5, 6, 7, 7, 7]
+    assert [c.hints_exhausted for c in model.contexts] == [False] * 7 + [True] * 2
     assert model.contexts[-1].history
     assert model.contexts[-1].knowledge
     assert model.contexts[-1].message=="我不理解这里的条件"
