@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./styles.css";
 
 export const metadata: Metadata = {
-  title: "学镜 Learning Mirror",
+  title: "学镜学习空间 Learning Mirror",
   description: "面向大学数理课程的学习与作业平台"
 };
 

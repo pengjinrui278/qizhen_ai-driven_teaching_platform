@@ -46,7 +46,7 @@ function asSnapshot(value:unknown):ScheduleSnapshot{
  if(!value||typeof value!=="object")throw new Error("课表文件不是有效对象");
  const row=value as Partial<ScheduleSnapshot>;
  if(row.schema_version!==1||row.source!=="zju-local-connector"||!Number.isInteger(row.academic_year_start)||!Array.isArray(row.courses)||!row.courses.every(asCourse)){
-  throw new Error("课表文件不是学镜本地连接器导出的格式");
+  throw new Error("课表文件不是学镜学习空间本地连接器导出的格式");
  }
  return {...row,season:String(row.season||""),assignments:Array.isArray(row.assignments)?row.assignments:[]} as ScheduleSnapshot;
 }
@@ -75,7 +75,7 @@ export default function ZjuSchedule(){
  },[]);
  const byDay=useMemo(()=>DAYS.map((_,index)=>(snapshot?.courses||[]).filter(course=>course.day_of_week===index+1).sort((a,b)=>a.periods[0]-b.periods[0])),[snapshot]);
  const openConnector=()=>{
-  setError("");setNotice("请在新窗口完成本人统一认证；账号密码不会发送到学镜服务器。");
+  setError("");setNotice("请在新窗口完成本人统一认证；账号密码不会发送到学镜学习空间服务器。");
   const target="http://127.0.0.1:8765/?return_origin="+encodeURIComponent(window.location.origin);
   const popup=window.open(target,"learning-mirror-zju-connector","popup=yes,width=940,height=820");
   connectorWindow.current=popup;

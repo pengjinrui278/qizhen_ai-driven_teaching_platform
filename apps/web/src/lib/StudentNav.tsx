@@ -12,7 +12,7 @@ export default function StudentNav({ active }: StudentNavProps) {
   return (
     <nav className="studentNav" aria-label="学生端导航">
       <a href="/" className="studentBrand">
-        学镜
+        学镜学习空间
       </a>
       <div className="studentNavLinks">
         {links.map((link) => (

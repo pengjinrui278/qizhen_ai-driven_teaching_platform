@@ -80,7 +80,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
 
 
  {error&&<div className="pilotAlert" role="alert">{error}</div>}{notice&&<div className="pilotNotice" role="status">{notice}</div>}
- {loading?<p>正在恢复登录状态…</p>:!user?<section className="pilotCard loginCard"><div className="loginBrand"><span className="loginLogo">镜</span><div><h2>{register?"创建学镜账号":"欢迎回到学镜"}</h2><p>{register?"注册后即可在课程中获得最小提示式引导":"登录后继续你的课程学习与学习档案"}</p></div></div>
+ {loading?<p>正在恢复登录状态…</p>:!user?<section className="pilotCard loginCard"><div className="loginBrand"><span className="loginLogo">镜</span><div><h2>{register?"创建学镜学习空间账号":"欢迎回到学镜学习空间"}</h2><p>{register?"注册后即可在课程中获得最小提示式引导":"登录后继续你的课程学习与学习档案"}</p></div></div>
  <form className="pilotForm authForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const password=String(f.get("password")||"");if(register&&password!==String(f.get("password_confirm")||"")){setError("两次输入的口令不一致");return;}void run(async()=>setUser(await api(register?"/auth/register":"/auth/login","POST",{username:String(f.get("username")||"").trim(),password,...(register?{nickname:String(f.get("nickname")||"").trim(),role,invite_code:String(f.get("invite")||"")}:{})})));}}>
  <label>账号<input name="username" required minLength={3} maxLength={80} autoComplete="username" autoCapitalize="none" spellCheck={false} pattern="[a-zA-Z0-9_.-]+" placeholder="3–80 位字母、数字或 _ . -"/></label>{register&&<label>昵称<input name="nickname" required minLength={1} maxLength={80} autoComplete="nickname" placeholder="在平台中显示的称呼"/></label>}
  <label>口令<input name="password" type="password" required minLength={6} maxLength={128} autoComplete={register?"new-password":"current-password"} placeholder={register?"至少 6 个字符":"输入账号口令"}/></label>
