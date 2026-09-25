@@ -23,9 +23,9 @@ try {
     $tools=@(Get-SelectedTools $Selection)
     $environment=Get-EnvironmentCheck
     if (-not $environment.supported) { throw '首版支持 Windows 10 2004+ / Windows 11，x64 或 ARM64。' }
-    if (-not $environment.wingetPath) { throw '未找到 WinGet。请通过微软官方应用安装程序页面安装或更新 App Installer，再重新打开助手。' }
+    if (-not $environment.wingetPath) { throw '未检测到 WinGet 入口。请在微软商店完成“应用安装程序”的安装或更新（仅下载安装包不够），再重新打开助手。若已安装，请检查 Windows 的应用执行别名中 WinGet 是否启用。无需自行在终端安装所选工具。' }
     $version=Invoke-WinGet $environment.wingetPath @('--version') 30
-    if ($version.exitCode -ne 0 -or $version.output.Trim() -notmatch '^v?(\d+\.\d+\.\d+)') { throw '无法读取 WinGet 版本。' }
+    if ($version.exitCode -ne 0 -or $version.output.Trim() -notmatch '^v?(\d+\.\d+\.\d+)') { throw '已找到 WinGet，但无法启动或读取版本。请在微软商店更新“应用安装程序”，再重新打开助手；此错误不表示没有下载。' }
     if ([version]$Matches[1] -lt [version]'1.12.0') { throw '请先通过微软 App Installer 更新 WinGet 至 1.12 或更高版本。' }
     $source=Invoke-WinGet $environment.wingetPath @('source','export','winget') 60
     if ($source.exitCode -ne 0) { throw '无法核对 WinGet 来源。' }

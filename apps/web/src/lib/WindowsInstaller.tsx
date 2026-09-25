@@ -5,7 +5,7 @@ import "./windows-installer.css";
 type Bundle={file:string;sha256:string;bytes:number};
 export default function WindowsInstaller(){
  const [selected,setSelected]=useState<string[]>(["codex"]),[bundles,setBundles]=useState<Record<string,Bundle>>({}),[error,setError]=useState("");
- useEffect(()=>{let live=true;fetch("/downloads/windows/manifest.json").then(r=>{if(!r.ok)throw new Error("暂时无法获取安装助手，请刷新重试");return r.json();}).then(data=>{if(live)setBundles(data.packages);}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;fetch("/downloads/windows/manifest.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("暂时无法获取安装助手，请刷新重试");return r.json();}).then(data=>{if(live)setBundles(data.packages);}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
  const key=catalog.filter(t=>selected.includes(t.key)).map(t=>t.key).join("-"),bundle=bundles[key];
  return <section className="windowsInstaller" aria-label="Windows 安装助手">
  <h2>Windows 一键安装助手</h2><p>选择工具，下载并解压助手，双击 Start.cmd。在本地确认后开始安装。</p>
@@ -15,7 +15,7 @@ export default function WindowsInstaller(){
  <a href={tool.docs} target="_blank" rel="noopener noreferrer">官方安装与配置指引 ↗</a>
  </article>)}</div>
  {error&&<p role="alert">{error}</p>}
- <div className="aiActions">{bundle?<a className="windowsDownload" href={"/downloads/windows/"+bundle.file} download>下载 Windows 助手（已选 {selected.length} 项）</a>:<button disabled>{selected.length?"正在准备下载…":"请先选择工具"}</button>}</div>
+ <div className="aiActions">{bundle?<a className="windowsDownload" href={"/downloads/windows/"+bundle.file+"?v="+bundle.sha256} download>下载 Windows 助手（已选 {selected.length} 项）</a>:<button disabled>{selected.length?"正在准备下载…":"请先选择工具"}</button>}</div>
  <p>支持 Windows 10 2004+ / Windows 11，需要 WinGet 1.12+。缺少时，助手会引导你前往微软官方页面。</p>
  <details><summary>安装、账号与安全</summary>
  <p>助手会保留已有工具，不自动升级或改写模型配置。安装过程中可能出现系统授权提示；可停止后续任务，当前安装不会被强制中断。</p>

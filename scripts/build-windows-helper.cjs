@@ -28,7 +28,7 @@ function build(){
   fs.writeFileSync(path.join(out,file),archive);
   packages[key]={file,sha256:crypto.createHash('sha256').update(archive).digest('hex'),bytes:archive.length};
  }
- fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({version:'0.1.0',packages},null,2));
+ fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({version:'0.1.1',packages},null,2));
  console.log('Windows helper: '+Object.keys(packages).length+' selection bundles built');
 }
 if(require.main===module)build();

@@ -6,6 +6,27 @@ function Test-Case([string]$Name,[scriptblock]$Body){& $Body;$script:passed++;Wr
 function Expect-Throw([scriptblock]$Body){$failed=$false;try{& $Body | Out-Null}catch{$failed=$true};Assert $failed 'Expected rejection'}
 function Get-ExistingCommand($Tool){return $script:existing}
 $script:existing=$false
+Test-Case 'WinGet standard alias works without PATH' {
+ & {
+  function Get-Command { return $null }
+  function Test-Path { param($LiteralPath,$PathType) return $LiteralPath.EndsWith('Microsoft\WindowsApps\winget.exe') -or $LiteralPath.EndsWith('Microsoft/WindowsApps/winget.exe') }
+  Assert ([bool](Find-WinGet)) 'standard alias missing'
+ }
+}
+Test-Case 'WinGet PATH fallback' {
+ & {
+  function Test-Path { return $false }
+  function Get-Command { return [pscustomobject]@{Source='C:\fixture\winget.exe'} }
+  Assert ((Find-WinGet) -eq 'C:\fixture\winget.exe') 'PATH fallback missing'
+ }
+}
+Test-Case 'WinGet missing returns empty path' {
+ & {
+  function Test-Path { return $false }
+  function Get-Command { return $null }
+  Assert ((Find-WinGet) -eq '') 'missing command not handled'
+ }
+}
 $catalog=@(Get-ToolCatalog);$tool=$catalog[0]
 $official='{"Arg":"https://cdn.winget.microsoft.com/cache","Identifier":"Microsoft.Winget.Source_8wekyb3d8bbwe","Name":"winget","Type":"Microsoft.PreIndexed.Package"}'
 Test-Case 'catalog identity' {Assert ($catalog.Count -eq 4) 'count';Assert ($catalog[0].id -eq 'OpenAI.Codex') 'id'}

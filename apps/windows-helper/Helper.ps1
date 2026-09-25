@@ -10,7 +10,7 @@ if(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'selection.json')){
  [void](Get-SelectedTools ($chosen -join ','))
 }
 $form=New-Object Windows.Forms.Form
-$form.Text='学镜 · Windows 安装助手'
+$form.Text='学镜 · Windows 安装助手 0.1.1'
 $form.Size=New-Object Drawing.Size(800,760)
 $form.MinimumSize=$form.Size
 $form.StartPosition='CenterScreen'

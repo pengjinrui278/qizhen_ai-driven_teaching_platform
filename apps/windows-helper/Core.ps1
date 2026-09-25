@@ -26,12 +26,21 @@ function Assert-OfficialSource([string]$Json) {
     $matching = @($entries | Where-Object { $_.Name -ceq 'winget' -and $_.Arg.TrimEnd('/') -ceq 'https://cdn.winget.microsoft.com/cache' -and $_.Type -ceq 'Microsoft.PreIndexed.Package' -and $_.Identifier -ceq 'Microsoft.Winget.Source_8wekyb3d8bbwe' })
     if ($matching.Count -ne 1) { throw 'WinGet source is not the expected Microsoft community source. No installation performed.' }
 }
+function Find-WinGet {
+    # Resolve the standard alias even when WindowsApps is missing from PATH.
+    # Never change persistent PATH or search arbitrary downloaded executables.
+    $alias = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Microsoft/WindowsApps/winget.exe'
+    if (Test-Path -LiteralPath $alias -PathType Leaf) { return $alias }
+    $command = Get-Command winget.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($command) { return $command.Source }
+    return ''
+}
 function Get-EnvironmentCheck {
     $arch = [Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITECTURE','Machine')
     $architecture = switch ($arch) { 'AMD64' {'x64'} 'ARM64' {'arm64'} default {'unsupported'} }
-    $winget = Get-Command winget.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $winget = Find-WinGet
     $build = [int](Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber).CurrentBuildNumber
-    return [pscustomobject]@{architecture=$architecture;windowsBuild=$build;wingetPath=$(if($winget){$winget.Source}else{''});supported=($build -ge 19041 -and $architecture -ne 'unsupported')}
+    return [pscustomobject]@{architecture=$architecture;windowsBuild=$build;wingetPath=$winget;supported=($build -ge 19041 -and $architecture -ne 'unsupported')}
 }
 function Get-ExistingCommand($Tool) {
     if (-not $Tool.command) { return $false }
