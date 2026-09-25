@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$CorePath)
+﻿param([Parameter(Mandatory=$true)][string]$CorePath)
 . $CorePath
 $script:passed=0
 function Assert($Condition,[string]$Message){if(-not $Condition){throw $Message}}
@@ -77,5 +77,27 @@ Test-Case 'argument injection rejected' {Expect-Throw {Invoke-WinGet 'unused.exe
 Test-Case 'process execution and exit collection' {
  $r=Invoke-WinGet (Join-Path $PSHOME 'powershell.exe') @('-NoProfile','-Command','exit','7') 15
  Assert ($r.exitCode -eq 7) 'exit'
+}
+Test-Case 'hash mismatch gives actionable safety guidance' {
+ $d=Get-InstallDiagnosis 'WorkBuddy' 'install' -1978335215
+ Assert ($d.hexCode -eq '0x8A150011') 'hex code'
+ Assert ($d.impact.Contains('未运行')) 'installation boundary'
+ Assert (($d.steps -join ' ').Contains('不要强制安装')) 'safety guidance'
+ Assert ((Format-InstallDiagnosis $d).Contains('WinGet 日志')) 'logs'
+}
+Test-Case 'unknown failure does not claim no installation' {
+ $d=Get-InstallDiagnosis 'Tool' 'install' 12345
+ Assert ($d.impact.Contains('无法确认')) 'uncertain state'
+ Assert ($d.steps.Count -ge 3) 'next steps'
+}
+Test-Case 'hash failure propagates structured diagnosis' {
+ $run=Mock-Run @(-1978335212,-1978335215)
+ try{Invoke-ToolStep $tool 'x64' $run;throw 'Expected failure'}catch{
+  Assert ($_.Exception.Data['diagnosis'].hexCode -eq '0x8A150011') 'missing structured error'
+ }
+}
+Test-Case 'environment failure works without exit code' {
+ $d=Get-InstallDiagnosis 'Environment' 'check'
+ Assert ($d.hexCode -eq '未提供') 'nullable exit code'
 }
 Write-Output ('Passed '+$script:passed+' tests; zero real installation commands.')

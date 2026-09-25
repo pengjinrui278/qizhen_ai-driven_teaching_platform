@@ -10,7 +10,7 @@ if(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'selection.json')){
  [void](Get-SelectedTools ($chosen -join ','))
 }
 $form=New-Object Windows.Forms.Form
-$form.Text='学镜 · Windows 安装助手 0.1.1'
+$form.Text='学镜 · Windows 安装助手 0.1.2'
 $form.Size=New-Object Drawing.Size(800,760)
 $form.MinimumSize=$form.Size
 $form.StartPosition='CenterScreen'
@@ -19,7 +19,7 @@ $form.BackColor=[Drawing.Color]::FromArgb(246,249,254)
 $layout=New-Object Windows.Forms.TableLayoutPanel
 $layout.Dock='Fill';$layout.Padding=New-Object Windows.Forms.Padding(24)
 $layout.ColumnCount=1;$layout.RowCount=7
-foreach($height in @(55,175,65,46,48,0,72)){
+foreach($height in @(55,135,65,46,48,0,112)){
  $style=New-Object Windows.Forms.RowStyle
  if($height){$style.SizeType='Absolute';$style.Height=$height}else{$style.SizeType='Percent';$style.Height=100}
  [void]$layout.RowStyles.Add($style)
@@ -58,9 +58,11 @@ $links.Dock='Fill';$links.WrapContents=$true
 $guide=Add-Button '所选工具官方指引' $links
 $requirements=Add-Button '获取 WinGet' $links
 $license=Add-Button 'WinGet 条款' $links
-$logs=Add-Button '本地任务记录' $links
+$logs=Add-Button '本次详细记录' $links
+$wingetLogs=Add-Button 'WinGet 日志' $links
+$copyHelp=Add-Button '复制故障摘要' $links
 $layout.Controls.Add($links,0,6)
-$script:worker=$null;$script:runFolder='';$script:lastStatus=''
+$script:worker=$null;$script:runFolder='';$script:lastStatus='';$script:failureSummary=''
 $timer=New-Object Windows.Forms.Timer;$timer.Interval=500
 function Start-Task([string]$Operation){
  if($script:worker -and -not $script:worker.HasExited){return}
@@ -83,7 +85,7 @@ function Start-Task([string]$Operation){
  $arguments+='-Confirmed'
  $script:worker=Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $script:runFolder 'worker.log') -RedirectStandardError (Join-Path $script:runFolder 'worker-error.log')
  $list.Enabled=$false;$check.Enabled=$false;$install.Enabled=$false;$consent.Enabled=$false;$stop.Enabled=$true
- $output.Text='正在启动任务…';$script:lastStatus='';$timer.Start()
+ $output.Text='正在启动任务…';$script:lastStatus='';$script:failureSummary='';$timer.Start()
 }
 $check.Add_Click({try{Start-Task 'check'}catch{$output.Text=$_.Exception.Message}})
 $install.Add_Click({try{Start-Task 'install'}catch{$output.Text=$_.Exception.Message}})
@@ -98,8 +100,9 @@ $timer.Add_Tick({
    if($raw -ne $script:lastStatus){
     $state=$raw | ConvertFrom-Json;$script:lastStatus=$raw
     $lines=@($state.message,'')
+    if($state.phase -eq 'failed'){$script:failureSummary='学镜助手 0.1.2'+[Environment]::NewLine+'开始时间：'+$state.startedAt+[Environment]::NewLine+$state.message}
     foreach($item in $state.items){$tool=$catalog | Where-Object key -eq $item.key;$lines+=($tool.name+'：'+$item.message)}
-    if($state.finished){$lines+='';foreach($tool in $catalog | Where-Object key -in @($state.items | ForEach-Object { $_.key })){$lines+=($tool.name+'：'+$tool.next)};$lines+='';$lines+='卸载：Windows 设置 → 应用 → 已安装的应用。个人配置不会由助手删除。'}
+    if($state.finished){$lines+='';foreach($tool in $catalog | Where-Object key -in @($state.items | Where-Object {$_.state -in @('installed','existing')} | ForEach-Object { $_.key })){$lines+=($tool.name+'：'+$tool.next)};if($state.operation -eq 'install'){$lines+='';$lines+='卸载：Windows 设置 → 应用 → 已安装的应用。个人配置不会由助手删除。'}}
     $output.Text=$lines -join [Environment]::NewLine
    }
   }
@@ -112,7 +115,16 @@ $timer.Add_Tick({
 $guide.Add_Click({$index=$list.SelectedIndex;if($index -lt 0){$index=0};Start-Process $catalog[$index].docs})
 $requirements.Add_Click({Start-Process 'https://apps.microsoft.com/detail/9nblggh4nns1'})
 $license.Add_Click({Start-Process 'https://github.com/microsoft/winget-pkgs/blob/master/README.md'})
-$logs.Add_Click({if($script:runFolder){Start-Process explorer.exe -ArgumentList ('"'+$script:runFolder+'"')}else{$output.Text='尚未执行任务，没有本地记录。'}})
+$logs.Add_Click({if($script:runFolder){Start-Process explorer.exe -ArgumentList ('"'+$script:runFolder+'"')}else{[void][Windows.Forms.MessageBox]::Show('请先运行“检查环境”。执行后可在这里查看 status.json、command 日志和 worker-error.log。')}})
+$wingetLogs.Add_Click({
+ $folder=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Packages/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe/LocalState/DiagOutputDir'
+ if(Test-Path -LiteralPath $folder){Start-Process explorer.exe -ArgumentList ('"'+$folder+'"');[void][Windows.Forms.MessageBox]::Show('按“修改日期”排序，打开与失败时间对应的 WinGet 日志。它记录了下载、校验和安装细节。分享前检查本机路径等个人信息。')}
+ else{[void][Windows.Forms.MessageBox]::Show('默认 WinGet 日志目录不存在，可能尚未运行或使用了不同安装方式。请先查看“本次详细记录”中的 command 日志。')}
+})
+$copyHelp.Add_Click({
+ if($script:failureSummary){try{[Windows.Forms.Clipboard]::SetText($script:failureSummary);[void][Windows.Forms.MessageBox]::Show('故障摘要已复制。发送前检查是否含个人信息；无需粘贴密钥或完整日志。')}catch{[void][Windows.Forms.MessageBox]::Show('复制失败，请手动选择上方提示文字复制。')}}
+ else{[void][Windows.Forms.MessageBox]::Show('当前没有失败记录。任务失败后可复制工具、时间、错误码和处理建议。')}
+})
 $form.Add_FormClosing({param($sender,$event)
  if($script:worker -and -not $script:worker.HasExited){$event.Cancel=$true;[void][Windows.Forms.MessageBox]::Show('任务仍在进行，请使用“停止后续任务”并等待当前步骤结束。')}
 })
