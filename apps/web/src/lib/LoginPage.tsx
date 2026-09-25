@@ -19,8 +19,8 @@ export default function LoginPage(){
   finally{lock.current=false;setBusy(false);}
  }
  return <main className="loginPage"><section className="loginSurface" aria-labelledby="login-title">
-  <div className="loginIdentity"><span aria-hidden="true">镜</span><div><strong>学镜</strong><p>Learning Mirror</p></div></div>
-  <h1 id="login-title">{register?"创建账号":"登录学镜"}</h1>
+  <div className="loginIdentity"><span aria-hidden="true">镜</span><div><strong>学镜学习空间</strong><p>Learning Mirror</p></div></div>
+  <h1 id="login-title">{register?"创建账号":"登录学镜学习空间"}</h1>
   {checking?<p role="status">正在确认登录状态…</p>:<>
    {error&&<p className="loginError" role="alert">{error}</p>}
    <form onSubmit={submit} key={register?"register":"login"}>
