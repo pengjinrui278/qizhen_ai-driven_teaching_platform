@@ -5,11 +5,14 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import PhotoInput from "./PhotoInput";
 import coursePrompts from "./course-prompts.json";
+import {normalizeMath} from "./math-markdown.mjs";
+import {streamCourseMessage} from "./course-stream";
 import "./course-chat.css";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
-function MessageText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{text.replace(/\\\[([\s\S]*?)\\\]/g,(_,s)=>"$$"+s+"$$").replace(/\\\(([\s\S]*?)\\\)/g,(_,s)=>"$"+s+"$")}</ReactMarkdown>;}
-export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;courses:Row[];user:Row;sandboxes?:Row[]}){
+function MessageText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{normalizeMath(text)}</ReactMarkdown>;}
+export default function CourseChat({api,courses,user,sandboxes=[],streaming=false}:{api:Api;courses:Row[];user:Row;sandboxes?:Row[];streaming?:boolean}){
+ const [stage,setStage]=useState("");
  const [assignment,setAssignment]=useState(""),[theme,setTheme]=useState("conditions");
  const [course,setCourse]=useState("mathematical_analysis"),[sessions,setSessions]=useState<Row[]>([]),[active,setActive]=useState<Row|null>(null),[events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[pending,setPending]=useState<Row|null>(null),[copied,setCopied]=useState(""),[historyOpen,setHistoryOpen]=useState(false),[feedback,setFeedback]=useState("");
@@ -19,8 +22,9 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
  useEffect(()=>{let mounted=true;const token=epoch.current;const q=new URLSearchParams(location.search);const c=q.get("course");if(c)setCourse(c);
   api("/attempts").then(async rows=>{if(!mounted)return;setSessions(rows);const a=rows.find((a:Row)=>a.id===q.get("attempt"));if(a){const d=await api("/attempts/"+a.id);if(mounted&&epoch.current===token){setCourse(a.course_id);setActive(d);setEvents(d.events);}}}).catch(e=>mounted&&setError(e.message));return()=>{mounted=false;epoch.current++;};},[]);
  useEffect(()=>{bottom.current?.scrollIntoView({block:"nearest"});},[events,pending,busy]);
- function clear(c=course){if(lock.current)return;epoch.current++;setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setFeedback("");setHistoryOpen(false);input.current?.focus();}
- async function resume(a:Row){if(lock.current)return;const token=++epoch.current;setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){setCourse(a.course_id);setActive(d);setEvents(d.events);setPending(null);pendingRef.current=null;setDraft("");setHistoryOpen(false);}}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
+ function resetRelated(){setRelatedChunks([]);setRelatedLoading(false);setShowRelated(false);setCopied("");setFeedback("");}
+ function clear(c=course){if(lock.current)return;epoch.current++;setLoading(false);resetRelated();setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setHistoryOpen(false);input.current?.focus();}
+ async function resume(a:Row){if(lock.current)return;const token=++epoch.current;resetRelated();setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){setCourse(a.course_id);setActive(d);setAssignment(d.sandbox_id||"");setEvents(d.events);setPending(null);pendingRef.current=null;setDraft("");setHistoryOpen(false);}}catch(e){if(token===epoch.current)setError((e as Error).message);}finally{if(token===epoch.current)setLoading(false);}}
  async function send(retry=false,mode="chat"){
   if(lock.current||loading||user.status!=="active")return;
   const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"请帮我梳理解题框架，保留关键步骤让我自己完成":draft.trim());
@@ -32,7 +36,9 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
    let a=active;
    if(!a){a=await api("/attempts","POST",{course_id:course,text:request.message,sandbox_id:assignment||null});if(token!==epoch.current)return;setActive(a);}
    const aid=a!.id;
-   await api("/attempts/"+aid+"/messages","POST",request);
+   setStage("queued");
+   if(streaming)await streamCourseMessage(aid,request,value=>{if(token===epoch.current)setStage(value);});
+   else await api("/attempts/"+aid+"/messages","POST",request);
    const detail=await api("/attempts/"+aid);
    if(token!==epoch.current)return;
    setEvents(detail.events);setPending(null);pendingRef.current=null;setDraft("");setSessions(await api("/attempts"));input.current?.focus();
@@ -47,12 +53,13 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
  async function report(outcome:string){if(!active||busy)return;try{await api("/attempts/"+active.id+"/feedback","POST",{request_id:crypto.randomUUID(),outcome,theme,note:""});setFeedback("已记录");}catch(e){setError((e as Error).message);}}
  async function searchRelated(text:string){
   if(!text.trim())return;
+  const token=epoch.current;
   setRelatedLoading(true);setShowRelated(true);
   try{
-   const chunks=await api("/textbooks/search?course_id="+encodeURIComponent(course)+"&q="+encodeURIComponent(text.slice(0,200))+"&limit=5");
-   setRelatedChunks(chunks);
-  }catch(e){setRelatedChunks([]);}
-  finally{setRelatedLoading(false);}
+   const chunks=await api("/textbooks/related","POST",{course_id:course,text:text.slice(0,12000)});
+   if(token===epoch.current)setRelatedChunks(chunks);
+  }catch(e){if(token===epoch.current){setRelatedChunks([]);setError("教材搜索暂不可用，识别文字已保留，可继续提问。");}}
+  finally{if(token===epoch.current)setRelatedLoading(false);}
  }
  function handleRecognizedText(text:string){
   setDraft(current=>current?current+"\n"+text:text);
@@ -70,7 +77,7 @@ export default function CourseChat({api,courses,user,sandboxes=[]}:{api:Api;cour
  {active&&events.length>0&&!isInitial(events[0],0)&&<article className="chatUser"><MessageText text={active.problem.text||"课程问题"}/></article>}
  {events.map((e,i)=><div className="chatExchange" key={e.request_id}><article className="chatUser"><MessageText text={e.message||active?.problem?.text||"继续"}/></article><article className="chatAssistant">{e.response?.hint_level&&<div className="hintTag">提示级别 {e.response.hint_level}/7{e.response.hints_exhausted?" · 已用完":""}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div></article></div>)}
  {pending&&<article className="chatUser"><MessageText text={pending.message}/></article>}
- {busy&&<p className="chatThinking" role="status">正在思考…</p>}<div ref={bottom}/></div>
+ {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <div className="hintToolbar">
   <div className="hintInfo">

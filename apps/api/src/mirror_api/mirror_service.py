@@ -66,12 +66,12 @@ class MirrorPipeline:
     def __init__(self, model: LanguageModel):
         self.model = model
 
-    def handle(self, session: Session, request: CourseMirrorRequest) -> CourseMirrorResponse:
+    def handle(self, session: Session, request: CourseMirrorRequest, on_progress=None) -> CourseMirrorResponse:
         key=(request.participant_code,request.attempt_id,request.course_id)
         with _LOCKS[hash(key)%len(_LOCKS)]:
-            return self._handle(session,request)
+            return self._handle(session,request,on_progress)
 
-    def _handle(self, session: Session, request: CourseMirrorRequest) -> CourseMirrorResponse:
+    def _handle(self, session: Session, request: CourseMirrorRequest, on_progress=None) -> CourseMirrorResponse:
         existing = session.get(MirrorEvent, request.request_id)
         if existing is not None:
             old = existing.request_payload
@@ -95,6 +95,8 @@ class MirrorPipeline:
         # 工作区校验只对新事件生效（回放检查在上面已返回）：
         # 已落库 request_id 的回放无条件成功，即使工作区后来被关闭。
         self._validate_workspace(session, request)
+        if on_progress:
+            on_progress("retrieving")
 
         pack_ids = course_pack_ids(session, request.course_id, request.course_profile_id)
         uncertainty: list[str] = []
@@ -180,7 +182,11 @@ class MirrorPipeline:
         included = {(node.get("source_id"), node["knowledge_id"]) for node in context.knowledge}
         knowledge = [node for node in knowledge if (node.coursepack_id, node.knowledge_id) in included]
         chunks = [chunk for chunk in chunks if (chunk.source_id, chunk.chunk_id) in included]
+        if on_progress:
+            on_progress("generating")
         answer = self.model.generate(context)
+        if on_progress:
+            on_progress("checking")
 
         citations = [
             CourseCitation(

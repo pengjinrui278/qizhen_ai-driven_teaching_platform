@@ -85,7 +85,7 @@ export default function Pilot({initial="learn",portal,demonstration=false,sectio
  {loading?<p>正在恢复登录状态…</p>:!user?<p role="status">正在前往登录…</p>:<>
  {!portal&&<nav className="pilotTabs" aria-label="工作台">{([["learn","课程学习"],["resources","资源中心"],["memory","我的观察"],["sandboxes","我的作业"],...(staff?[["builder","课程建设"]]:[]),["account","档案与隐私"]] as [Tab,string][]).map(([key,label])=><button key={key} disabled={busy} aria-current={tab===key?"page":undefined} onClick={()=>{epoch.current++;setTab(key);setError("");if(key==="builder")void run(async()=>setBuilder(await api("/builder")));}}>{label}</button>)}</nav>}
  {user.status==="frozen"&&<div className="pilotNotice">档案已冻结。仍可查看、导出、删除，或在档案设置恢复更新。</div>}
- {tab==="learn"&&<><CourseChat api={api} courses={courses} user={user} sandboxes={sandboxes}/>
+ {tab==="learn"&&<><CourseChat api={api} courses={courses} user={user} sandboxes={sandboxes} streaming={!demonstration}/>
  <details><summary>分享题目</summary><form className="pilotForm" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void run(async()=>{await api("/contributions","POST",{course_id:f.get("course"),title:f.get("title"),text:f.get("text"),consent:true});setNotice("已提交审核");});}}><select name="course">{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select><input name="title" required minLength={3} placeholder="题目名称"/><textarea name="text" required minLength={5} placeholder="仅提交愿意共享的题干，不附私人聊天"/><label className="check"><input type="checkbox" required/>我有权分享此题，同意用于课程题库</label><button disabled={busy}>提交审核</button></form></details>
  </>}
  

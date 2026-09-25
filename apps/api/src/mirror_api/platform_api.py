@@ -193,7 +193,8 @@ def attempts(db=Depends(db_for),user=Depends(user_for)):
 @router.get("/attempts/{aid}")
 def attempt_detail(aid:str,db=Depends(db_for),user=Depends(user_for)):
     row=own_attempt(db,user,aid)
-    events=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id)
+    events=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id,
+                      MirrorEvent.request_payload["attempt_id"].as_string()==aid)
                       .order_by(MirrorEvent.occurred_at)).scalars().all()
     return {"id":row.id,"course_id":row.course_id,"problem":row.problem,"sandbox_id":row.sandbox_id,
             "events":[{"request_id":e.request_id,"message":e.request_payload.get("message",""),
@@ -213,7 +214,25 @@ def send_message(aid:str,body:Message,request:Request,db=Depends(db_for),user=De
         return _send_message(aid,body,request,db,user)
 
 
-def _send_message(aid,body,request,db,user):
+@router.post("/attempts/{aid}/messages/stream")
+def stream_message(aid: str, body: Message, request: Request, db=Depends(db_for), user=Depends(user_for)):
+    from .course_stream import response_stream
+    own_attempt(db, user, aid)
+    user_id = user.id
+
+    def work(progress):
+        # Never share the dependency's SQLAlchemy session with a worker thread.
+        with request.app.state.session_factory() as worker_db:
+            account = worker_db.get(Account, user_id)
+            if account is None:
+                raise HTTPException(401, "登录状态已失效，请重新登录。")
+            with _attempt_locks[hash(aid) % len(_attempt_locks)]:
+                return _send_message(aid, body, request, worker_db, account, progress)
+
+    return response_stream(work)
+
+
+def _send_message(aid,body,request,db,user,on_progress=None):
     require_active(user)
     attempt=own_attempt(db,user,aid)
     if (request.app.state.pipeline.model.name == "stub"
@@ -235,7 +254,7 @@ def _send_message(aid,body,request,db,user):
         course_profile_id=attempt.profile_id,problem=attempt.problem,interaction_mode=body.mode,
         participant_code=user.id,assignment_workspace_id=sandbox,attempt_id=aid,
         message=body.message,history=history,student_context=memory.context_for(db,user.id,attempt.course_id))
-    response=request.app.state.pipeline.handle(db,payload)
+    response=request.app.state.pipeline.handle(db,payload,on_progress=on_progress)
     theme=memory.detect_theme(body.message)
     if theme:
         memory.add_observation(db,user.id,attempt.course_id,aid,"student_question",theme,
@@ -795,6 +814,18 @@ def search_textbooks(course_id: str, q: str, limit: int = 20, db=Depends(db_for)
         "locator": c.locator,
         "chapter": _parse_chapter_from_title(c.title),
     } for c in chunks]
+
+class RelatedTextbookQuery(BaseModel):
+    course_id: str = Field(max_length=100)
+    text: str = Field(min_length=1, max_length=12000)
+
+
+@router.post("/textbooks/related")
+def related_textbooks(body: RelatedTextbookQuery, db=Depends(db_for), user=Depends(user_for)):
+    from .retrieval_terms import concept_query
+    # POST prevents private OCR text being placed in URLs and access logs.
+    return search_textbooks(body.course_id, concept_query(body.text), 5, db, user)
+
 
 @router.get("/textbooks/{source_id}/chapters")
 def textbook_chapters(source_id: str, db=Depends(db_for), user=Depends(user_for)):

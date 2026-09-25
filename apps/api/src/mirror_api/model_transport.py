@@ -1,4 +1,4 @@
-"""Bounded, non-retrying model calls. Never include provider bodies or credentials in errors."""
+"""Bounded calls: retry connection failures once, never uncertain paid requests."""
 import httpx
 
 class ModelError(Exception):
@@ -10,14 +10,20 @@ class ModelError(Exception):
 def complete(base_url,api_key,payload,timeout):
     if not api_key:
         raise ModelError(503,"课程助手暂不可用，请稍后重试。")
-    try:
-        response=httpx.post(base_url.rstrip("/")+"/chat/completions",
-            headers={"Authorization":"Bearer "+api_key},json=payload,
-            timeout=timeout,follow_redirects=False)
-    except httpx.TimeoutException:
-        raise ModelError(504,"回答超时，请稍后重试。") from None
-    except httpx.RequestError:
-        raise ModelError(503,"暂时无法连接课程助手，请稍后重试。") from None
+    for attempt in range(2):
+        try:
+            response=httpx.post(base_url.rstrip("/")+"/chat/completions",
+                headers={"Authorization":"Bearer "+api_key},json=payload,
+                timeout=timeout,follow_redirects=False)
+            break
+        except (httpx.ConnectTimeout, httpx.ConnectError):
+            if attempt == 0:
+                continue
+            raise ModelError(503,"暂时无法连接课程助手，请稍后重试。") from None
+        except httpx.TimeoutException:
+            raise ModelError(504,"回答超时，请稍后重试。") from None
+        except httpx.RequestError:
+            raise ModelError(503,"暂时无法连接课程助手，请稍后重试。") from None
     if response.status_code!=200:
         code=429 if response.status_code==429 else 503
         raise ModelError(code,"课程助手繁忙或暂不可用，请稍后重试。")
