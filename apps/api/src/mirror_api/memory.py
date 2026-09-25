@@ -1,5 +1,6 @@
 """可纠正的观察→假设→最小个人上下文；不从题型或求助次数推断能力。"""
 import uuid
+import re
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -16,15 +17,17 @@ THEMES = {
 
 def detect_theme(message):
     # 只认学生明确表达的困难，不根据题干的知识标签推断。
-    if not any(w in message for w in ("不会", "不懂", "为什么", "不明白", "卡", "不知道", "困惑")):
+    if not any(w in message for w in ("不会", "不懂", "不理解", "不明白", "卡", "不知道", "困惑")):
         return None
     for theme, words in [
         ("conditions", ("条件", "能用", "适用")),
-        ("quantifiers", ("量词", "任意", "存在", "依赖", "ε", "epsilon", "N")),
+        ("quantifiers", ("量词", "任意", "存在", "依赖", "ε", "δ", "epsilon", "delta")),
         ("construction", ("构造", "辅助", "怎么想")),
     ]:
         if any(w in message for w in words):
             return theme
+    if re.search(r"(?<![a-zA-Z])N(?![a-zA-Z])", message):
+        return "quantifiers"
     return None
 
 
@@ -90,7 +93,7 @@ def context_for(db, user, course):
     ).order_by(Observation.created_at.desc()).limit(12)).scalars().all()
     labels={"continued":"自报可以继续","solved":"自报完成，独立性未验证",
             "still_stuck":"自报仍有困难","independent_success":"自报独立完成，尚需任务证据",
-            "student_question":"明确提出困惑","artifact_review":"教学团队作品判断",
+            "student_question":"明确提出困惑","artifact_review":"教学团队作品判断","ta_review":"教学团队作品判断",
             "independent_test":"独立任务记录"}
     summaries=[f"{THEMES.get(r.theme,('学习环节',))[0]}：{labels.get(r.kind,'已记录反馈')}；"
                f"证据来源={r.source}，强度={r.strength}，"

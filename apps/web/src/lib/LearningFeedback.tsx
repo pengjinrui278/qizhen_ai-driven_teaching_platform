@@ -4,7 +4,7 @@ type Row=Record<string,any>;
 const themeNames:Row={conditions:"定理条件",quantifiers:"量词与依赖",construction:"辅助构造"};
 const themeDesc:Row={conditions:"定理适用条件的核对与判断",quantifiers:"量词顺序、变量依赖与 ε-N 构造",construction:"辅助对象、辅助函数与构造思路"};
 const outcomes:Row={continued:"能够继续",solved:"自报完成",still_stuck:"仍有困难",independent_success:"自报独立完成"};
-const statusLabels:Row={worth_attention:{label:"需关注",color:"#dc2626",bg:"#fef2f2"},improving:{label:"改善中",color:"#059669",bg:"#ecfdf5"},emerging:{label:"观察中",color:"#d97706",bg:"#fffbeb"},weakened:{label:"已改善",color:"#2563eb",bg:"#eff6ff"}};
+const statusLabels:Row={worth_attention:{label:"待核对",color:"#dc2626",bg:"#fef2f2"},improving:{label:"出现相反证据",color:"#059669",bg:"#ecfdf5"},emerging:{label:"观察中",color:"#d97706",bg:"#fffbeb"},weakened:{label:"原判断减弱",color:"#2563eb",bg:"#eff6ff"}};
 export default function LearningFeedback({memory,courses,onCorrect}:{memory:Row;courses:Row[];onCorrect:(id:string,note:string)=>Promise<void>}){
  const [course,setCourse]=useState("all"),[days,setDays]=useState("14"),[selected,setSelected]=useState<string|null>(null),[note,setNote]=useState(""),[busy,setBusy]=useState(false);
  const cutoff=days==="all"?0:Date.now()-Number(days)*86400000;
@@ -28,12 +28,12 @@ export default function LearningFeedback({memory,courses,onCorrect}:{memory:Row;
  <div className="diagnosisSummary">
   <div className="summaryCard"><span className="summaryLabel">学习活跃度</span><strong className="summaryValue">{activeDays}<small>天</small></strong><span className="summarySub">{valid.length} 条学习记录</span></div>
   <div className="summaryCard warning"><span className="summaryLabel">需关注环节</span><strong className="summaryValue">{worthAttention}<small>个</small></strong><span className="summarySub">{stillStuck} 次自述仍有困难</span></div>
-  <div className="summaryCard success"><span className="summaryLabel">改善中</span><strong className="summaryValue">{improving}<small>个</small></strong><span className="summarySub">{independentSuccess} 次独立完成</span></div>
+  <div className="summaryCard success"><span className="summaryLabel">出现相反证据</span><strong className="summaryValue">{improving}<small>个</small></strong><span className="summarySub">{independentSuccess} 次自报独立完成</span></div>
   <div className="summaryCard"><span className="summaryLabel">主动反馈</span><strong className="summaryValue">{feedback.length}<small>次</small></strong><span className="summarySub">自我认知参与度</span></div>
  </div>
  {/* 薄弱点诊断 */}
  <section className="pilotCard diagnosisSection">
-  <h2>薄弱点诊断</h2>
+  <h2>持续学习观察</h2>
   <p className="diagnosisNote">基于你的学习交互记录生成，不是能力评分。新证据可以修正旧判断。</p>
   {hypotheses.length?<div className="diagnosisGrid">
    {hypotheses.map((h:Row)=>{
@@ -50,7 +50,7 @@ export default function LearningFeedback({memory,courses,onCorrect}:{memory:Row;
      <p className="diagnosisStatement">{h.statement}</p>
      <div className="evidenceBar">
       <div className="evidenceSupport" style={{width:supportPct+"%"}} title={`支持证据 ${support} 条`}/>
-      <div className="evidenceContra" style={{width:(100-supportPct)+"%"}} title={`相反证据 ${contra} 条`}/>
+      <div className="evidenceContra" style={{width:(total?100-supportPct:0)+"%"}} title={`相反证据 ${contra} 条`}/>
      </div>
      <div className="evidenceMeta">
       <span className="evidenceSupportText">支持 {support}</span>

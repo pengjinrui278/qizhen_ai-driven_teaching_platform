@@ -208,7 +208,7 @@ class MirrorPipeline:
         if harness.status == "failed":
             answer = "这次生成的内容没有通过检查，已停止展示。请换一种问法，或请教师/TA核对。"
             uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
-        evidence = self._draft_evidence(request, problem, knowledge)
+        evidence = self._draft_evidence(request, problem, knowledge, hint_level, harness.status)
 
         response = CourseMirrorResponse(
             request_id=request.request_id,
@@ -387,7 +387,7 @@ class MirrorPipeline:
             overall = "not_run"
         return HarnessResult(status=overall, checks=checks)
 
-    def _draft_evidence(self, request, problem, knowledge) -> list[LearningEvidenceDraft]:
+    def _draft_evidence(self, request, problem, knowledge, hint_level=None, harness_status=None) -> list[LearningEvidenceDraft]:
         now = datetime.now(UTC)
         drafts = [
             LearningEvidenceDraft(
@@ -412,4 +412,14 @@ class MirrorPipeline:
                     occurred_at=now,
                 )
             )
+        if hint_level is not None:
+            drafts.append(LearningEvidenceDraft(
+                event_type="hint_requested",
+                observation=f"本次请求第{hint_level}级提示；"
+                            + ("生成结果被拦截。" if harness_status == "failed" else "已返回提示。")
+                            + "提示级别仅描述帮助强度，不代表能力或掌握程度。",
+                reasoning_stage=f"hint_{hint_level}",
+                related_knowledge_ids=[node.knowledge_id for node in knowledge],
+                strength="weak", source_event_ids=[request.request_id], occurred_at=now,
+            ))
         return drafts

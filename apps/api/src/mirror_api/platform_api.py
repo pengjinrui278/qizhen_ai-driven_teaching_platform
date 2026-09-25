@@ -284,6 +284,16 @@ def feedback(aid:str,body:Feedback,db=Depends(db_for),user=Depends(user_for)):
     memory.add_observation(db,user.id,attempt.course_id,aid,body.outcome,body.theme,
                           labels[body.outcome]+("："+body.note if body.note else ""),
                           direction,source="self_report",observation_id=oid)
+    event=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id,
+        MirrorEvent.request_payload["attempt_id"].as_string()==aid)
+        .order_by(MirrorEvent.occurred_at.desc()).limit(1)).scalar_one_or_none()
+    evidence_id=hashlib.sha256(oid.encode()).hexdigest()
+    if event and not db.get(LearningEvidenceRow,evidence_id):
+        db.add(LearningEvidenceRow(evidence_id=evidence_id,request_id=event.request_id,
+            course_id=attempt.course_id,event_type="student_outcome_reported",
+            observation=labels[body.outcome]+("："+body.note if body.note else ""),
+            reasoning_stage=body.theme,related_knowledge_ids=[],strength="weak",
+            source_event_ids=[event.request_id,oid]))
     db.commit();return memory.memory_view(db,user.id)
 
 

@@ -106,7 +106,7 @@ def test_evidence_rows_are_persisted(session):
     pipeline = MirrorPipeline(StubMirrorModel())
     pipeline.handle(session, make_request("req-ev", "first_hint", problem_id=PROBLEM_ID))
     rows = session.query(LearningEvidenceRow).filter_by(request_id="req-ev").all()
-    assert {row.event_type for row in rows} == {"help_request_received", "problem_engaged"}
+    assert {row.event_type for row in rows} == {"help_request_received", "problem_engaged", "hint_requested"}
     assert all(row.strength == "weak" for row in rows)
 
 
