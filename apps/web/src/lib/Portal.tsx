@@ -62,7 +62,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  if(error&&!data)return <main className="loginPage"><section className="loginSurface"><p role="alert">{error}</p><button onClick={()=>setReload(n=>n+1)}>重试</button><p><Link href="/login">返回登录</Link></p></section></main>;
  return <div className={"portal "+(teacher?"teacherPortal":"studentPortal")}>
  <aside className="portalSidebar">
- <Link href={href()} className="portalLogo"><span className="logoMark">镜</span><span>学镜<span className="brandEnglish">Learning Mirror</span></span></Link>
+ <Link href={href()} className="portalLogo"><span className="logoMark">镜</span><span>学镜学习空间<span className="brandEnglish">Learning Mirror</span></span></Link>
  <div className="portalRole"><strong>{teacher?"教师工作台":"学生工作台"}</strong></div>
  <nav aria-label={teacher?"教师端导航":"学生端导航"}>{nav.map(([key,label,icon])=><Link key={key} href={href(key)} aria-current={section===key?"page":undefined}><Icon name={icon}/>{label}</Link>)}</nav>
  <div className="sidebarBottom"><Link href={"/"+(teacher?"student":"teacher")+(demo?"?mode=demo":"?mode=live")}><Icon name="switch"/>{teacher?"切换到学生端":"切换到教师端"}</Link></div>
