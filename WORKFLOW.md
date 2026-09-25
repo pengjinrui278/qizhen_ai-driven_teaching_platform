@@ -1,67 +1,32 @@
 # 项目工作流
 
-本仓库是参赛作品的主仓库（GitHub：<https://github.com/pengjinrui278/qizhen_ai-driven_teaching_platform>）。
-**所有重大更新必须及时提交并推送到远程**，同步部署到生产 `http://124.220.5.87/`，并在 `docs/progress/进度日志.md` 追加记录。
+仓库：https://github.com/pengjinrui278/qizhen_ai-driven_teaching_platform
 
-## 分支策略
+## 半自动并行协作（2026-09-25 起）
 
-- `main` 为主干，始终保持可运行、可展示状态；
-- 团队 ≤4 人且截止时间紧，日常开发直接提交到 `main`；
-- 试验性大改动可开 `exp/<主题>` 分支，验证后合回 `main`。
+main 是主负责人集成区，执行对话分别使用 work/web、work/platform、work/agent、work/learning 及对应独立 worktree。
+详见 docs/parallel/README.md。以用户最新要求为准，历史“日常直接 main、推送即部署”规则已撤销。
 
-## 提交规范
+1. 用户与主负责人确认需求和优先级，主负责人下发分工任务。
+2. 执行对话只修改责任文件，测试并作中文提交，在自己的 handoff 中报告提交号、验证、风险和接口需求。
+3. 主负责人审阅 diff 和验证记录，处理跨模块接口，依次合并，再运行完整回归。
+4. 仅推送用户授权的分支。不 force push，不回退覆盖队友代码。
+5. 正式部署是独立步骤，需要明确授权、备份及回滚方案、版本迁移检查和部署后验收，不能由执行分工自行触发。
 
-格式：`<type>: <简短中文描述>`（正文可补充“为什么”）
+## 提交与验收
 
-| type | 用途 |
-|---|---|
-| feat | 新功能（前后端、智能体链路） |
-| data | 语料库、CoursePack、数据集变更 |
-| eval | 评测用例、评测脚本与结果 |
-| docs | 文档、申报书与提交材料 |
-| fix | 缺陷修复 |
-| chore | 构建、依赖、配置 |
+提交格式：feat/fix/test/docs/chore/eval: 中文简述。一次只做一件事。
+区分静态审查、离线测试、真实 API 验证和正式部署验收；记录失败与未验证项。
+当前 GitHub CI 对 push/PR 做验证，Railway 工作流需手动触发；外部托管平台的 webhook 不能仅凭仓库配置排除。
 
-一次提交只做一件事；提交信息说清改了什么、为什么。
+## 生产操作边界
 
-## 生产同步（124.220.5.87）
+历史服务器 ubuntu@124.220.5.87、目录 /home/ubuntu/app 仅作参考，连接权限和实际版本需现场核实。
+scripts/deploy-prod.sh 含重置代码与资料导入步骤；不得直接照抄运行。部署前检查服务器本地修改、数据授权、迁移和恢复路径。
+提交/推送不等于部署，本次并行工作区准备不执行部署。
 
-展示用服务器：`ubuntu@124.220.5.87`，代码目录 `/home/ubuntu/app`（保留服务器上的 `.env` 与 `certbot/`）。
+## 数据与设计
 
-本机推送 `origin/main` 后执行：
-
-```bash
-ssh ubuntu@124.220.5.87 'bash /home/ubuntu/app/scripts/deploy-prod.sh'
-```
-
-脚本会 `git fetch && reset --hard origin/main`，`docker compose -f compose.prod.yml up -d --build`，再 `seed-profiles` + `import-all-coursepacks`。不要在服务器上改业务代码。
-
-## 什么算“重大更新”（必须推送 + 上线 + 记进度日志）
-
-1. 完成 `docs/development-roadmap.md` 中的一个阶段或里程碑；
-2. 智能体/模型能力有实质变化（新链路、新 Harness、Eval 通过率显著变化）；
-3. 数据语料库有批次性扩充；
-4. 申报书、演示材料等提交物定稿或重要修订；
-5. 任何影响评审展示效果的变更。
-
-## 版本与快照
-
-- 阶段里程碑打 tag：`phase-1`、`phase-2`……；
-- 大赛提交时打 `submission` tag（对应 09-30 提交物的快照）；
-- 决赛前打 `finals` tag。
-
-## 目录职责
-
-| 路径 | 内容 |
-|---|---|
-| `apps/` | 前后端代码（Next.js Web / FastAPI API） |
-| `coursepacks/` | 课程语料库（CoursePack） |
-| `docs/competition/` | 大赛通知、参赛指南、下载的官方模板 |
-| `docs/progress/` | 进度日志 |
-| `submission/` | 最终提交材料包（作品、说明文件等，按官网要求组织） |
-
-## 禁止事项
-
-- 不提交 `.env`、密钥、真实学生个人信息；
-- 样例与提交语料不得包含教材原文或原书习题全文（版权约束，见 `docs/data-rights.md`）；
-- 不把大文件（数据集原始文件、模型权重）直接推进仓库——先讨论存放方案（Release / 对象存储 / Git LFS）。
+不提交 .env、密钥、真实学生信息、数据库、未授权教材全文及原书习题全文。
+不复制生产数据库给并行测试。新教材入库不能当作模型参数训练或完整审校。
+豆包负责视觉设计，前端负责功能接入；待筛选概念稿保留未跟踪，不提交。
