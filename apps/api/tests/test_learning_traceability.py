@@ -106,7 +106,9 @@ def test_message_retry_keeps_one_event_and_one_set_of_weak_evidence(learning_cli
         ).all()
         assert ids and {r.evidence_id for r in rows} == ids
         assert all(r.strength == "weak" and r.source_event_ids == [rid] for r in rows)
-        assert memory.memory_view(db, user["id"]) == {"observations": [], "hypotheses": []}
+        view = memory.memory_view(db, user["id"])
+        assert view["observations"] == [] and view["hypotheses"] == []
+        assert len(view["activities"]) == 1  # An activity is not a diagnostic observation.
         assert memory.context_for(db, user["id"], COURSE).relevant_hypotheses == []
 
 
@@ -147,7 +149,7 @@ def test_persisted_private_history_and_evidence_are_not_shared(learning_client, 
     register(learning_client, "r4_private_other", role=role)
     assert learning_client.get(f"/api/v2/attempts/{aid}").status_code == 404
     assert learning_client.get("/api/v2/attempts").json() == []
-    assert learning_client.get("/api/v2/memory").json() == {"observations": [], "hypotheses": []}
+    assert learning_client.get("/api/v2/memory").json() == {"observations": [], "hypotheses": [], "activities": []}
     assert correct(learning_client, oid).status_code == 404
     assert learning_client.post(f"/api/v2/attempts/{aid}/feedback", json=body).status_code == 404
     assert evidence(eid) == before

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from . import memory, retrieval, sandboxes
+from . import memory, retrieval, sandboxes, learning_activity
 from .auth import (COOKIE, aware, current_account, issue_session, password_hash,
                    password_matches, public_account, remove_sessions, require_active, require_staff)
 from .config import get_settings
@@ -189,7 +189,8 @@ def create_attempt(body:AttemptCreate,db=Depends(db_for),user=Depends(user_for))
     row=Attempt(id=new_id(),account_id=user.id,course_id=body.course_id,profile_id=profile.profile_id,
                 problem=problem,sandbox_id=body.sandbox_id)
     db.add(row);db.commit()
-    return {"id":row.id,"problem":problem,"course_id":row.course_id,"sandbox_id":row.sandbox_id}
+    return {"id":row.id,"problem":problem,"course_id":row.course_id,"sandbox_id":row.sandbox_id,
+            "title":learning_activity.summarize(body.text,body.course_id),"title_source":"topic_extraction","created_at":learning_activity.timestamp(row.created_at)}
 
 
 @router.get("/attempts")
@@ -197,7 +198,8 @@ def attempts(offset:int=Query(default=0,ge=0),limit:int=Query(default=100,ge=1,l
     rows=db.execute(select(Attempt).where(Attempt.account_id==user.id)
                     .order_by(Attempt.created_at.desc(),Attempt.id.desc()).offset(offset).limit(limit)).scalars().all()
     return [{"id":r.id,"course_id":r.course_id,"problem":r.problem,"sandbox_id":r.sandbox_id,
-             "created_at":r.created_at.isoformat()} for r in rows]
+             "title":learning_activity.summarize(r.problem.get("text", ""),r.course_id),"title_source":"topic_extraction",
+             "created_at":learning_activity.timestamp(r.created_at)} for r in rows]
 
 
 @router.get("/attempts/{aid}")
@@ -295,7 +297,14 @@ def _process_message(aid,body,request,db,user,on_progress=None):
         course_profile_id=attempt.profile_id,problem=attempt.problem,interaction_mode=body.mode,
         participant_code=user.id,assignment_workspace_id=sandbox,attempt_id=aid,
         message=body.message,history=history,student_context=memory.context_for(db,user.id,attempt.course_id))
-    response=request.app.state.pipeline.handle(db,payload,on_progress=on_progress)
+    activity_id=learning_activity.start(db,user.id,attempt,body)
+    try:
+        response=request.app.state.pipeline.handle(db,payload,on_progress=on_progress)
+    except Exception:
+        db.rollback()
+        learning_activity.finish(db,activity_id)
+        raise
+    learning_activity.finish(db,activity_id,response)
     theme=memory.detect_theme(body.message)
     if theme:
         memory.add_observation(db,user.id,attempt.course_id,aid,"student_question",theme,

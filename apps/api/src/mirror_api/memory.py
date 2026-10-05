@@ -108,11 +108,13 @@ def context_for(db, user, course):
 
 
 def memory_view(db, user):
+    from .learning_activity import view as activity_view
     observations = db.execute(select(Observation).where(
         Observation.account_id == user).order_by(Observation.created_at.desc())).scalars().all()
     hypotheses = db.execute(select(Hypothesis).where(
         Hypothesis.account_id == user).order_by(Hypothesis.updated_at.desc())).scalars().all()
     return {
+        "activities": activity_view(db,user),
         "observations": [{"id": r.id, "course_id": r.course_id, "attempt_id": r.attempt_id,
                           "kind": r.kind, "theme": r.theme, "text": r.text,
                           "direction": r.direction, "source": r.source,

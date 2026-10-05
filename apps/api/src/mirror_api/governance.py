@@ -43,7 +43,7 @@ def delete_personal(db, user):
         db.query(model).filter_by(account_id=user.id).delete(synchronize_session=False)
     # 个人观察纠正审计不保留可回溯身份，教师行政审计只保留无名标识。
     for audit in db.execute(select(Audit).where(Audit.actor_id==user.id)).scalars():
-        if audit.action in ("observation_correction", "feedback_source"):
+        if audit.action in ("observation_correction", "feedback_source", "course_activity"):
             db.delete(audit)
         else:
             audit.actor_id="deleted-account"
@@ -60,6 +60,7 @@ def expire_personal(db, now=None):
     now=now or datetime.now(UTC)
     for user in db.execute(select(Account).where(Account.status!="deleted")).scalars():
         cutoff=now-timedelta(days=user.retention_days)
+        db.query(Audit).filter(Audit.actor_id==user.id,Audit.action=="course_activity",Audit.created_at<cutoff).delete(synchronize_session=False)
         for model in (AIMessage,AINote):
             db.query(model).filter(model.account_id==user.id,model.created_at<cutoff).delete(synchronize_session=False)
         # Keep an old conversation only while it still has retained messages.

@@ -157,6 +157,7 @@ def test_other_account_cannot_correct_read_or_reuse_feedback(learning_client, ro
         assert learning_client.get(f"/api/v2/attempts/{aid}").status_code == 404
         assert learning_client.get("/api/v2/memory").json() == {
             "observations": [],
+        "activities": [],
             "hypotheses": [],
         }
         other_aid = attempt(learning_client)
@@ -193,7 +194,7 @@ def test_account_deletion_removes_own_evidence_but_preserves_other_user(learning
         with app.state.session_factory() as db:
             assert db.get(Observation, oid) is None
             assert db.get(Observation, other_oid) is not None
-            assert memory.memory_view(db, user["id"]) == {"observations": [], "hypotheses": []}
+            assert memory.memory_view(db, user["id"]) == {"observations": [], "hypotheses": [], "activities": []}
 
 
 def test_same_feedback_id_cannot_move_to_another_attempt(learning_client):
@@ -224,7 +225,9 @@ def test_deleting_observation_and_rebuilding_removes_old_diagnosis(learning_clie
         db.flush()
         memory.rebuild(db, user["id"], COURSE)
         db.commit()
-        assert memory.memory_view(db, user["id"]) == {"observations": [], "hypotheses": []}
+        view = memory.memory_view(db, user["id"])
+        assert view["observations"] == [] and view["hypotheses"] == []
+        assert len(view["activities"]) == 1  # An activity is not a diagnostic observation.
         assert memory.context_for(db, user["id"], COURSE).relevant_knowledge_states == []
         assert memory.memory_view(db, "other-synthetic-user") == other_before
 
@@ -259,7 +262,7 @@ def test_delete_one_observation_through_api(learning_client):
     result = learning_client.delete(f"/api/v2/observations/{oid}")
     assert result.status_code == 200
     assert evidence(eid) is None
-    assert learning_client.get("/api/v2/memory").json() == {"observations": [], "hypotheses": []}
+    assert learning_client.get("/api/v2/memory").json() == {"observations": [], "hypotheses": [], "activities": []}
 
 
 @pytest.mark.parametrize("changed", [False, True], ids=["same-body", "conflicting-body"])
