@@ -162,7 +162,7 @@ class OpenAICompatibleModel:
     dynamic_hints = True
 
     def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 60.0,
-                 max_tokens: int = 4096, reasoning_effort: str = "high"):
+                 max_tokens: int = 4096, reasoning_effort: str = "low"):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model

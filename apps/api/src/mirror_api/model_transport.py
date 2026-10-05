@@ -62,6 +62,8 @@ def complete(base_url,api_key,payload,timeout):
         if choice.get("finish_reason") != "stop":
             metadata = _safe_end_metadata(choice, value, payload)
             logger.warning("model_response_rejected %s", json.dumps(metadata, sort_keys=True), extra=metadata)
+            if choice.get("finish_reason") == "length":
+                raise ModelError(502,"本次生成达到模型输出上限，回答未完成。你的问题已保留，可点击重试；若仍失败，请联系平台管理员调整生成配置。")
             raise ModelError(502,"本次回答未完整生成，请缩小问题范围后重试。")
         if not isinstance(answer,str) or not answer.strip():
             raise ModelError(502,"本次未得到有效回答，请重试。")

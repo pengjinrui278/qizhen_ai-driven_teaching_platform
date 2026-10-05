@@ -25,7 +25,7 @@ def test_incomplete_answers_not_retried_or_saved(session, monkeypatch, caplog, r
         })
 
     monkeypatch.setattr(httpx, "post", post)
-    model = OpenAICompatibleModel("https://api.deepseek.com", "PRIVATE_SECRET", "fixture", max_tokens=8192)
+    model = OpenAICompatibleModel("https://api.deepseek.com", "PRIVATE_SECRET", "fixture", max_tokens=8192, reasoning_effort="high")
     request = CourseMirrorRequest(
         request_id="incomplete-request", course_id="mathematical_analysis",
         course_profile_id="chen-jixiu-3e", problem={"text": "PRIVATE_STUDENT_QUESTION"},
