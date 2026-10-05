@@ -131,9 +131,10 @@
 /* R4: one bounded conversation scroller; nested mathematics only scrolls horizontally. */
 .chatDrawerOverlay {display:none;}
 @media(min-width:1024px){
- .portal.lmStudentShell .lmCourseChat.historyCollapsed {grid-template-columns:minmax(0,1fr)!important;}
- .portal.lmStudentShell .lmCourseChat.historyCollapsed.hasRelated {grid-template-columns:minmax(0,1fr) 280px!important;}
- .portal.lmStudentShell .lmCourseChat.historyCollapsed .chatHistory {display:none!important;}
+ .portal.lmStudentShell .lmCourseChat.historyCollapsed {grid-template-columns:44px minmax(0,1fr)!important;}
+ .portal.lmStudentShell .lmCourseChat.historyCollapsed.hasRelated {grid-template-columns:44px minmax(0,1fr) 280px!important;}
+ .portal.lmStudentShell .lmCourseChat.historyCollapsed .chatHistory {display:block!important;padding:4px!important;}
+ .portal.lmStudentShell .lmCourseChat.historyCollapsed .chatHistory > :not(.chatSidebarHead),.portal.lmStudentShell .lmCourseChat.historyCollapsed .chatSidebarHead strong {display:none;}
 }
 @media(max-width:1023px){
  .portal.lmStudentShell .lmCourseChat .chatDrawerOverlay {display:block;position:absolute;inset:0;z-index:4;background:rgba(15,23,42,.2);border:0;border-radius:0;}

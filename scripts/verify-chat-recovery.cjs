@@ -3,7 +3,7 @@ const {chromium}=require('playwright');const assert=require('assert/strict');
  const p=await b.newPage({viewport:{width:1440,height:900}});const errors=[];p.on('pageerror',e=>errors.push(e.message));
  const course={course_id:'mathematical_analysis',display_name:'数学分析'};
  const empty={id:'empty',course_id:course.course_id,problem:{text:'生成失败但原题必须可见'},events:[]};
- const saved={id:'saved',course_id:course.course_id,problem:{text:'已有成功历史'},events:[{request_id:'done',message:'已有成功历史',response:{answer:'保存过的真实格式回答。'}}]};
+ const saved={id:'saved',title:'已有成功历史',course_id:course.course_id,problem:{text:'已有成功历史'},events:[{request_id:'done',message:'已有成功历史',response:{answer:'保存过的真实格式回答。'}}]};
  let release;const delayed=new Promise(r=>release=r);let started;const began=new Promise(r=>started=r);
  await p.route('**/api/v2/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v2','');let value=[];
  if(path==='/me')value={id:'fixture',role:'student',status:'active'};
