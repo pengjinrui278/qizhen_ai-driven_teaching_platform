@@ -1,8 +1,8 @@
 """SSE progress with an audited final result; never stream unchecked model text."""
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue, Empty
-from threading import BoundedSemaphore
 import json
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty, Full, Queue
+from threading import BoundedSemaphore
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -19,20 +19,34 @@ def response_stream(work):
         raise HTTPException(429, "课程助手正在处理其他请求，请稍后重试。")
     events = Queue(maxsize=16)
 
+    def publish(kind, data):
+        # Progress is transient. A slow/disconnected consumer must not prevent
+        # persistence or keep a worker slot forever. Keep the newest bounded
+        # events, including the terminal result (the worker's final publish).
+        while True:
+            try:
+                events.put_nowait((kind, data))
+                return
+            except Full:
+                try:
+                    events.get_nowait()
+                except Empty:
+                    pass  # The consumer made room between put and get.
+
     def run():
         try:
-            result = work(lambda stage: events.put(("progress", {"stage": stage})))
-            events.put(("done", result))
+            result = work(lambda stage: publish("progress", {"stage": stage}))
+            publish("done", result)
         except (HTTPException, MirrorError, ModelError) as exc:
-            events.put(("error", {"detail": str(exc.detail), "status": exc.status_code}))
-        except Exception:
-            events.put(("error", {"detail": "本次回答未完成，请重试；已保存的对话不会丢失。", "status": 503}))
+            publish("error", {"detail": str(exc.detail), "status": exc.status_code})
+        except Exception:  # noqa: BLE001 -- sanitize all worker failures at the SSE boundary
+            publish("error", {"detail": "本次回答未完成，请重试；已保存的对话不会丢失。", "status": 503})
         finally:
             _slots.release()
 
     try:
         _workers.submit(run)
-    except Exception:
+    except Exception:  # noqa: BLE001 -- return capacity on any executor submission failure
         _slots.release()
         raise HTTPException(503, "课程助手暂不可用，请稍后重试。") from None
 

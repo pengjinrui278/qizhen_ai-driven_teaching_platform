@@ -1,13 +1,15 @@
 """受身份与归属约束的内测API，前端统一入口使用此协议。"""
 import hashlib
 import json
+import logging
 import secrets
+import time
 import uuid
 from threading import RLock
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +32,7 @@ from .domain import TaDecisionRequest, TeacherDecisionRequest
 
 router = APIRouter(prefix="/api/v2")
 _attempt_locks = [RLock() for _ in range(64)]
+_feedback_locks = [RLock() for _ in range(64)]
 
 
 def db_for(request: Request):
@@ -54,6 +57,13 @@ def own_attempt(db, user, aid):
     attempt = db.get(Attempt, aid)
     if not attempt or attempt.account_id != user.id:
         raise HTTPException(404, "学习会话不存在")
+    return attempt
+
+
+def _course_write_attempt(db, user, aid):
+    attempt = own_attempt(db, user, aid)
+    if attempt.course_id == "ai_literacy":
+        raise HTTPException(410, "该历史会话仅供查看，请使用独立 AI 学习会话继续提问。")
     return attempt
 
 
@@ -158,7 +168,7 @@ def create_attempt(body:AttemptCreate,db=Depends(db_for),user=Depends(user_for))
     require_active(user)
     profile=load_course_profiles().get(body.course_id)
     if not profile or body.course_id=="ai_literacy":
-        raise HTTPException(400,"请选择数理课程")
+        raise HTTPException(400,"请选择课程")
     problem={"text":body.text.strip() or None,"problem_id":body.problem_id,
              "coursepack_id":body.coursepack_id}
     if body.problem_id:
@@ -183,9 +193,9 @@ def create_attempt(body:AttemptCreate,db=Depends(db_for),user=Depends(user_for))
 
 
 @router.get("/attempts")
-def attempts(db=Depends(db_for),user=Depends(user_for)):
+def attempts(offset:int=Query(default=0,ge=0),limit:int=Query(default=100,ge=1,le=100),db=Depends(db_for),user=Depends(user_for)):
     rows=db.execute(select(Attempt).where(Attempt.account_id==user.id)
-                    .order_by(Attempt.created_at.desc()).limit(100)).scalars().all()
+                    .order_by(Attempt.created_at.desc(),Attempt.id.desc()).offset(offset).limit(limit)).scalars().all()
     return [{"id":r.id,"course_id":r.course_id,"problem":r.problem,"sandbox_id":r.sandbox_id,
              "created_at":r.created_at.isoformat()} for r in rows]
 
@@ -217,7 +227,7 @@ def send_message(aid:str,body:Message,request:Request,db=Depends(db_for),user=De
 @router.post("/attempts/{aid}/messages/stream")
 def stream_message(aid: str, body: Message, request: Request, db=Depends(db_for), user=Depends(user_for)):
     from .course_stream import response_stream
-    own_attempt(db, user, aid)
+    _course_write_attempt(db, user, aid)
     user_id = user.id
 
     def work(progress):
@@ -233,8 +243,39 @@ def stream_message(aid: str, body: Message, request: Request, db=Depends(db_for)
 
 
 def _send_message(aid,body,request,db,user,on_progress=None):
+    from .mirror_service import MirrorError
+    from .model_transport import ModelError
+    started = time.monotonic()
+    status, outcome = 200, "completed"
+    trace_id = uuid.uuid4().hex
+    try:
+        return _process_message(aid, body, request, db, user, on_progress)
+    except (ModelError, MirrorError, HTTPException) as exc:
+        status = exc.status_code
+        outcome = ({429: "rate_limited", 504: "timeout", 502: "upstream_incomplete_or_invalid"}
+                   .get(status, "upstream_unavailable" if isinstance(exc, ModelError) else "rejected"))
+        raise
+    except Exception:  # noqa: BLE001 -- log category only, never exception body/traceback
+        status = 503 if on_progress is not None else 500
+        outcome = "unexpected_failure"
+        raise
+    finally:
+        # Request IDs are user input: correlate only their digest, never raw IDs/text.
+        diagnostics = {
+            "trace_id": trace_id,
+            "request_key": hashlib.sha256(body.request_id.encode()).hexdigest(),
+            "attempt_key": hashlib.sha256(aid.encode()).hexdigest(),
+            "processing_elapsed_ms": max(0, round((time.monotonic() - started) * 1000)),
+            "response_status": status, "outcome": outcome,
+        }
+        logging.getLogger("mirror_api.course_requests").log(
+            logging.INFO if status < 400 else logging.WARNING,
+            "course_request_finished %s", json.dumps(diagnostics, sort_keys=True), extra=diagnostics)
+
+
+def _process_message(aid,body,request,db,user,on_progress=None):
     require_active(user)
-    attempt=own_attempt(db,user,aid)
+    attempt=_course_write_attempt(db,user,aid)
     if (request.app.state.pipeline.model.name == "stub"
             and (not get_settings().allow_stub_learning or get_settings().environment=="production")
             and attempt.course_id != "ai_literacy"):
@@ -273,27 +314,108 @@ class Feedback(BaseModel):
 
 @router.post("/attempts/{aid}/feedback")
 def feedback(aid:str,body:Feedback,db=Depends(db_for),user=Depends(user_for)):
-    require_active(user);attempt=own_attempt(db,user,aid)
+    oid = "feedback:" + body.request_id
+    with _feedback_locks[hash(oid) % len(_feedback_locks)]:
+        try:
+            _lock_feedback_account(db, user)
+            return _feedback(aid, body, db, user)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(409, "反馈编号冲突") from None
+
+
+def _lock_feedback_account(db, user):
+    # PostgreSQL serializes correction/retry for this account across processes.
+    # SQLite uses the process-local oid lock above; no distributed claim implied.
+    db.execute(select(Account).where(Account.id == user.id).with_for_update()).scalar_one()
+
+
+def _feedback_event(db, row, event_id):
+    event = db.get(MirrorEvent, event_id) if event_id else None
+    attempt = db.get(Attempt, row.attempt_id) if row.attempt_id else None
+    if (event and event.participant_code == row.account_id and event.course_id == row.course_id
+            and event.request_payload.get("attempt_id") == row.attempt_id
+            and attempt and attempt.account_id == row.account_id and attempt.course_id == row.course_id
+            and row.course_id != "ai_literacy"):
+        return event
+    return None
+
+
+def _derived_feedback(db, row):
+    if (not row.id.startswith("feedback:") or row.source != "self_report"
+            or row.kind not in {"continued", "solved", "still_stuck", "independent_success"}):
+        return None
+    evidence = db.get(LearningEvidenceRow, hashlib.sha256(row.id.encode()).hexdigest())
+    if (evidence and evidence.event_type == "student_outcome_reported"
+            and evidence.course_id == row.course_id
+            and evidence.source_event_ids == [evidence.request_id, row.id]
+            and _feedback_event(db, row, evidence.request_id)):
+        return evidence
+    return None
+
+
+def _source_audit_id(oid):
+    return hashlib.sha256(("feedback-source:" + oid).encode()).hexdigest()
+
+
+def _save_feedback_source(db, row, event_id):
+    key = _source_audit_id(row.id)
+    if db.get(Audit, key) is None:
+        db.add(Audit(id=key, actor_id=row.account_id, target=row.id, action="feedback_source",
+                     detail={"observation_id": row.id, "event_id": event_id,
+                             "attempt_id": row.attempt_id, "course_id": row.course_id,
+                             "event_type": "student_outcome_reported"}))
+
+
+def _restore_feedback_source(db, row):
+    audit = db.get(Audit, _source_audit_id(row.id))
+    if not (audit and audit.actor_id == row.account_id and audit.target == row.id
+            and audit.action == "feedback_source" and row.source == "self_report"
+            and row.id.startswith("feedback:")
+            and row.kind in {"continued", "solved", "still_stuck", "independent_success"}):
+        return None
+    detail = audit.detail
+    if (detail.get("observation_id") != row.id or detail.get("attempt_id") != row.attempt_id
+            or detail.get("course_id") != row.course_id
+            or detail.get("event_type") != "student_outcome_reported"):
+        return None
+    return _feedback_event(db, row, detail.get("event_id"))
+
+
+def _add_feedback_evidence(db, row, event):
+    evidence_id = hashlib.sha256(row.id.encode()).hexdigest()
+    # An existing mismatched row is not overwritten or removed.
+    if db.get(LearningEvidenceRow, evidence_id) is None:
+        db.add(LearningEvidenceRow(evidence_id=evidence_id, request_id=event.request_id,
+            course_id=row.course_id, event_type="student_outcome_reported",
+            observation=row.text, reasoning_stage=row.theme, related_knowledge_ids=[],
+            strength="weak", source_event_ids=[event.request_id, row.id]))
+
+
+def _feedback(aid, body, db, user):
+    require_active(user);attempt=_course_write_attempt(db,user,aid)
     oid="feedback:"+body.request_id
-    old=db.get(Observation,oid)
-    if old and (old.account_id!=user.id or old.attempt_id!=aid or old.kind!=body.outcome):
-        raise HTTPException(409,"反馈编号冲突")
     direction="support" if body.outcome=="still_stuck" else "contradict" if body.outcome=="independent_success" else "neutral"
     labels={"continued":"学生自报提示后可以继续","solved":"学生自报做出来了，独立性未验证",
             "still_stuck":"学生自报在该环节仍然卡住","independent_success":"学生自报独立完成；未经独立测试核验"}
-    memory.add_observation(db,user.id,attempt.course_id,aid,body.outcome,body.theme,
-                          labels[body.outcome]+("："+body.note if body.note else ""),
-                          direction,source="self_report",observation_id=oid)
+    text = labels[body.outcome]+("："+body.note if body.note else "")
+    old = db.get(Observation, oid, populate_existing=True)
+    if old:
+        if (old.account_id, old.course_id, old.attempt_id, old.kind, old.theme, old.text) != (
+                user.id, attempt.course_id, aid, body.outcome, body.theme, text):
+            raise HTTPException(409, "反馈编号冲突")
+        # No late attachment, including retries after correction or a new message.
+        return memory.memory_view(db, user.id)
+    row = memory.add_observation(db,user.id,attempt.course_id,aid,body.outcome,body.theme,
+                                text,direction,source="self_report",observation_id=oid)
     event=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id,
         MirrorEvent.request_payload["attempt_id"].as_string()==aid)
-        .order_by(MirrorEvent.occurred_at.desc()).limit(1)).scalar_one_or_none()
-    evidence_id=hashlib.sha256(oid.encode()).hexdigest()
-    if event and not db.get(LearningEvidenceRow,evidence_id):
-        db.add(LearningEvidenceRow(evidence_id=evidence_id,request_id=event.request_id,
-            course_id=attempt.course_id,event_type="student_outcome_reported",
-            observation=labels[body.outcome]+("："+body.note if body.note else ""),
-            reasoning_stage=body.theme,related_knowledge_ids=[],strength="weak",
-            source_event_ids=[event.request_id,oid]))
+        .where(MirrorEvent.course_id == attempt.course_id)
+        .order_by(MirrorEvent.occurred_at.desc(), MirrorEvent.request_id).limit(1)).scalar_one_or_none()
+    event = _feedback_event(db, row, event.request_id) if event else None
+    _save_feedback_source(db, row, event.request_id if event else None)
+    if event:
+        _add_feedback_evidence(db, row, event)
     db.commit();return memory.memory_view(db,user.id)
 
 
@@ -309,13 +431,32 @@ class Correction(BaseModel):
 
 @router.patch("/observations/{oid}")
 def correct(oid:str,body:Correction,db=Depends(db_for),user=Depends(user_for)):
+    with _feedback_locks[hash(oid) % len(_feedback_locks)]:
+        _lock_feedback_account(db, user)
+        return _correct(oid, body, db, user)
+
+
+def _correct(oid, body, db, user):
     require_active(user)
-    row=db.get(Observation,oid)
+    row=db.get(Observation,oid,populate_existing=True)
     if not row or row.account_id!=user.id:
         raise HTTPException(404,"观察不存在")
+    derived = _derived_feedback(db, row)
+    if derived:
+        # Adopt legacy evidence's validated original source before retracting it.
+        _save_feedback_source(db, row, derived.request_id)
+    if body.disputed:
+        if derived:
+            db.delete(derived)
+    elif row.disputed:
+        original_event = _restore_feedback_source(db, row)
+        if original_event:
+            _add_feedback_evidence(db, row, original_event)
+    changed = row.disputed != body.disputed or row.correction != body.note
     row.disputed=body.disputed;row.correction=body.note
     db.flush();memory.rebuild(db,user.id,row.course_id)
-    sandboxes.audit(db,user.id,oid,"observation_correction",{"disputed":body.disputed})
+    if changed:
+        sandboxes.audit(db,user.id,oid,"observation_correction",{"disputed":body.disputed})
     db.commit();return memory.memory_view(db,user.id)
 
 
@@ -756,6 +897,28 @@ def recognize(body:ImageInput,db=Depends(db_for),user=Depends(user_for)):
 
 
 # ---------------------------------------------------------------- 教材库与全文搜索
+
+@router.get("/material-library")
+def material_library(response: Response, q: str = Query(default="", max_length=300),
+                     course_id: str | None = None, kind: Literal["textbook", "exam"] | None = None,
+                     year: int | None = None, tag: str | None = None,
+                     page: int = Query(default=1, ge=1),
+                     page_size: int = Query(default=20, ge=1, le=50), user=Depends(user_for)):
+    from .resource_library import PRIVATE_HEADERS, listing
+    response.headers.update(PRIVATE_HEADERS)
+    return listing(user.id, q, course_id, kind, year, tag, page, page_size)
+
+
+@router.get("/material-library/{resource_id}/pdf")
+def material_pdf(resource_id: str, user=Depends(user_for)):
+    from .resource_library import original
+    return original(user.id, resource_id, "pdf")
+
+
+@router.get("/material-library/{resource_id}/cover")
+def material_cover(resource_id: str, user=Depends(user_for)):
+    from .resource_library import original
+    return original(user.id, resource_id, "cover")
 
 import re as _re
 

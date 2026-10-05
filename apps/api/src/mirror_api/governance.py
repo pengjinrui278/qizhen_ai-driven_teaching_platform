@@ -43,7 +43,7 @@ def delete_personal(db, user):
         db.query(model).filter_by(account_id=user.id).delete(synchronize_session=False)
     # 个人观察纠正审计不保留可回溯身份，教师行政审计只保留无名标识。
     for audit in db.execute(select(Audit).where(Audit.actor_id==user.id)).scalars():
-        if audit.action=="observation_correction":
+        if audit.action in ("observation_correction", "feedback_source"):
             db.delete(audit)
         else:
             audit.actor_id="deleted-account"
@@ -69,6 +69,12 @@ def expire_personal(db, now=None):
         observations=db.execute(select(Observation).where(
             Observation.account_id==user.id,Observation.created_at<cutoff)).scalars().all()
         courses={r.course_id for r in observations}
+        observation_ids = [row.id for row in observations]
+        if observation_ids:
+            db.query(Audit).filter(Audit.actor_id == user.id,
+                Audit.target.in_(observation_ids),
+                Audit.action.in_(("observation_correction", "feedback_source"))).delete(
+                    synchronize_session=False)
         for row in observations:db.delete(row)
         ids=list(db.execute(select(MirrorEvent.request_id).where(
             MirrorEvent.participant_code==user.id,MirrorEvent.occurred_at<cutoff)).scalars())
