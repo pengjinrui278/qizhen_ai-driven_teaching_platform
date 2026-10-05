@@ -1,15 +1,23 @@
 /* R5: one course picker; lightweight, consistently sized conversation history. */
+/* Design B R5 mapping: time groups and accessible timestamps; no deletion action. */
+.portal.lmStudentShell .lmCourseChat .chatHistoryGroup h3 {font:500 12px/1.5 system-ui,sans-serif;color:var(--lm-muted);margin:18px 10px 8px;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList .chatHistoryGroup button {position:relative;margin:4px 0;overflow:visible;}
+.portal.lmStudentShell .lmCourseChat .chatHistoryTitle {display:block;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
+.portal.lmStudentShell .lmCourseChat .chatHistoryTime {display:none;position:absolute;left:0;right:0;top:100%;z-index:2;align-items:center;padding:6px 8px;background:#f0f5ff;font-size:11px;white-space:normal;border-radius:4px;box-shadow:0 2px 6px #17335414;}
+.portal.lmStudentShell .lmCourseChat .chatHistoryGroup button:hover .chatHistoryTime,.portal.lmStudentShell .lmCourseChat .chatHistoryGroup button:focus-visible .chatHistoryTime {display:flex;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {outline:2px solid #93b4ed;outline-offset:1px;}
+@media(hover:none){.portal.lmStudentShell .lmCourseChat .chatHistoryTime {display:block;position:static;background:transparent;padding:0;font-size:11px;color:var(--lm-muted);}}
 .portal.lmStudentShell .lmCourseChat .chatHistory {padding:14px;background:transparent;border:0;box-shadow:none;border-radius:0;font:13px/1.5 system-ui,sans-serif;}
 .portal.lmStudentShell .lmCourseChat .chatSidebarHead {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:18px;}
 .portal.lmStudentShell .lmCourseChat .chatSidebarHead strong,.portal.lmStudentShell .lmCourseChat .chatHistory h2 {font:600 13px/1.5 system-ui,sans-serif;}
-.portal.lmStudentShell .lmCourseChat .chatSidebarHead button {border:0;background:transparent;box-shadow:none;padding:6px;min-height:32px;min-width:32px;}
+.portal.lmStudentShell .lmCourseChat .chatSidebarHead button {border:0;background:transparent;box-shadow:none;padding:6px;min-height:36px;min-width:36px;}
 .portal.lmStudentShell .lmCourseChat .chatHistory label {display:block;font:400 13px/1.5 system-ui,sans-serif;margin:0 0 18px;}
 .portal.lmStudentShell .lmCourseChat .chatHistory select {margin-top:8px;font:inherit;}
 .portal.lmStudentShell .lmCourseChat .chatHistory h2 {margin:20px 0 10px;color:var(--lm-muted);}
 .portal.lmStudentShell .lmCourseChat .chatSessionList {gap:4px;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button {display:block;width:100%;min-height:36px;padding:8px 10px;border:0;box-shadow:none;background:transparent;border-radius:6px;text-align:left;font:400 13px/1.45 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--lm-text);}
-.portal.lmStudentShell .lmCourseChat .chatSessionList button:hover,.portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {background:#e9f3ff;}
-.portal.lmStudentShell .lmCourseChat .chatSessionList button[aria-current=true] {background:#deedfc;color:#235b91;font-weight:500;border:0;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList button:hover,.portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {background:#f0f5ff;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList button[aria-current=true] {background:#e6eeff;color:#1d4ed8;font-weight:500;border:0;}
 .portal.lmStudentShell .lmCourseChat .chatCourseName {font:500 14px/1.5 system-ui,sans-serif;flex:1;}
 .portal.lmStudentShell .lmCourseChat .chatSidebarLauncher {display:none;}
 @media(max-width:1023px){
