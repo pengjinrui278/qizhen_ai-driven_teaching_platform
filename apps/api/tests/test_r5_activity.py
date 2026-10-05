@@ -65,6 +65,17 @@ def test_retention_cleans_activity_journal(pilot):
     assert pilot.get('/api/v2/memory').json()['activities']==[]
 
 
+def test_feedback_overview_does_not_read_private_transcripts(pilot,monkeypatch):
+    register(pilot,'overview-only');aid=start(pilot);message(pilot,aid,'overview-turn','chat')
+    from mirror_api import learning_activity
+    def forbidden(*a,**k):raise AssertionError('overview must not query full activity history')
+    monkeypatch.setattr(learning_activity,'view',forbidden)
+    response=pilot.get('/api/v2/memory?include_activities=false')
+    assert response.status_code==200
+    assert 'activities' not in response.json()
+    assert response.json()=={'observations':[],'hypotheses':[]}
+
+
 def test_request_id_cannot_be_reused_for_other_session(pilot):
     register(pilot,'activity-conflict');aid=start(pilot);message(pilot,aid,'shared-turn','chat')
     other=start(pilot,'求解电路电流')
@@ -73,13 +84,17 @@ def test_request_id_cannot_be_reused_for_other_session(pilot):
     assert len(answered)==1 and answered[0]['attempt_id']==aid
 
 
-@pytest.mark.parametrize('mode,budget,effort',[('chat',32768,'low'),('first_hint',32768,'low'),('full_solution',65536,'high'),('solution_review',65536,'high')])
-def test_budget_tiers(mode,budget,effort,monkeypatch):
+@pytest.mark.parametrize('mode,level,course,budget,effort',[
+    ('chat',None,COURSE,32768,'low'),('first_hint',1,COURSE,32768,'low'),
+    ('next_hint',2,COURSE,32768,'low'),('next_hint',3,COURSE,65536,'high'),
+    ('full_solution',None,COURSE,65536,'high'),('solution_review',None,COURSE,65536,'high'),
+    ('chat',3,'ai_literacy',32768,None)])
+def test_budget_tiers(mode,level,course,budget,effort,monkeypatch):
     seen=[]
     def post(*a,**kw):
         seen.append(kw['json']);return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':'complete'}}]})
     monkeypatch.setattr(httpx,'post',post)
     model=OpenAICompatibleModel('https://api.deepseek.com','fixture','deepseek-flash',max_tokens=32768,deep_max_tokens=65536)
-    model.generate(MirrorContext(course_name='数学分析',mirror_name='Mirror',course_id=COURSE,interaction_mode=mode))
-    assert seen[0]['max_tokens']==budget and seen[0]['reasoning_effort']==effort
+    model.generate(MirrorContext(course_name='数学分析',mirror_name='Mirror',course_id=course,interaction_mode=mode,hint_level=level,message='继续'))
+    assert seen[0]['max_tokens']==budget and seen[0].get('reasoning_effort')==effort
     assert len(seen)==1

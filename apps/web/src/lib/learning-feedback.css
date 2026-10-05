@@ -83,3 +83,5 @@
 .learningFeedback .lf-session li {margin:14px 0;padding:12px;background:#f5f9fe;border-radius:8px;}
 .learningFeedback .lf-question {white-space:pre-wrap;overflow-wrap:anywhere;}
 .learningFeedback .lf-session a {display:inline-block;margin-top:10px;color:#2464a0;}
+.learningFeedback .lf-feedback-details > summary {padding:16px 0;color:#42628c;cursor:pointer;font-size:14px;}
+.learningFeedback .lf-progress-summary a {color:#1d4ed8;font-size:13px;}

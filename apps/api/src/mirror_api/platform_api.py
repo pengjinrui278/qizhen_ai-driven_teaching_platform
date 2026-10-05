@@ -429,8 +429,8 @@ def _feedback(aid, body, db, user):
 
 
 @router.get("/memory")
-def get_memory(db=Depends(db_for),user=Depends(user_for)):
-    return memory.memory_view(db,user.id)
+def get_memory(include_activities:bool=True,db=Depends(db_for),user=Depends(user_for)):
+    return memory.memory_view(db,user.id,include_activities=include_activities)
 
 
 class Correction(BaseModel):
