@@ -1,6 +1,9 @@
 type Row=Record<string,any>;
-export async function streamCourseMessage(aid:string,body:Row,onProgress:(stage:string)=>void):Promise<Row>{
+export async function streamCourseMessage(aid:string,body:Row,onProgress:(stage:string)=>void,signal?:AbortSignal):Promise<Row>{
  const controller=new AbortController();
+ const abort=()=>controller.abort();
+ signal?.addEventListener("abort",abort,{once:true});
+ if(signal?.aborted)controller.abort();
  let timer:ReturnType<typeof setTimeout>;
  const touch=()=>{clearTimeout(timer);timer=setTimeout(()=>controller.abort(),90000);};
  touch();
@@ -25,5 +28,5 @@ export async function streamCourseMessage(aid:string,body:Row,onProgress:(stage:
   }}finally{await reader.cancel().catch(()=>{});}
   throw new Error("连接中断，请重试以恢复本次回答。");
  }catch(e){if(e instanceof Error&&e.name==="AbortError")throw new Error("连接长时间没有响应，请重试以恢复本次回答。");throw e;}
- finally{clearTimeout(timer!);}
+ finally{clearTimeout(timer!);signal?.removeEventListener("abort",abort);}
 }
