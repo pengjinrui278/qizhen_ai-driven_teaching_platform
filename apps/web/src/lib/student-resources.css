@@ -1,0 +1,98 @@
+/* B2 resources only. Existing endpoints and their scopes remain explicit. */
+.portal.lmStudentShell .lmResources {min-width:0;max-width:none;overflow-wrap:anywhere;}
+.portal.lmStudentShell .lmResources .lmResourceHeading {margin-bottom:20px;}
+.portal.lmStudentShell .lmResources .lmResourceHeading h1 {font:700 24px/1.4 var(--lm-serif);}
+.portal.lmStudentShell .lmResources .lmResourceHeading p {font-size:13px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmResources .rcTopbar {gap:12px;}
+.portal.lmStudentShell .lmResources .rcCourseSelect {max-width:100%;}
+.portal.lmStudentShell .lmResources .rcCourseSelect label {white-space:nowrap;flex:none;}
+.portal.lmStudentShell .lmResources .rcSearchBox {min-width:0;gap:8px;}
+.portal.lmStudentShell .lmResources .rcSearchBox input {border:1px solid var(--lm-border);border-radius:10px;min-width:0;}
+.portal.lmStudentShell .lmResources button,.portal.lmStudentShell .lmResources select {min-height:44px;}
+.portal.lmStudentShell .lmResources .rcSearchBox button {background:var(--lm-primary-deep);color:white;border-color:var(--lm-primary-deep);border-radius:9px;}
+.portal.lmStudentShell .lmResources .rcTabs {display:flex;align-items:center;flex-wrap:wrap;gap:6px;border:0;background:#f1f5f9;padding:4px;border-radius:10px;}
+.portal.lmStudentShell .lmResources .rcTabs button {font-size:13px;border:0;border-radius:7px;margin:0;padding:8px 14px;}
+.portal.lmStudentShell .lmResources .rcTabs button.active {background:#e0e7ff;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcTabs a {margin-left:auto;display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcCardGrid {grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+.portal.lmStudentShell .lmResources .rcCardGrid:has(.rcExamCard) {grid-template-columns:minmax(0,1fr);}
+.portal.lmStudentShell .lmResources .rcBookCard {display:flex;flex-direction:column;gap:0;padding:0;text-align:left;border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);overflow:hidden;min-width:0;background:white;}
+.portal.lmStudentShell .lmResources .rcBookCard:hover {border-color:var(--lm-border-hover);box-shadow:var(--lm-shadow-hover);transform:translateY(-3px);}
+.portal.lmStudentShell .lmResources .rcBookCover {width:100%;height:130px;border-radius:0;box-shadow:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);}
+.portal.lmStudentShell .lmResources .rcBookCover .lmIcon {width:38px;height:38px;}
+.portal.lmStudentShell .lmResources .rcBookInfo {padding:16px;width:100%;}
+.portal.lmStudentShell .lmResources .rcBookInfo h3 {font-size:15px;margin:0 0 8px;}
+.portal.lmStudentShell .lmResources .rcBookStats {font-size:12px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmResources .rcBookAction {font-size:12px;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcExamCard {text-align:left;padding:16px 20px;border-radius:12px;background:white;border-color:var(--lm-border);box-shadow:var(--lm-shadow);}
+.portal.lmStudentShell .lmResources .rcExamYear {font-size:20px;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcExamAnswer.no {color:var(--lm-muted);}
+.portal.lmStudentShell .lmResources .rcSearchItem {text-align:left;padding:16px;border-color:var(--lm-border);background:#fff;border-radius:11px;box-shadow:var(--lm-shadow);}
+.portal.lmStudentShell .lmResources .rcSearchHeader {flex-wrap:wrap;}
+.portal.lmStudentShell .lmResources .rcSearchMeta,.portal.lmStudentShell .lmResources .rcSearchJump {color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcHighlight {background:rgba(99,102,241,.15);color:#4338ca;}
+.portal.lmStudentShell .lmResources .rcReader {min-height:0;overflow:visible;border-radius:14px;border-color:var(--lm-border);box-shadow:var(--lm-shadow);}
+.portal.lmStudentShell .lmResources .rcReaderSidebar {width:210px;border-radius:14px 0 0 14px;border-color:var(--lm-border);}
+.portal.lmStudentShell .lmResources .rcReaderContent {min-width:0;padding:24px;max-height:none;overflow:visible;}
+.portal.lmStudentShell .lmResources .rcChapterList button.active {background:#eef2ff;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcBookBlock {min-width:0;border-left-color:var(--lm-primary);}
+.portal.lmStudentShell .lmResources .rcLabelTag {background:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmResources .rcExamDetail {background:white;padding:20px;border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);}
+.portal.lmStudentShell .lmResources .rcExamDetailHeader {padding:20px 0;}
+.portal.lmStudentShell .lmResources .rcQuestion {border-top:1px solid var(--lm-border);padding:16px 0;min-width:0;}
+.portal.lmStudentShell .lmResources .katex-display {overflow-x:auto;overflow-y:hidden;max-width:100%;}
+.portal.lmStudentShell .lmResources .rcLoading,.portal.lmStudentShell .lmResources .rcEmpty {background:#fff;border:1px dashed var(--lm-border);border-radius:14px;padding:24px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmResources .rcError {border:1px solid #fecdd3;border-left:4px solid var(--lm-danger);color:#be123c;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.portal.lmStudentShell .lmResources :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+@media(max-width:800px) {
+ .portal.lmStudentShell .lmResources .rcReader {flex-direction:column;}
+ .portal.lmStudentShell .lmResources .rcReaderSidebar {width:100%;border-right:0;border-bottom:1px solid var(--lm-border);border-radius:14px 14px 0 0;}
+ .portal.lmStudentShell .lmResources .rcChapterList {flex-direction:row;flex-wrap:wrap;}
+ .portal.lmStudentShell .lmResources .rcReaderContent {padding:16px;}
+}
+@media(max-width:540px) {
+ .portal.lmStudentShell .lmResources .rcTopbar {align-items:stretch;flex-direction:column;}
+ .portal.lmStudentShell .lmResources .rcCourseSelect select {width:100%;min-width:0;}
+ .portal.lmStudentShell .lmResources .rcSearchBox input {font-size:16px;padding:10px;}
+ .portal.lmStudentShell .lmResources .rcSearchBox button {padding:8px 12px;}
+ .portal.lmStudentShell .lmResources .rcCardGrid {grid-template-columns:minmax(0,1fr);}
+ .portal.lmStudentShell .lmResources .rcTabs a {margin-left:0;width:100%;}
+ .portal.lmStudentShell .lmResources .rcExamDetail {padding:14px;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .portal.lmStudentShell .lmResources button {transition:none;}
+ .portal.lmStudentShell .lmResources .rcBookCard:hover {transform:none;}
+}
+
+/* B-reference visual correction. */
+.portal.lmStudentShell .lmResources .rcSearchBox {position:relative;}
+.portal.lmStudentShell .lmResources .rcSearchBox > .lmIcon {position:absolute;left:12px;top:14px;width:16px;height:16px;color:#94a3b8;}
+.portal.lmStudentShell .lmResources .rcSearchBox input {padding-left:38px;}
+.portal.lmStudentShell .lmResources .rcSearchBox button {display:flex;align-items:center;gap:6px;background:var(--lm-grad);border:0;}
+.portal.lmStudentShell .lmResources .rcSearchBox button .lmIcon {width:15px;height:15px;}
+.portal.lmStudentShell .lmResources .rcTabs button {background:transparent;}
+.portal.lmStudentShell .lmResources .rcCourseSelect {margin:0 0 16px;}
+.portal.lmStudentShell .lmResources .rcBookInfo p {margin:6px 0;font-weight:400;}
+.portal.lmStudentShell .lmResources .rcBookSymbol {font:900 36px var(--lm-serif);z-index:1;}
+.portal.lmStudentShell .lmResources .rcBookAction {display:block;margin-top:6px;}
+
+.portal.lmStudentShell .lmResources .lmResourceHeading h1 {margin:0;}
+.portal.lmStudentShell .lmResources .lmResourceHeading p {margin:2px 0 0;}
+.portal.lmStudentShell .lmResources .rcTopbar {flex-direction:column;align-items:stretch;}
+.portal.lmStudentShell .lmResources .rcSearchBox {width:100%;max-width:none;order:-1;}
+.portal.lmStudentShell .lmResources .rcCourseSelect {align-self:flex-start;}
+.portal.lmStudentShell .lmResources .rcTabs {width:fit-content;margin:16px 0;}
+.portal.lmStudentShell .lmResources .rcTabs a {margin-left:20px;}
+.portal.lmStudentShell .lmResources .rcCardGrid {grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+.portal.lmStudentShell .lmResources .rcBookCard {border-radius:12px;}
+.portal.lmStudentShell .lmResources .rcBookInfo {padding:12px 14px;}
+.portal.lmStudentShell .lmResources .rcBookInfo h3 {font-size:13.5px;margin:0 0 2px;}
+.portal.lmStudentShell .lmResources .rcBookMeta,.portal.lmStudentShell .lmResources .rcBookStats {font-size:11px;color:#94a3b8;}
+.portal.lmStudentShell .lmResources .rcBookCover {position:relative;}
+.portal.lmStudentShell .lmResources .rcBookCover::after {content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.3));}
+.portal.lmStudentShell .lmResources .rcExamCard {display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 14px;padding:14px 18px;}
+.portal.lmStudentShell .lmResources .rcExamHeader {grid-column:1;grid-row:1/3;display:flex;flex-direction:column;gap:4px;}
+.portal.lmStudentShell .lmResources .rcExamCard h3 {grid-column:2;grid-row:1;margin:0;font-size:14px;}
+.portal.lmStudentShell .lmResources .rcExamMeta {grid-column:2;grid-row:2;margin:0;font-size:12px;}
+.portal.lmStudentShell .lmResources .rcExamAnswer {grid-column:3;grid-row:1/3;margin:0;font-size:11px;}
+@media(max-width:540px){.portal.lmStudentShell .lmResources .rcCardGrid {grid-template-columns:minmax(0,1fr);}.portal.lmStudentShell .lmResources .rcExamAnswer {grid-column:2;grid-row:3;}.portal.lmStudentShell .lmResources .rcTabs a {margin-left:0;}}

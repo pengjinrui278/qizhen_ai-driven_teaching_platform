@@ -1,0 +1,46 @@
+.portal .lmMaterialLibrary {font:14px/1.6 system-ui,sans-serif;color:var(--lm-text);min-width:0;}
+.portal .lmMaterialLibrary .mlHeading {margin-bottom:24px;}
+.portal .lmMaterialLibrary h1 {font:700 24px/1.4 var(--lm-serif);margin:0;}
+.portal .lmMaterialLibrary .mlHeading p {font-size:13px;color:var(--lm-muted);margin:2px 0 0;}
+.portal .lmMaterialLibrary button,.portal .lmMaterialLibrary select,.portal .lmMaterialLibrary input {min-height:44px;border:1px solid var(--lm-border);border-radius:9px;background:white;font:inherit;}
+.portal .lmMaterialLibrary button {display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;color:var(--lm-muted);}
+.portal .lmMaterialLibrary button:disabled {opacity:.55;cursor:not-allowed;}
+.portal .lmMaterialLibrary .lmIcon {width:17px;height:17px;flex:none;}
+.portal .lmMaterialLibrary .mlSearch {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 8px;}
+.portal .lmMaterialLibrary .mlSearchInput {position:relative;}
+.portal .lmMaterialLibrary .mlSearchInput .lmIcon {position:absolute;top:14px;left:12px;color:#94a3b8;}
+.portal .lmMaterialLibrary .mlSearchInput input {padding-left:38px;width:100%;}
+.portal .lmMaterialLibrary .mlPrimary {background:var(--lm-grad);color:white;border:0;}
+.portal .lmMaterialLibrary .mlFilters {grid-column:1/-1;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.portal .lmMaterialLibrary .mlFilters label {display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--lm-muted);}
+.portal .lmMaterialLibrary .mlFilters input {width:150px;}
+.portal .lmMaterialLibrary .mlFilters select {width:210px;}
+.portal .lmMaterialLibrary .mlTabs {display:flex;gap:4px;padding:4px;background:#f1f5f9;width:fit-content;border-radius:10px;margin:20px 0 16px;}
+.portal .lmMaterialLibrary .mlTabs button {border:0;background:transparent;}
+.portal .lmMaterialLibrary .mlTabs button[aria-pressed=true] {background:#e0e7ff;color:var(--lm-primary-deep);font-weight:600;}
+.portal .lmMaterialLibrary .mlCount {font-size:12px;color:var(--lm-muted);}
+.portal .lmMaterialLibrary .mlGrid {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+.portal .lmMaterialLibrary .mlCard {min-width:0;overflow:hidden;background:white;border:1px solid var(--lm-border);border-radius:12px;box-shadow:var(--lm-shadow);}
+.portal .lmMaterialLibrary .mlCover {height:190px;overflow:hidden;background:#f1f5f9;display:grid;place-items:center;border-bottom:1px solid var(--lm-border);}
+.portal .lmMaterialLibrary .mlCover img {display:block;height:190px;max-height:190px;width:100%;object-fit:contain;}
+.portal .lmMaterialLibrary .mlCoverMissing {display:flex;align-items:center;flex-direction:column;gap:10px;color:var(--lm-muted);font-size:12px;}
+.portal .lmMaterialLibrary .mlCoverMissing .lmIcon {width:32px;height:32px;}
+.portal .lmMaterialLibrary .mlCardBody {padding:14px;overflow-wrap:anywhere;}
+.portal .lmMaterialLibrary .mlCard h2 {font-size:14px;font-weight:600;line-height:1.6;}
+.portal .lmMaterialLibrary .mlCard p {font-size:12px;margin:6px 0;color:var(--lm-muted);}
+.portal .lmMaterialLibrary .mlTags {display:flex;gap:5px;flex-wrap:wrap;}
+.portal .lmMaterialLibrary .mlTags span {font-size:11px;padding:2px 8px;background:#eef2ff;color:#4f46e5;border-radius:99px;}
+.portal .lmMaterialLibrary .mlRead {margin-top:10px;width:100%;justify-content:space-between;border:0;border-top:1px solid var(--lm-border);border-radius:0;color:var(--lm-primary-deep);padding:10px 0 0;}
+.portal .lmMaterialLibrary .mlPagination {display:flex;align-items:center;justify-content:center;gap:16px;margin-top:24px;}
+.portal .lmMaterialLibrary .mlState {background:white;border:1px dashed var(--lm-border);border-radius:12px;padding:32px;text-align:center;color:var(--lm-muted);}
+.portal .lmMaterialLibrary .mlError {background:#fff1f2;color:#be123c;padding:16px;border:1px solid #fecdd3;border-radius:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.portal .lmMaterialLibrary .mlReader {min-width:0;}
+.portal .lmMaterialLibrary .mlReaderHead {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.portal .lmMaterialLibrary .mlReaderHead h2 {font-size:18px;overflow-wrap:anywhere;}
+.portal .lmMaterialLibrary .mlReaderActions {display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.portal .lmMaterialLibrary .mlReaderActions a {display:inline-flex;align-items:center;gap:6px;padding:10px 16px;min-height:44px;border-radius:9px;background:var(--lm-grad);color:white;text-decoration:none;}
+.portal .lmMaterialLibrary .mlHint {font-size:12px;color:var(--lm-muted);}
+.portal .lmMaterialLibrary object {display:block;width:100%;height:75vh;min-height:400px;border:1px solid var(--lm-border);background:white;border-radius:12px;}
+.portal .lmMaterialLibrary :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+@media(max-width:600px){.portal .lmMaterialLibrary .mlFilters label {flex:1;min-width:100px;}.portal .lmMaterialLibrary .mlFilters input,.portal .lmMaterialLibrary .mlFilters select {width:100%;}.portal .lmMaterialLibrary .mlGrid {grid-template-columns:minmax(0,1fr);}.portal .lmMaterialLibrary .mlPagination {gap:8px;font-size:12px;}.portal .lmMaterialLibrary .mlPagination button {padding:8px;}.portal .lmMaterialLibrary .mlSearch input {font-size:16px;}.portal .lmMaterialLibrary object {height:60vh;}}
+@media(prefers-reduced-motion:reduce){.portal .lmMaterialLibrary button {transition:none;}}

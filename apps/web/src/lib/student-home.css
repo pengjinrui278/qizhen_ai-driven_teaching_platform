@@ -1,0 +1,122 @@
+/* Student shell only; page content outside .lmStudentHome retains existing styles. */
+.portal.lmStudentShell.lmContentShell {font:14px/1.6 system-ui,sans-serif;background:radial-gradient(700px circle at 10% 5%,rgba(99,102,241,.07),transparent 50%),radial-gradient(600px circle at 90% 90%,rgba(6,182,212,.06),transparent 50%),var(--lm-bg);background-attachment:fixed;}
+.portal.lmContentShell > .portalWorkspace > .portalContent {padding:28px 32px;max-width:none;width:100%;}
+.portal.lmContentShell .portalEmbedded {font-family:system-ui,sans-serif;}
+.portal.lmContentShell input,.portal.lmContentShell select,.portal.lmContentShell textarea {transition:border-color .15s,box-shadow .15s;}
+@media(prefers-reduced-motion:reduce){.portal.lmContentShell input,.portal.lmContentShell select,.portal.lmContentShell textarea {transition:none;}}
+@media(max-width:900px){.portal.lmContentShell > .portalWorkspace > .portalContent {padding:20px 16px;}}
+.portal.lmStudentShell {display:grid;grid-template-columns:240px minmax(0,1fr);align-items:start;min-height:100vh;background:var(--lm-bg);}
+.lmStudentShell > .portalWorkspace {margin-left:0;width:100%;min-width:0;}
+.lmStudentShell > .portalWorkspace > .portalContent {width:100%;}
+.lmStudentShell.lmHomeShell {background:radial-gradient(700px circle at 10% 5%,rgba(99,102,241,.07),transparent 50%),radial-gradient(600px circle at 90% 90%,rgba(6,182,212,.06),transparent 50%),var(--lm-bg);background-attachment:fixed;}
+.lmHomeShell > .portalWorkspace > .portalContent {padding:28px 32px;max-width:none;}
+.lmStudentShell .lmStudentSidebar {position:sticky;top:0;display:flex;flex-direction:column;gap:0;width:240px;height:100vh;height:100dvh;overflow-y:auto;padding:20px 14px;background:var(--lm-card);border-right:1px solid var(--lm-border);font-family:var(--lm-font);}
+.lmStudentShell .lmStudentLogo {display:flex;align-items:center;gap:10px;padding:8px 10px 20px;color:var(--lm-text);font-size:15px;font-weight:700;line-height:1.2;}
+.lmStudentShell .lmLogoMark {width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:10px;background:var(--lm-grad);color:#fff;font:900 18px var(--lm-serif);box-shadow:0 4px 16px rgba(99,102,241,.25);}
+.lmStudentShell .lmLogoEnglish {display:block;margin-top:4px;font-size:10px;color:var(--lm-muted);font-weight:400;letter-spacing:.05em;}
+.lmStudentShell .lmStudentSidebar nav {display:flex;flex:1;flex-direction:column;gap:2px;}
+.lmStudentShell .lmStudentSidebar nav a,.lmStudentShell .lmSidebarFooter a,.lmStudentShell .lmSidebarFooter button {display:flex;align-items:center;gap:10px;min-height:44px;width:100%;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:var(--lm-muted);font:500 13.5px/1.5 var(--lm-font);text-align:left;transition:background .18s,color .18s;}
+.lmStudentShell .lmStudentSidebar .lmIcon {flex:none;width:18px;height:18px;stroke-width:2.2;}
+.lmStudentShell .lmStudentSidebar nav a:hover,.lmStudentShell .lmSidebarFooter a:hover,.lmStudentShell .lmSidebarFooter button:hover {background:#f8fafc;color:var(--lm-text);transform:none;}
+.lmStudentShell .lmStudentSidebar nav a[aria-current="page"] {background:rgba(99,102,241,.14);color:var(--lm-primary-deep);font-weight:600;}
+.lmStudentShell .lmSidebarFooter {margin-top:20px;padding-top:12px;border-top:1px solid var(--lm-border);}
+.lmStudentShell .lmStudentSidebar :focus-visible,.lmStudentHome :focus-visible,.lmStudentShell .lmHomeStatus :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+.lmStudentHome,.lmStudentShell .lmHomeStatus {font:14px/1.6 var(--lm-font);color:var(--lm-text);min-width:0;overflow-wrap:anywhere;}
+.lmStudentHome .lmWelcome {position:relative;border:1px solid var(--lm-border);border-radius:16px;padding:24px 28px;margin-bottom:20px;box-shadow:var(--lm-shadow);background:radial-gradient(180px circle at 100% 0,rgba(99,102,241,.1),transparent),var(--lm-card);}
+.lmStudentHome .lmWelcome h1 {font-size:22px;font-weight:700;margin:0 0 4px;line-height:1.4;}
+.lmStudentHome .lmWelcome p {font-size:13px;color:var(--lm-muted);margin:0;}
+.lmStudentHome .lmWelcomeStats {display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;}
+.lmStudentHome .lmWelcomeStats span {display:flex;align-items:center;gap:8px;color:var(--lm-muted);font-size:12px;}
+.lmStudentHome .lmWelcomeStats strong {color:var(--lm-primary-deep);font-size:22px;font-weight:700;}
+.lmStudentHome .lmHomeHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 20px;}
+.lmStudentHome .lmHomeHeading h2 {font:700 24px/1.4 var(--lm-serif);margin:0;}
+.lmStudentHome .lmCourseGrid {display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px;}
+.lmStudentHome .lmCourseCard {--lm-cover:var(--lm-grad);display:flex;flex-direction:column;padding:18px;background:var(--lm-card);border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);transition:transform .18s,box-shadow .18s,border-color .18s;min-width:0;}
+.lmStudentHome .lmCourseCard:hover {transform:translateY(-3px);box-shadow:var(--lm-shadow-hover);border-color:var(--lm-border-hover);}
+.lmStudentHome .lmCover-algebra {--lm-cover:linear-gradient(135deg,#06b6d4,#3b82f6);}
+.lmStudentHome .lmCover-physics {--lm-cover:linear-gradient(135deg,#8b5cf6,#ec4899);}
+.lmStudentHome .lmCover-topology {--lm-cover:linear-gradient(135deg,#6366f1,#8b5cf6);}
+.lmStudentHome .lmCover-ode {--lm-cover:linear-gradient(135deg,#10b981,#06b6d4);}
+.lmStudentHome .lmCover-python {--lm-cover:linear-gradient(135deg,#f97316,#ef4444);}
+.lmStudentHome .lmCover-circuits {--lm-cover:linear-gradient(135deg,#f59e0b,#f97316);}
+.lmStudentHome .lmCover-psychology {--lm-cover:linear-gradient(135deg,#ec4899,#8b5cf6);}
+.lmStudentHome .lmCover-english {--lm-cover:linear-gradient(135deg,#3b82f6,#8b5cf6);}
+.lmStudentHome .lmCourseIcon {width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:var(--lm-cover);color:#fff;font:700 20px var(--lm-serif);margin-bottom:12px;}
+.lmStudentHome .lmCourseCard h3 {font-size:15px;font-weight:600;margin:0 0 12px;}
+.lmStudentHome .lmCourseAction {display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:10px;border-top:1px solid var(--lm-border);color:var(--lm-primary-deep);font-size:12px;}
+.lmStudentHome .lmCourseAction .lmIcon {width:16px;height:16px;}
+.lmStudentHome .lmHomeColumns {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.lmStudentHome .lmHomeCard {background:var(--lm-card);border:1px solid var(--lm-border);border-radius:14px;padding:20px;box-shadow:var(--lm-shadow);min-width:0;}
+.lmStudentHome .lmHomeCardHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.lmStudentHome .lmHomeCardHeading h2 {display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;margin:0;}
+.lmStudentHome .lmHomeCardHeading .lmIcon {width:17px;height:17px;color:var(--lm-primary-deep);}
+.lmStudentHome .lmHomeCardHeading a {display:inline-flex;align-items:center;min-height:44px;color:var(--lm-primary-deep);font-size:12px;}
+.lmStudentHome .lmHomeworkLink,.lmStudentHome .lmRecentLink {display:flex;align-items:center;gap:12px;padding:10px 0;min-height:44px;border-bottom:1px solid var(--lm-border);font-size:13px;}
+.lmStudentHome .lmHomeworkLink:last-child,.lmStudentHome .lmRecentLink:last-child {border-bottom:0;}
+.lmStudentHome .lmHomeworkLink > span:nth-child(2),.lmStudentHome .lmRecentLink > span:nth-child(2) {flex:1;min-width:0;}
+.lmStudentHome .lmHomeworkLink strong {display:block;font-weight:500;}
+.lmStudentHome .lmHomeworkLink small {display:block;color:var(--lm-muted);font-size:12px;margin-top:3px;}
+.lmStudentHome .lmHomeworkDot {width:8px;height:8px;border-radius:50%;background:#f59e0b;flex:none;}
+.lmStudentHome .lmRecentIcon {display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,.14);color:var(--lm-primary-deep);flex:none;}
+.lmStudentHome .lmRecentIcon .lmIcon {width:15px;height:15px;}
+.lmStudentHome .lmHomeworkLink > .lmIcon,.lmStudentHome .lmRecentLink > .lmIcon {width:16px;height:16px;flex:none;color:var(--lm-muted);}
+.lmStudentHome .lmHomeEmpty {padding:20px;color:var(--lm-muted);font-size:13px;text-align:center;background:#f8fafc;border:1px dashed var(--lm-border);border-radius:10px;}
+.lmStudentHome .lmSrOnly {position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap;}
+/* Real local schedule: keep import/settings/data; only scope its presentation here. */
+.lmStudentHome .lmHomeSchedule {min-width:0;margin-bottom:20px;}
+.lmStudentHome .zjuSchedule {padding:20px;background:var(--lm-card);border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);}
+.lmStudentHome .zjuScheduleHero {padding:0;border:0;border-radius:0;background:transparent;align-items:center;gap:16px;}
+.lmStudentHome .zjuScheduleHero h2 {font-size:15px;font-weight:600;letter-spacing:0;margin:0;}
+.lmStudentHome .zjuScheduleHero p {font-size:12px;margin:4px 0 0;color:var(--lm-muted);}
+.lmStudentHome .zjuScheduleActions {display:flex;flex-wrap:wrap;min-width:0;gap:8px;}
+.lmStudentHome .zjuScheduleActions button,.lmStudentHome .zjuScheduleMeta button {height:auto;min-height:44px;font-size:12px;border:1px solid var(--lm-border);border-radius:9px;}
+.lmStudentHome .zjuScheduleActions .zjuConnectButton {background:var(--lm-primary-deep);color:#fff;border-color:var(--lm-primary-deep);box-shadow:0 2px 12px rgba(99,102,241,.2);}
+.lmStudentHome .zjuPrivacyRail {display:none;}
+.lmStudentHome .zjuScheduleMeta {margin:16px 0 14px;background:#f8fafc;border-color:var(--lm-border);border-radius:10px;}
+.lmStudentHome .zjuScheduleMeta > div {background:#f8fafc;min-width:0;padding:10px 12px;}
+.lmStudentHome .zjuScheduleMeta strong {font-size:12px;overflow-wrap:anywhere;}
+.lmStudentHome .zjuWeekGrid {display:grid;grid-template-columns:repeat(7,minmax(116px,1fr));gap:8px;max-width:100%;overflow-x:auto;padding:3px 3px 8px;}
+.lmStudentHome .zjuDayColumn {min-width:0;padding:12px;border:1px solid var(--lm-border);border-radius:10px;background:#fff;box-shadow:var(--lm-shadow);}
+.lmStudentHome .zjuDayColumn h3 {font-size:12px;color:var(--lm-muted);margin-bottom:8px;}
+.lmStudentHome .zjuCourseSlip {padding:8px;background:rgba(99,102,241,.08);border:0;border-radius:6px;}
+.lmStudentHome .zjuCourseSlip h4 {font-size:12px;color:var(--lm-primary-deep);}
+.lmStudentHome .zjuCourseSlip p,.lmStudentHome .zjuCourseSlip span,.lmStudentHome .zjuCoursePeriods {font-size:11px;color:var(--lm-muted);}
+.lmStudentHome .zjuScheduleEmpty {min-height:0;padding:24px 16px;margin-top:16px;background:#f8fafc;border-color:var(--lm-border);border-radius:10px;}
+.lmStudentHome .zjuEmptyWeek {display:none;}
+.lmStudentHome .zjuScheduleEmpty h3 {font-size:16px;margin:0 0 10px;}
+.lmStudentHome .zjuScheduleEmpty p {font-size:13px;}
+.lmStudentShell .lmHomeStatus {padding:24px;border:1px solid var(--lm-border);border-radius:14px;background:var(--lm-card);box-shadow:var(--lm-shadow);}
+.lmStudentShell .lmHomeStatus h1 {font-size:22px;}
+.lmStudentShell .lmHomeStatusError {border-left:4px solid var(--lm-danger);}
+.lmStudentShell .lmHomeStatusError p {color:#be123c;}
+.lmStudentShell .lmHomeStatus button,.lmStudentShell .lmHomeStatus a {display:inline-flex;align-items:center;min-height:44px;margin-right:12px;}
+.lmStudentShell .lmHomeSkeleton {height:100px;margin:20px 0;border-radius:14px;background:rgba(99,102,241,.2);animation:lm-pulse 1.5s ease-in-out infinite alternate;}
+@keyframes lm-pulse {to{opacity:.4;}}
+@media(max-width:900px) {
+ .portal.lmStudentShell {grid-template-columns:60px minmax(0,1fr);}
+ .lmStudentShell .lmStudentSidebar {width:60px;padding:14px 7px;}
+ .lmStudentShell .lmStudentLogo {padding:8px 5px 20px;}
+ .lmStudentShell .lmSidebarLabel {display:none;}
+ .lmStudentShell .lmStudentSidebar nav a,.lmStudentShell .lmSidebarFooter a,.lmStudentShell .lmSidebarFooter button {justify-content:center;padding:10px;min-width:44px;}
+ .lmHomeShell > .portalWorkspace > .portalContent {padding:20px 16px;}
+ .lmStudentHome .lmHomeColumns {grid-template-columns:minmax(0,1fr);}
+ .lmStudentHome .zjuScheduleHero {align-items:flex-start;flex-direction:column;}
+}
+@media(max-width:540px) {
+ .lmHomeShell > .portalWorkspace > .portalContent {padding:16px;}
+ .lmStudentHome .lmWelcome {padding:20px;}
+ .lmStudentHome .lmWelcome h1 {font-size:20px;}
+ .lmStudentHome .lmWelcomeStats {gap:12px;}
+ .lmStudentHome .lmCourseGrid {grid-template-columns:minmax(0,1fr);}
+ .lmStudentHome .lmHomeCard,.lmStudentHome .zjuSchedule {padding:16px;}
+ .lmStudentHome .zjuScheduleActions {flex-direction:column;width:100%;}
+ .lmStudentHome .zjuScheduleMeta {grid-template-columns:minmax(0,1fr);}
+ .lmStudentHome .zjuScheduleMeta > div:first-child,.lmStudentHome .zjuScheduleMeta button {grid-column:auto;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .lmStudentShell .lmStudentSidebar a,.lmStudentShell .lmSidebarFooter button,.lmStudentHome .lmCourseCard {transition:none;}
+ .lmStudentHome .lmCourseCard:hover {transform:none;}
+ .lmStudentShell .lmHomeSkeleton {animation:none;}
+}
+
+.portal.lmStudentShell .lmCourseCard .lmCourseIntro {font-size:12px;line-height:1.6;color:var(--lm-muted);margin:4px 0 12px;}

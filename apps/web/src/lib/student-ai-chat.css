@@ -1,0 +1,44 @@
+/* AI direct-answer chat only; no course hints, assessment or assignment styling. */
+.portal .lmAIChat {max-width:none;color:var(--lm-text);font:14px/1.6 system-ui,sans-serif;}
+.portal .lmAIChat .pageHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px;}
+.portal .lmAIChat h1 {font:700 24px/1.4 var(--lm-serif);}
+.portal .lmAIChat .pageHeading p {font-size:13px;color:var(--lm-muted);margin:2px 0 0;}
+.portal .lmAIChat button,.portal .lmAIChat .aiFile {display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:9px;color:var(--lm-muted);border-color:var(--lm-border);font-size:13px;}
+.portal .lmAIChat .lmIcon {width:17px;height:17px;flex:none;}
+.portal .lmAIChat .aiTabs {padding:4px;margin-bottom:16px;gap:4px;background:#f1f5f9;border:1px solid var(--lm-border);border-radius:10px;}
+.portal .lmAIChat .aiTabs a {padding:8px 14px;font-size:13px;min-height:40px;}
+.portal .lmAIChat .aiTabs a[aria-current] {background:white;color:var(--lm-primary-deep);box-shadow:var(--lm-shadow);}
+.portal .lmAIChat .aiChatLayout {position:relative;display:block;background:transparent;border:0;overflow:visible;}
+.portal .lmAIChat .aiHistory {display:none;}
+.portal .lmAIChat .aiHistory.isOpen {display:block;position:absolute;right:0;top:0;width:min(320px,100%);max-height:520px;z-index:5;background:white;border:1px solid var(--lm-border);border-radius:12px;box-shadow:var(--lm-shadow-hover);}
+.portal .lmAIChat .aiHistoryRow button:first-child {justify-content:flex-start;white-space:normal;overflow-wrap:anywhere;}
+.portal .lmAIChat .aiChat {height:auto;max-height:none;min-height:calc(100dvh - 196px);}
+.portal .lmAIChat .aiMessages {padding:4px 4px 20px;overflow:visible;min-width:0;}
+.portal .lmAIChat .aiMessages article {display:flex;flex-direction:column;gap:16px;margin-bottom:16px;background:transparent;border:0;box-shadow:none;border-radius:0;padding:0;}
+.portal .lmAIChat .lmAIMessage {display:flex;gap:10px;max-width:85%;min-width:0;}
+.portal .lmAIChat .lmAIMe {align-self:flex-end;flex-direction:row-reverse;}
+.portal .lmAIChat .lmAIAvatar {display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:9px;background:#e2e8f0;color:var(--lm-muted);}
+.portal .lmAIChat .lmAIBot {background:var(--lm-grad);color:white;box-shadow:0 2px 8px rgba(99,102,241,.3);}
+.portal .lmAIChat .lmAIMessageBody {min-width:0;}
+.portal .lmAIChat .lmAIName {font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:3px;}
+.portal .lmAIChat .lmAIMe .lmAIName {text-align:right;}
+.portal .lmAIChat .aiQuestion,.portal .lmAIChat .aiAnswer {margin:0;padding:12px 16px;background:white;border:1px solid var(--lm-border);border-radius:4px 12px 12px 12px;box-shadow:var(--lm-shadow);overflow-wrap:anywhere;min-width:0;}
+.portal .lmAIChat .aiQuestion {background:#eef2ff;border-color:#c7d2fe;border-radius:12px 4px 12px 12px;box-shadow:none;}
+.portal .lmAIChat .aiMessages p {font-size:13.5px;line-height:1.7;margin:0 0 8px;}
+.portal .lmAIChat .aiAnswer strong {color:#4338ca;}
+.portal .lmAIChat .aiAnswer > button {border:0;font-size:11px;padding:4px 9px;min-height:32px;}
+.portal .lmAIChat .aiAnswer details {margin:10px 0 0;border:0;padding:0;}
+.portal .lmAIChat .aiAnswer summary {font-size:12px;color:var(--lm-primary-deep);}
+.portal .lmAIChat .katex-display {overflow-x:auto;overflow-y:hidden;max-width:100%;}
+.portal .lmAIChat .aiEmpty {padding:60px 0;color:var(--lm-muted);}
+.portal .lmAIChat .aiEmpty h2 {font-size:20px;}
+.portal .lmAIChat .aiComposer {margin:0;border-top:1px solid var(--lm-border);padding-top:12px;}
+.portal .lmAIChat .aiComposer textarea {min-height:64px;max-height:160px;font-size:14px;border:1.5px solid var(--lm-border);border-radius:11px;}
+.portal .lmAIChat .aiComposer .aiActions {margin-top:8px;gap:8px;}
+.portal .lmAIChat .aiPrimary {background:var(--lm-grad)!important;border:0;box-shadow:0 2px 8px rgba(99,102,241,.3);}
+.portal .lmAIChat .aiPrivacy {font-size:11px;margin:8px 0 0;color:var(--lm-muted);}
+.portal .lmAIChat .aiAttachment {padding:12px;background:white;border:1px solid var(--lm-border);border-radius:10px;}
+.portal .lmAIChat .aiNoteEditor {background:white;border-color:var(--lm-border);}
+.portal .lmAIChat :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+@media(max-width:680px){.portal .lmAIChat .pageHeading {align-items:flex-start;}.portal .lmAIChat .pageHeading button {font-size:12px;flex:none;padding:8px;}.portal .lmAIChat .lmAIMessage {max-width:100%;gap:7px;}.portal .lmAIChat .lmAIAvatar {width:26px;height:26px;}.portal .lmAIChat .aiQuestion,.portal .lmAIChat .aiAnswer {padding:10px 12px;}.portal .lmAIChat .aiComposer textarea {font-size:16px;}.portal .lmAIChat .aiFile {padding:8px;}.portal .lmAIChat .aiAnswer>button {min-height:44px;}}
+@media(prefers-reduced-motion:reduce){.portal .lmAIChat button,.portal .lmAIChat textarea {transition:none;}}

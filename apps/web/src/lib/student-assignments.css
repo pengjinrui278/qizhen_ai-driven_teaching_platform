@@ -1,0 +1,60 @@
+/* Explicit opt-in from the student assignments branch of Pilot. */
+.portal.lmStudentShell .lmStudentAssignments {min-width:0;overflow-wrap:anywhere;}
+.portal.lmStudentShell .lmStudentAssignments .pageHeading h1 {font:700 24px/1.4 var(--lm-serif);}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment {max-width:600px;align-items:flex-end;padding:16px;background:white;border:1px solid var(--lm-border);border-radius:12px;box-shadow:var(--lm-shadow);}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment label {flex:1;min-width:0;}
+.portal.lmStudentShell .lmStudentAssignments button {min-height:44px;}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment button,.portal.lmStudentShell .lmStudentAssignments button.primary {background:var(--lm-primary-deep);border-color:var(--lm-primary-deep);color:#fff;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards {gap:10px;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards > .pilotCard {padding:20px;background:white;border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);margin:0;}
+.portal.lmStudentShell .lmStudentAssignments .panelHeading {align-items:flex-start;gap:12px;}
+.portal.lmStudentShell .lmStudentAssignments .panelHeading h2 {display:flex;align-items:center;gap:14px;font-size:15px;font-weight:600;min-width:0;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentIcon {display:grid;place-items:center;flex:none;width:44px;height:44px;background:#eef2ff;color:var(--lm-primary-deep);border-radius:11px;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards p {font-size:13px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmStudentAssignments .statusTag {flex:none;white-space:nowrap;font-size:11px;}
+.portal.lmStudentShell .lmStudentAssignments .statusTag.ready {background:#eef2ff;color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmStudentAssignments .pilotForm {padding:16px;background:#f8fafc;border:1px solid var(--lm-border);border-radius:10px;margin-top:16px;}
+.portal.lmStudentShell .lmStudentAssignments .pilotForm textarea {line-height:1.7;}
+.portal.lmStudentShell .lmStudentAssignments input:focus,.portal.lmStudentShell .lmStudentAssignments textarea:focus {border-color:var(--lm-primary);box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+.portal.lmStudentShell .lmStudentAssignments .portalError {display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-left:4px solid var(--lm-danger);}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentsEmpty,.portal.lmStudentShell .lmStudentAssignments .lmAssignmentsLoading {background:#fff;border:1px dashed var(--lm-border);padding:24px;border-radius:14px;text-align:center;}
+.portal.lmStudentShell .lmStudentAssignments :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+@media(max-width:540px) {
+ .portal.lmStudentShell .lmStudentAssignments .joinAssignment {flex-wrap:wrap;gap:10px;}
+ .portal.lmStudentShell .lmStudentAssignments .joinAssignment label {width:100%;flex-basis:100%;}
+ .portal.lmStudentShell .lmStudentAssignments .panelHeading {flex-wrap:wrap;}
+ .portal.lmStudentShell .lmStudentAssignments .assignmentCards > .pilotCard {padding:16px;}
+ .portal.lmStudentShell .lmStudentAssignments .pilotForm {padding:12px;}
+ .portal.lmStudentShell .lmStudentAssignments .photoActions {flex-wrap:wrap;}
+ .portal.lmStudentShell .lmStudentAssignments .photoPreview {grid-template-columns:minmax(0,1fr);}
+}
+@media(prefers-reduced-motion:reduce) {.portal.lmStudentShell .lmStudentAssignments button {transition:none;}}
+
+/* B-reference visual correction. */
+
+.portal.lmStudentShell .lmStudentAssignments {position:relative;}
+.portal.lmStudentShell .lmStudentAssignments .pageHeading {display:block;margin:0 0 24px;padding:0;}
+.portal.lmStudentShell .lmStudentAssignments .pageHeading h1 {margin:0;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentsSubtitle {margin:2px 0 0;font-size:13px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment {margin:0 0 16px;max-width:420px;box-shadow:none;padding:0;background:transparent;border:0;gap:8px;}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment label {display:flex;align-items:center;gap:8px;flex-direction:row;white-space:nowrap;font-size:12px;}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment input {background:white;min-width:0;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards > .pilotCard {display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;row-gap:4px;padding:16px 20px;border-radius:12px;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards .panelHeading {display:contents;}
+.portal.lmStudentShell .lmStudentAssignments .panelHeading h2 {font-size:14px;margin:0;grid-column:1;grid-row:1;position:relative;padding-left:58px;min-height:24px;align-items:center;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentIcon {position:absolute;left:0;top:0;width:42px;height:42px;border-radius:10px;}
+.portal.lmStudentShell .lmStudentAssignments .statusTag {grid-column:2;grid-row:1;align-self:center;justify-self:end;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentDeadline {grid-column:1;grid-row:2;margin:0 0 0 58px;font-size:12px;color:#94a3b8;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentRequirements {grid-column:1;grid-row:3;margin:0 0 0 58px;padding:0;border:0;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentRequirements summary {min-height:28px;padding:0;font-size:12px;color:var(--lm-muted);font-weight:400;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards > .pilotCard > button {grid-column:2;grid-row:2/4;align-self:center;font-size:12px;padding:6px 12px;border-color:var(--lm-border);color:var(--lm-primary-deep);}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards .pilotForm {grid-column:1/-1;}
+@media(max-width:540px){
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment {flex-wrap:nowrap;}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment label {flex-basis:auto;width:auto;}
+.portal.lmStudentShell .lmStudentAssignments .joinAssignment button {white-space:nowrap;padding:6px 10px;}
+.portal.lmStudentShell .lmStudentAssignments .assignmentCards > .pilotCard {padding:16px;column-gap:8px;}
+.portal.lmStudentShell .lmStudentAssignments .panelHeading h2 {padding-left:0;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentIcon {display:none;}
+.portal.lmStudentShell .lmStudentAssignments .lmAssignmentDeadline,.portal.lmStudentShell .lmStudentAssignments .lmAssignmentRequirements {margin-left:0;}
+}

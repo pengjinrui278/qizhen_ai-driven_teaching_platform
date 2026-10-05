@@ -1,0 +1,11 @@
+/* UI-B1 tokens are opt-in: do not override Portal/Pilot's existing variables. */
+.lmStudentShell {
+  --lm-bg:#eef2f7; --lm-card:#fff; --lm-border:#e2e8f0; --lm-border-hover:#a5b4fc;
+  --lm-primary:#6366f1; --lm-cyan:#06b6d4; --lm-primary-deep:#4f46e5;
+  --lm-text:#0f172a; --lm-muted:#64748b; --lm-danger:#f43f5e;
+  --lm-grad:linear-gradient(135deg,#6366f1,#06b6d4);
+  --lm-shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+  --lm-shadow-hover:0 8px 24px rgba(15,23,42,.1);
+  --lm-font:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;
+  --lm-serif:"Noto Serif SC","Songti SC",SimSun,serif;
+}

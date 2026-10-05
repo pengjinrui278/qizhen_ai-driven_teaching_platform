@@ -1,0 +1,53 @@
+.portal.lmStudentShell .lmStudentPrivacy {min-width:0;overflow-wrap:anywhere;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyHeading {margin-bottom:20px;}
+.portal.lmStudentShell .lmStudentPrivacy h1 {font:700 24px/1.4 var(--lm-serif);}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyHeading p {font-size:13px;color:var(--lm-muted);}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyCard {padding:20px;background:white;border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);margin-bottom:16px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyCardTitle {display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyIcon {width:38px;height:38px;display:grid;place-items:center;flex:none;background:#eef2ff;color:var(--lm-primary-deep);border-radius:10px;}
+.portal.lmStudentShell .lmStudentPrivacy h2 {font-size:15px;font-weight:600;margin:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyCardTitle p {font-size:12px;color:var(--lm-muted);margin:4px 0 0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyForm {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:760px;align-items:end;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyForm button {grid-column:1/-1;justify-self:start;}
+.portal.lmStudentShell .lmStudentPrivacy button {display:inline-flex;align-items:center;gap:6px;min-height:44px;border-radius:9px;}
+.portal.lmStudentShell .lmStudentPrivacy button .lmIcon {width:16px;height:16px;}
+.portal.lmStudentShell .lmStudentPrivacy button.primary {background:var(--lm-primary-deep);border-color:var(--lm-primary-deep);color:white;}
+.portal.lmStudentShell .lmStudentPrivacy input,.portal.lmStudentShell .lmStudentPrivacy select {min-height:44px;border-color:var(--lm-border);}
+.portal.lmStudentShell .lmStudentPrivacy input:focus,.portal.lmStudentShell .lmStudentPrivacy select:focus {border-color:var(--lm-primary);box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+.portal.lmStudentShell .lmStudentPrivacy details {margin:0;}
+.portal.lmStudentShell .lmStudentPrivacy summary {min-height:44px;font-weight:600;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyDanger {border-left:4px solid var(--lm-danger);}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyDanger button {color:#be123c;border-color:#fecdd3;background:#fff1f2;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyPending,.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyMissing {padding:12px 16px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;color:var(--lm-primary-deep);font-size:13px;}
+.portal.lmStudentShell .lmStudentPrivacy :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
+@media(max-width:540px) {
+ .portal.lmStudentShell .lmStudentPrivacy .lmPrivacyCard {padding:16px;}
+ .portal.lmStudentShell .lmStudentPrivacy .lmPrivacyForm {grid-template-columns:minmax(0,1fr);}
+}
+@media(prefers-reduced-motion:reduce) {.portal.lmStudentShell .lmStudentPrivacy button {transition:none;}}
+
+/* B-reference visual correction. */
+
+.portal.lmStudentShell .lmStudentPrivacy h1 {margin:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyHeading p {margin:2px 0 0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacySectionTitle {display:flex;align-items:center;gap:8px;font-size:15px;margin:0 0 14px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacySectionTitle > .lmIcon {width:18px;height:18px;color:var(--lm-primary);}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow {display:flex;flex-direction:row;align-items:center;gap:14px;padding:16px 20px;border:1px solid var(--lm-border);border-radius:11px;background:white;box-shadow:var(--lm-shadow);margin:0 0 10px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow:last-child {margin-bottom:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow h3,.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyFieldText {font-size:13.5px;font-weight:600;margin:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow p,.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow small {display:block;font-size:12px;color:var(--lm-muted);font-weight:400;margin:2px 0 0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyForm {display:flex;flex-direction:column;gap:0;max-width:none;align-items:stretch;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyForm > button {align-self:flex-start;margin-top:12px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyFieldText {flex:1;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow input,.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow select {width:170px;flex:none;font-size:12px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyManagement {display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyManagement details {border:0;padding:0;flex:1;min-width:230px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyManagement summary {width:fit-content;border:1px solid #fecdd3;color:#be123c;font-size:13px;border-radius:9px;padding:9px 14px;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyManagement .lmPrivacyForm {max-width:500px;gap:8px;}
+@media(max-width:540px){
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow {padding:12px;gap:10px;flex-wrap:wrap;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow > div {flex:1;min-width:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyFieldText {min-width:0;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow input,.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyRow select {width:100%;}
+.portal.lmStudentShell .lmStudentPrivacy .lmPrivacyManagement details {min-width:0;flex-basis:100%;}
+}
