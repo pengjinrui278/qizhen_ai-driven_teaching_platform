@@ -274,6 +274,7 @@ class OpenAICompatibleModel:
 
         deep = context.course_id != "ai_literacy" and self.deep_max_tokens is not None and (
             context.interaction_mode in ("full_solution", "solution_review")
+            or context.hint_level == MAX_HINT_LEVEL
             or any(word in (context.message or "") for word in ("详细证明", "深入推导", "难题", "充分思考")))
         payload={
                 "model": self.model,
