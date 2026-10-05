@@ -13,13 +13,15 @@
 from __future__ import annotations
 
 import re
-import uuid
 import threading
+import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .agent_policy import POLICY_VERSION, THREE_LEVEL_POLICY_VERSIONS
+from .context_budget import bounded_context
 from .domain import (
     CourseCitation,
     CourseMirrorRequest,
@@ -30,15 +32,12 @@ from .domain import (
     LearningEvidenceDraft,
 )
 from .llm import LanguageModel, MirrorContext
-from .agent_policy import POLICY_VERSION
-from .context_budget import bounded_context
 from .models import (
     AssignmentWorkspace,
     Course,
     CourseProfileRow,
     LearningEvidenceRow,
     MirrorEvent,
-    ProblemHint,
 )
 from .retrieval import (
     course_pack_ids,
@@ -49,9 +48,10 @@ from .retrieval import (
     search_knowledge,
     search_textbook_chunks,
 )
+from .retrieval_terms import concept_groups
+from .teaching_scaffold import MAX_HINT_LEVEL
 
-HINT_MODES = (InteractionMode.FIRST_HINT, InteractionMode.NEXT_HINT)
-MAX_HINT_LEVEL = 7
+HINT_MODES = (InteractionMode.FIRST_HINT, InteractionMode.NEXT_HINT, InteractionMode.FULL_SOLUTION)
 _LOCKS = [threading.RLock() for _ in range(64)]
 
 
@@ -113,7 +113,11 @@ class MirrorPipeline:
                 uncertainty.append("命中的题目授权范围不允许运行时使用，已按未命中处理。")
                 problem = None
 
-        retrieval_query=(request.message+" "+(request.problem.text or ""))[:2200]
+        retrieval_text = request.message + " " + (request.problem.text or "")
+        # Extract known concepts before clipping: a long introduction must not
+        # hide the actual question at the end of an otherwise valid request.
+        concepts = " ".join(group[0] for group in concept_groups(retrieval_text))
+        retrieval_query = (concepts + " " + retrieval_text).strip()[:2200]
         if problem is not None and request.interaction_mode is not InteractionMode.CHAT:
             knowledge = [node for node in knowledge_for_problem(session, problem) if rag_allowed(node)]
         else:
@@ -133,19 +137,8 @@ class MirrorPipeline:
 
         dynamic_hints = bool(getattr(self.model, "dynamic_hints", False)) and request.course_id != "ai_literacy"
         hints: list[dict] = []
-        if problem is not None and not dynamic_hints:
-            hint_rows = session.execute(
-                select(ProblemHint)
-                .where(
-                    ProblemHint.coursepack_id == problem.coursepack_id,
-                    ProblemHint.problem_id == problem.problem_id,
-                )
-                .order_by(ProblemHint.level)
-            ).scalars()
-            hints = [
-                {"level": row.level, "type": row.hint_type, "content": row.content}
-                for row in hint_rows
-            ]
+        # Unversioned CoursePack ladders remain stored as historical materials;
+        # they cannot be relabelled as the new three-level teaching scale.
 
         context = MirrorContext(
             course_id=request.course_id,
@@ -204,7 +197,7 @@ class MirrorPipeline:
             for chunk in chunks
         ]
 
-        harness = self._run_harness(profile.harnesses, request, problem, answer, citations)
+        harness = self._run_harness(profile.harnesses, request, problem, answer, citations, hint_level)
         if harness.status == "failed":
             answer = "这次生成的内容没有通过检查，已停止展示。请换一种问法，或请教师/TA核对。"
             uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
@@ -224,6 +217,8 @@ class MirrorPipeline:
             model=self.model.name,
             decision={
                 "policy_version": POLICY_VERSION,
+                "hint_scale_version": "course-hints-v1-three",
+                "hint_max_level": 3,
                 "context": request.student_context.model_dump(),
                 "attempt_id": request.attempt_id,
                 "coursepack": problem.coursepack_id if problem else None,
@@ -282,7 +277,7 @@ class MirrorPipeline:
 
     def _decide_hint_level(self, session, request, problem) -> tuple[int | None, bool]:
         """返回 (本次提示级别, 提示阶梯是否已用完)。"""
-        if request.interaction_mode not in HINT_MODES:
+        if request.course_id == "ai_literacy" or request.interaction_mode not in HINT_MODES:
             return None, False
         past = session.execute(
             select(MirrorEvent).where(
@@ -295,45 +290,39 @@ class MirrorPipeline:
         ).scalars().all()
         past_max = max((row.hint_level or 0 for row in past
                         if row.request_payload.get("attempt_id") == request.attempt_id
+                        and row.response_json.get("decision", {}).get("policy_version") in THREE_LEVEL_POLICY_VERSIONS
+                        and row.hint_level in (1, 2, 3)
                         and row.response_json.get("harness", {}).get("status") != "failed"), default=0)
-        if getattr(self.model, "dynamic_hints", False) and request.course_id != "ai_literacy":
-            if request.interaction_mode is InteractionMode.FIRST_HINT:
-                return max(1, past_max), past_max >= MAX_HINT_LEVEL
-            return min(past_max + 1, MAX_HINT_LEVEL), past_max >= MAX_HINT_LEVEL
+        if request.interaction_mode is InteractionMode.FULL_SOLUTION:
+            return MAX_HINT_LEVEL, past_max >= MAX_HINT_LEVEL
+        if past_max >= MAX_HINT_LEVEL:
+            return MAX_HINT_LEVEL, True
         if request.interaction_mode is InteractionMode.FIRST_HINT:
             return max(1, past_max), False
-        max_available = session.execute(
-            select(func.max(ProblemHint.level)).where(
-                ProblemHint.coursepack_id == problem.coursepack_id,
-                ProblemHint.problem_id == problem.problem_id,
-            )
-        ).scalar() if problem else MAX_HINT_LEVEL
-        cap = min(max_available or MAX_HINT_LEVEL, MAX_HINT_LEVEL)
-        if (past_max or 0) >= cap:
-            return cap, True
-        return min((past_max or 0) + 1, cap), False
+        return min(past_max + 1, MAX_HINT_LEVEL), False
 
     def _answer_type(self, request, problem, knowledge) -> str:
         if problem is not None or knowledge:
             return request.interaction_mode.value
         return "fallback_guidance"
 
-    def _run_harness(self, harness_names, request, problem, answer, citations) -> HarnessResult:
+    def _run_harness(self, harness_names, request, problem, answer, citations, hint_level=None) -> HarnessResult:
         checks: list[HarnessCheck] = []
 
         # 平台级安全栏：提示模式严禁泄露解法关键步骤（对所有课程生效）。
         if request.course_id != "ai_literacy" and problem is not None:
-            leaked_steps = [
-                step
-                for path in problem.solution_paths
-                for step in path.get("key_steps", [])
-                if isinstance(step, str) and len(step) > 4 and step in answer
-            ]
+            paths = [[step for step in path.get("key_steps", [])
+                      if isinstance(step, str) and len(step) > 4] for path in problem.solution_paths]
+            partial = any(step in answer for path in paths for step in path)
+            leaked = (any(path and all(step in answer for step in path) for path in paths)
+                      if hint_level in (2, 3) else partial)
             checks.append(
                 HarnessCheck(
                     name="answer_leakage",
-                    status="failed" if leaked_steps else "passed",
-                    detail="提示中泄露了解法关键步骤" if leaked_steps else "提示未泄露解法关键步骤",
+                    status="failed" if leaked else "uncertain" if partial else "passed",
+                    detail="命中完整参考关键步骤，已拦截" if leaked else
+                           "含必要中间步骤；字符串检查不能证明未代答，需人工审阅" if partial else
+                           "未命中参考关键步骤；不等于已验证全部教学正确性",
                 )
             )
 
@@ -343,8 +332,9 @@ class MirrorPipeline:
                 r"答案是\s*[：:]",
                 r"(?<!不)等于\s*[：:]",
                 r"(?<!不)为\s*[：:]",
-                r"[\d\s]+\s*[=＝]\s*[\d\s]+",
             ]
+            if hint_level == 1:
+                direct_answer_patterns.append(r"[\d\s]+\s*[=＝]\s*[\d\s]+")
             leaked = any(re.search(p, answer) for p in direct_answer_patterns)
             checks.append(
                 HarnessCheck(
@@ -388,6 +378,8 @@ class MirrorPipeline:
         return HarnessResult(status=overall, checks=checks)
 
     def _draft_evidence(self, request, problem, knowledge, hint_level=None, harness_status=None) -> list[LearningEvidenceDraft]:
+        if request.course_id == "ai_literacy":
+            return []
         now = datetime.now(UTC)
         drafts = [
             LearningEvidenceDraft(
@@ -415,7 +407,7 @@ class MirrorPipeline:
         if hint_level is not None:
             drafts.append(LearningEvidenceDraft(
                 event_type="hint_requested",
-                observation=f"本次请求第{hint_level}级提示；"
+                observation=f"本次请求三级教学策略第{hint_level}级提示（{POLICY_VERSION}）；"
                             + ("生成结果被拦截。" if harness_status == "failed" else "已返回提示。")
                             + "提示级别仅描述帮助强度，不代表能力或掌握程度。",
                 reasoning_stage=f"hint_{hint_level}",

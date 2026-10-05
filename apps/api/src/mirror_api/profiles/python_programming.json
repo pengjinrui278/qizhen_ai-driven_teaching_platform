@@ -1,0 +1,23 @@
+{
+  "course_id": "python_programming",
+  "display_name": "Python",
+  "mirror_name": "Python Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": [
+    "code_reading",
+    "debugging",
+    "testing",
+    "program_design"
+  ],
+  "capabilities": [
+    "progressive_hint",
+    "concept_explanation",
+    "solution_review"
+  ],
+  "harnesses": [],
+  "source_refs": [],
+  "metadata": {
+    "scope_status": "教材待补充；本轮教材处理暂停"
+  }
+}

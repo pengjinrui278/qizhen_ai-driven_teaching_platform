@@ -1,0 +1,23 @@
+{
+  "course_id": "college_english",
+  "display_name": "大学英语",
+  "mirror_name": "英语 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": [
+    "language_context",
+    "reading_evidence",
+    "writing_revision",
+    "communication"
+  ],
+  "capabilities": [
+    "progressive_hint",
+    "concept_explanation",
+    "solution_review"
+  ],
+  "harnesses": [],
+  "source_refs": [],
+  "metadata": {
+    "scope_status": "教材待补充；本轮教材处理暂停"
+  }
+}

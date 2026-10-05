@@ -1,7 +1,7 @@
 """模型网关。
 
-- ``StubMirrorModel``：确定性占位实现，直接用 CoursePack 中的提示阶梯/
-  解法路径组装回答。不需要任何密钥，保证离线可测、可演示；
+- ``StubMirrorModel``：确定性通用教学支架，不复用无版本的历史提示或完整解法。
+  不需要任何密钥，仅用于离线契约测试；
 - ``OpenAICompatibleModel``：国内通用大模型（DeepSeek、通义、GLM 等）
   的 OpenAI 兼容接口。真实接入只改配置，不改管线代码。
 
@@ -12,16 +12,20 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
-import httpx
-
-from .config import Settings
 from .agent_policy import teaching_policy
-from .teaching_scaffold import scaffold_policy
+from .config import Settings
 from .context_budget import bounded_context, fit_user_sections
 from .model_transport import complete
+from .teaching_scaffold import (
+    COURSE_HINT_SCAFFOLDS,
+    HINT_SCAFFOLDS,
+    MAX_HINT_LEVEL,
+    help_entry,
+    scaffold_policy,
+)
 
 
 @dataclass
@@ -61,23 +65,14 @@ class StubMirrorModel:
 
     def generate(self, context: MirrorContext) -> str:
         mode = context.interaction_mode
+        if context.course_id == "ai_literacy":
+            return self._concept(context) if context.knowledge else "离线模式没有可用资料；AI素养正常入口应直接解释，本次未调用模型。"
         if mode == "artifact_review":
             return "离线模式未执行数学批改。请人工逐行核对正式作品中的条件、量词和推导；当前不产生问题结论或能力判断。"
         if mode == "teacher_candidate_insight":
             return self._teacher_insight(context)
-        if mode in ("first_hint", "next_hint"):
-            hypotheses = context.student_context.get("relevant_hypotheses", [])
-            if hypotheses and not context.hints_exhausted:
-                focus = hypotheses[0]
-                if "条件" in focus:
-                    return "先列出准备使用的定理的条件，再逐条对照本题：哪一项还没有得到保证？"
-                if "量词" in focus:
-                    return "先写清谁先给定、谁可以依赖谁，再检查你选取的界是否对所有后续对象成立。"
-                if "构造" in focus:
-                    return "先不猜辅助对象的具体形式：为了调用目标定理，你希望这个对象满足什么性质？"
-            return self._hint(context)
-        if mode == "full_solution":
-            return self._solution(context)
+        if mode in ("first_hint", "next_hint", "full_solution"):
+            return self._hint(replace(context, hint_level=3) if mode == "full_solution" else context)
         if mode == "concept_explanation":
             return self._concept(context)
         if mode == "solution_review":
@@ -87,66 +82,39 @@ class StubMirrorModel:
         return "暂不支持该交互模式。"
 
     def _hint_ladder(self, context: MirrorContext) -> str:
-        knowledge = context.knowledge or []
-        titles = ", ".join(node.get("title", "") for node in knowledge[:2]) or "相关定义"
-        return json.dumps(
-            [
-                {
-                    "level": 1,
-                    "type": "direction",
-                    "content": f"先通读题目，把已知条件和要证/求的结论用式子写下来；可参考{titles}。",
-                },
-                {
-                    "level": 2,
-                    "type": "method",
-                    "content": "判断这道题属于哪种基本类型：计算、证明还是判断？列出可能用到的定理或公式名称。",
-                },
-                {
-                    "level": 3,
-                    "type": "subgoal",
-                    "content": "把原问题拆成两个更小的子问题：先处理最内层的运算或最基础的定义。",
-                },
-                {
-                    "level": 4,
-                    "type": "condition",
-                    "content": "检查题目中的特殊条件（如边界、定义域、零点、可逆性），它们通常是突破口。",
-                },
-                {
-                    "level": 5,
-                    "type": "verification",
-                    "content": "得到中间结果后，回代条件验证是否合理；再尝试把各步串成完整论证。",
-                },
-            ],
-            ensure_ascii=False,
-        )
+        scaffolds = COURSE_HINT_SCAFFOLDS.get(context.course_id, HINT_SCAFFOLDS)
+        return json.dumps([
+            {"level": i, "type": kind, "content": content}
+            for i, (kind, content) in enumerate(zip(
+                ("direction", "method", "verification"), scaffolds, strict=True), 1)
+        ], ensure_ascii=False)
 
     def _hint(self, context: MirrorContext) -> str:
-        if context.problem_statement is None:
-            return (
-                "我还没有在课程资料中定位到这道题。"
-                "先告诉我你卡在哪一步：是条件没看清，还是不知道从哪个定义入手？"
-            )
         if context.hints_exhausted:
-            return "这道题的提示阶梯已经用完。如果仍然卡住，可以请求完整思路，或先回顾相关定义。"
-        level = context.hint_level or 1
-        for step in context.hints:
-            if step.get("level") == level:
-                return f"提示（第 {level} 级）：{step['content']}"
-        if not context.hints:
-            guidance = [
-                "先写出已知条件和目标，找出最接近的定义。",
-                "准备使用哪个定理？逐项核对它需要的条件。",
-                "尝试把目标拆成一个更小的中间结论。",
-                "如果需要辅助对象，先列出希望它满足的性质。",
-                "核对边界情形、量词顺序和每一步的依赖。",
-                "把已确定的步骤连起来，标明仍未证明的一步。",
-                "离线模式只能提供通用引导；需要针对题目的完整回答请接入真实模型。",
-            ]
-            return f"离线通用提示（第{level}级）：{guidance[min(level,7)-1]}"
-        return "这道题暂时没有收录对应级别的提示。"
+            return "三级提示阶梯已经用完；可提交当前尝试以定位卡点，或回顾已给流程和验证方法。"
+        if context.problem_statement is None:
+            return "尚未提供题目。请补充已知、目标或当前卡点，再组织三级引导。"
+        level = max(1, min(context.hint_level or 1, MAX_HINT_LEVEL))
+        scaffolds = COURSE_HINT_SCAFFOLDS.get(context.course_id, HINT_SCAFFOLDS)
+        focus_note = ""
+        hypotheses = context.student_context.get("relevant_hypotheses", [])
+        if hypotheses:
+            focus = hypotheses[0]
+            if "条件" in focus:
+                focus_note = "若当前障碍涉及条件，可逐条对照适用要求。"
+            elif "量词" in focus:
+                focus_note = "若当前障碍涉及量词，可核对先后顺序与变量依赖。"
+            elif "构造" in focus:
+                focus_note = "若当前障碍涉及构造，可列出辅助对象所需性质。"
+            if focus_note:
+                focus_note += "这些观察可更正，不是能力判断。"
+        return (f"离线通用提示（第 {level} 级）："
+                + help_entry(context.message, context.history) + scaffolds[level - 1]
+                + focus_note
+                + " 这是通用流程，不表示已经完成本题求解或验证。")
 
     def _solution(self, context: MirrorContext) -> str:
-        return "我们先整理证明框架：写出已知条件、目标和已完成的步骤，再标出尚缺的关键推导。你想先检查哪一环？"
+        return self._hint(replace(context, hint_level=3))
 
     def _concept(self, context: MirrorContext) -> str:
         if not context.knowledge:
@@ -204,6 +172,14 @@ class OpenAICompatibleModel:
         self.name = f"openai_compatible:{model}"
 
     def generate(self, context: MirrorContext) -> str:
+        if context.course_id == "ai_literacy":
+            context = replace(context, hint_level=None, hints_exhausted=False, hints=[])
+        elif context.interaction_mode == "full_solution":
+            context = replace(context, hint_level=MAX_HINT_LEVEL)
+        elif context.interaction_mode not in ("first_hint", "next_hint"):
+            context = replace(context, hint_level=None, hints_exhausted=False)
+        elif context.hint_level is not None:
+            context = replace(context, hint_level=max(1, min(context.hint_level, MAX_HINT_LEVEL)))
         context = bounded_context(context)
         mode_rules = {
             "chat": (
@@ -220,17 +196,17 @@ class OpenAICompatibleModel:
                 "区分已发现的问题与证据不足；材料不足时不要编造题目。"
                 "不得判断学生能力、打分、宣称独立掌握。输出仅供TA和教师人工校准。"
             ),
-            "first_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
+            "first_hint": "按本轮三级教学等级解释；二级可给必要中间关系，三级连贯展示主要流程，不直接代交完整考核答案。",
             "next_hint": "本次是提示模式：严禁直接给出答案或完整步骤，只给对应级别的提示，保持最小有效提示原则。",
-            "full_solution": "学生请求梳理解题框架：整理已知与目标，保留关键推导空缺，不给完整解答或最终答案。",
+            "full_solution": "本次直接进入第3级：连贯展示大致解题流程、主要步骤、必要中间关系、条件检查和验证方法，可保留核心计算或论证；不代交完整考核答案。",
             "solution_review": "学生在请求解答自查：请依据常见错误清单指出需要核对的方向，不要直接重写完整解答。",
             "concept_explanation": "学生在问知识点：请依据课程知识准确讲解，如有常见误用一并提醒。",
             "hint_ladder_generation": (
                 "你正在为一道学生上传的错题生成提示阶梯。"
                 "输出必须是严格的 JSON 数组，数组元素为对象：{\"level\": int, \"type\": \"direction|method|subgoal|condition|verification\", \"content\": \"...\"}。"
                 "要求："
-                "1) 共 5 级提示，level 从 1 到 5；"
-                "2) 每级只给出引导性问题、子目标或可参考的定义/定理名称，严禁直接给出答案、数值结果或完整推导步骤；"
+                "1) 共 3 级提示，level 从 1 到 3；"
+                "2) 一级方向与概念，二级关键关系和必要中间步骤，三级连贯展示主要流程、条件与验证方法，保留核心计算或论证，不代交完整答案；"
                 "3) 内容用中文；"
                 "4) 只输出 JSON，不要 markdown 代码块，不要解释。"
             ),
@@ -243,19 +219,28 @@ class OpenAICompatibleModel:
                 "严禁输出参与码、学号、姓名等任何标识符。"
             ),
         }
+        if context.course_id in COURSE_HINT_SCAFFOLDS:
+            mode_rules.update(
+                chat="这是自然连续问答，结合近期对话优先回应本次真实意图：概念与日常交流可以直接解释，资料查询说明证据，"
+                     "复习提纲按已确认范围组织。练习求助从学生已有尝试继续，不代做考核任务。",
+
+            )
         if context.dynamic_hints:
             dynamic_rule = (
-                "根据本题、学生最新问题、近期对话和课程知识进行分析，给出此刻最有帮助的一条提示。"
+                "根据本题、学生最新问题、近期对话和课程知识，按本轮等级提供具体帮助。"
                 "不要播放预设提示；在本轮提示等级的帮助边界内，根据学生已经尝试的步骤调整切入点。"
-                "保持最小有效帮助，不直接给出完整答案；必要时先询问缺失条件。"
+                "第3级必须展示连贯主要流程和验证方法，不能仅给空泛定义或单个反问；不代交完整考核答案。"
             )
             mode_rules.update(first_hint=dynamic_rule, next_hint=dynamic_rule)
+        if context.course_id == "ai_literacy":
+            mode_rules = {context.interaction_mode: "直接清楚地回答，不使用课程提示阶梯或学习评估。"}
         system = (
             f"你是{context.course_name[:160]}的课程智能体（{context.mirror_name[:160]}）。"
             "规则：优先使用下面提供的课程材料；材料不足时如实说明。"
             + mode_rules.get(context.interaction_mode, "保持专业、克制的回答。")
             + teaching_policy(context.course_id, context.course_guidance)
             + scaffold_policy(context.course_id, context.hint_level)
+            + (help_entry(context.message, context.history) if context.hint_level else "")
         )
         user_lines = [f"交互模式：{context.interaction_mode}"]
         if context.hint_level:
@@ -267,8 +252,6 @@ class OpenAICompatibleModel:
             )
         if context.problem_statement:
             user_lines.append(f"题目：{context.problem_statement}")
-        if context.hints and not context.dynamic_hints:
-            user_lines.append(f"提示阶梯：{context.hints}")
         if context.knowledge:
             user_lines.append(f"可用课程知识：{context.knowledge}")
         if context.common_mistakes and context.interaction_mode == "solution_review":
@@ -296,7 +279,7 @@ class OpenAICompatibleModel:
                     {"role": "user", "content": fit_user_sections(user_lines)},
                 ],
             }
-        if self.base_url=="https://api.deepseek.com" and context.course_id!="ai_literacy":
+        if self.base_url in ("https://api.deepseek.com", "https://api.deepseek.com/v1") and context.course_id!="ai_literacy":
             payload.update(thinking={"type":"enabled"},reasoning_effort=self.reasoning_effort)
         return complete(self.base_url,self.api_key,payload,self.timeout)
 

@@ -6,9 +6,13 @@ from mirror_api.registry import load_course_profiles
 client = TestClient(app)
 
 
-def test_five_course_mirrors_are_registered() -> None:
+def test_existing_and_new_course_mirrors_are_registered() -> None:
     profiles = load_course_profiles()
-    assert len(profiles) == 6
+    assert set(profiles) == {
+        "mathematical_analysis", "linear_algebra_analytic_geometry", "university_physics",
+        "point_set_topology", "ordinary_differential_equations", "ai_literacy",
+        "python_programming", "electronic_circuits", "psychology_applications", "college_english",
+    }
     assert profiles["mathematical_analysis"].stage == "flagship"
     assert profiles["ai_literacy"].display_name == "AI 教学"
 
@@ -31,8 +35,13 @@ def test_preview_uses_unified_contract() -> None:
     assert payload["harness"]["status"] == "not_run"
 
 
-def test_every_profile_has_course_specific_harness() -> None:
+def test_profiles_only_declare_available_harnesses() -> None:
     for profile in load_course_profiles().values():
-        assert profile.harnesses
-        assert "learning_evidence" in profile.capabilities
-
+        assert profile.capabilities
+        if profile.course_id in {
+            "python_programming", "electronic_circuits", "psychology_applications", "college_english",
+        }:
+            assert profile.harnesses == []
+            assert profile.source_refs == []
+        else:
+            assert profile.harnesses  # Existing registrations, not proof of execution.

@@ -38,7 +38,7 @@ def test_hint_ladder_climbs_level_by_level(session):
     first = pipeline.handle(session, make_request("req-1", "first_hint", problem_id=PROBLEM_ID))
     assert first.hint_level == 1
     assert "第 1 级" in first.answer
-    assert "尝试用同一个足够靠后的数列项连接" in first.answer
+    assert "定义和量词" in first.answer
     assert {c.knowledge_id for c in first.citations} == {
         "concept_sequence_limit",
         "theorem_limit_uniqueness",
@@ -52,12 +52,15 @@ def test_hint_ladder_climbs_level_by_level(session):
 
     second = pipeline.handle(session, make_request("req-2", "next_hint", problem_id=PROBLEM_ID))
     assert second.hint_level == 2
-    assert "怎样让这个数列项同时足够接近" in second.answer
+    assert "中间命题" in second.answer
 
     # 提示阶梯用完后不再升级
     third = pipeline.handle(session, make_request("req-3", "next_hint", problem_id=PROBLEM_ID))
-    assert third.hint_level == 2
-    assert "提示阶梯已经用完" in third.answer
+    assert third.hint_level == 3 and not third.hints_exhausted
+    assert "流程" in third.answer
+    fourth = pipeline.handle(session, make_request("req-4", "next_hint", problem_id=PROBLEM_ID))
+    assert fourth.hint_level == 3 and fourth.hints_exhausted
+    assert "提示阶梯已经用完" in fourth.answer
 
 
 def test_no_hint_leakage_on_any_problem(session):

@@ -43,7 +43,7 @@ from .retrieval import (
 )
 
 _STUDENT_UPLOAD_PACK_PREFIX = "student-uploads-"
-_HINT_LADDER_SIZE = 5
+_HINT_LADDER_SIZE = 3
 
 
 class UploadError(Exception):
@@ -146,7 +146,7 @@ def generate_hint_ladder(
     course_name: str,
     mirror_name: str,
 ) -> list[ProblemHint]:
-    """为上传题生成 5 级不泄露答案的提示阶梯。"""
+    """为上传题生成三级教学提示，最后一级组织主要流程。"""
     # 已有提示则复用
     existing = session.execute(
         select(ProblemHint)
@@ -196,8 +196,7 @@ def generate_hint_ladder(
         ]
 
     result: list[ProblemHint] = []
-    for item in hints[:_HINT_LADDER_SIZE]:
-        level = int(item.get("level", len(result) + 1))
+    for level, item in enumerate(hints[:_HINT_LADDER_SIZE], start=1):
         result.append(
             ProblemHint(
                 coursepack_id=problem.coursepack_id,

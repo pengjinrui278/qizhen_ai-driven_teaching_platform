@@ -5,7 +5,7 @@ from mirror_api.teaching_scaffold import HINT_SCAFFOLDS, scaffold_policy
 
 
 @pytest.mark.parametrize("mode", ["chat", "first_hint", "next_hint", "full_solution"])
-@pytest.mark.parametrize("level", range(1, 8))
+@pytest.mark.parametrize("level", range(1, 4))
 def test_live_modes_preserve_guidance_and_level(monkeypatch, mode, level):
     captured = {}
 
@@ -22,8 +22,12 @@ def test_live_modes_preserve_guidance_and_level(monkeypatch, mode, level):
     ))
     system = captured["messages"][0]["content"]
     assert "不能直接交付完整答案" in system
-    assert HINT_SCAFFOLDS[level - 1] in system
-    assert f"第 {level} 级提示" in captured["messages"][1]["content"]
+    expected = None if mode == "chat" else 3 if mode == "full_solution" else level
+    if expected is None:
+        assert "本轮提示等级" not in system
+    else:
+        assert HINT_SCAFFOLDS[expected - 1] in system
+        assert f"第 {expected} 级提示" in captured["messages"][1]["content"]
     assert "PRIVATE_COMPLETE_SOLUTION" not in str(captured)
     assert "完全不会" in system and "卡住" in system
     assert "不编造引文或出处" in system
@@ -32,10 +36,11 @@ def test_live_modes_preserve_guidance_and_level(monkeypatch, mode, level):
 def test_offline_full_solution_cannot_disclose_key_steps():
     answer = StubMirrorModel().generate(MirrorContext(
         course_name="数分", mirror_name="数分", interaction_mode="full_solution",
+        problem_statement="合成证明题",
         solution_paths=[{"key_steps": ["PRIVATE_COMPLETE_SOLUTION"]}],
     ))
     assert "PRIVATE_COMPLETE_SOLUTION" not in answer
-    assert "框架" in answer
+    assert "流程" in answer
 
 
 def test_ai_literacy_keeps_direct_answer_boundary():
@@ -64,11 +69,11 @@ def test_dynamic_hint_progression_cap_and_attempt_isolation(session):
             interaction_mode=mode, attempt_id=attempt, participant_code=participant,
         ))
 
-    for level in range(1, 8):
+    for level in range(1, 4):
         response = send(level)
         assert response.hint_level == level
         assert not response.hints_exhausted
     assert send(8).hints_exhausted
-    assert send(9, "first_hint").hint_level == 7
+    assert send(9, "first_hint").hint_level == 3
     assert send(10, attempt="attempt-b").hint_level == 1
     assert send(11, participant="student-b").hint_level == 1

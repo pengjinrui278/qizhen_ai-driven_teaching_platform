@@ -8,6 +8,7 @@ from mirror_api.config import REPO_ROOT
 from mirror_api.coursepack import CoursePackImportError, import_coursepack
 from mirror_api.db import init_db, make_engine, make_session_factory
 from mirror_api.models import Course, KnowledgeNode, Problem, ProblemHint
+from mirror_api.registry import load_course_profiles
 from mirror_api.seed import seed_profiles
 
 SAMPLE_PACK = REPO_ROOT / "coursepacks" / "mathematical_analysis" / "chen-jixiu-3e"
@@ -25,10 +26,10 @@ def _manifest_row_count(key: str) -> int:
     )
 
 
-def test_seed_profiles_covers_five_courses(session):
+def test_seed_profiles_covers_registered_courses(session):
     courses = session.query(Course).all()
     ids = {c.course_id for c in courses}
-    assert len(courses) == 6
+    assert ids == set(load_course_profiles())
     assert "ai_literacy" in ids
     flagship = [c for c in courses if c.stage == "flagship"]
     assert [c.course_id for c in flagship] == [COURSE]

@@ -61,7 +61,7 @@ def test_upload_new_problem_creates_record(session):
     assert response.recognized is False
     assert response.quality_status in ("approved", "pending")
     assert response.problem_id.startswith("upload-")
-    assert response.max_hint_level == 5
+    assert response.max_hint_level == 3
     assert response.first_hint.hint_level == 1
     assert len(response.similar_problems) <= 3
 
@@ -76,7 +76,8 @@ def test_upload_new_problem_creates_record(session):
             ProblemHint.problem_id == problem.problem_id,
         )
     ).scalars().all()
-    assert len(hints) == 5
+    assert len(hints) == 3
+    assert sorted(h.level for h in hints) == [1, 2, 3]
 
 
 def test_upload_recognizes_existing_problem(session):

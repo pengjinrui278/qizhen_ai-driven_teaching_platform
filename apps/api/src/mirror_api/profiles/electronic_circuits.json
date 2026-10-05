@@ -1,0 +1,23 @@
+{
+  "course_id": "electronic_circuits",
+  "display_name": "电子电路基础",
+  "mirror_name": "电路 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": [
+    "circuit_topology",
+    "reference_direction",
+    "model_assumptions",
+    "calculation"
+  ],
+  "capabilities": [
+    "progressive_hint",
+    "concept_explanation",
+    "solution_review"
+  ],
+  "harnesses": [],
+  "source_refs": [],
+  "metadata": {
+    "scope_status": "教材资源登记与授权接入待确认"
+  }
+}

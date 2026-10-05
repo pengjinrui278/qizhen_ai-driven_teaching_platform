@@ -1,0 +1,23 @@
+{
+  "course_id": "psychology_applications",
+  "display_name": "心理学及应用",
+  "mirror_name": "心理学 Mirror",
+  "stage": "extension",
+  "profile_id": "competition-default",
+  "knowledge_forms": [
+    "theory",
+    "research_evidence",
+    "causal_reasoning",
+    "application_boundaries"
+  ],
+  "capabilities": [
+    "progressive_hint",
+    "concept_explanation",
+    "solution_review"
+  ],
+  "harnesses": [],
+  "source_refs": [],
+  "metadata": {
+    "scope_status": "教材待补充；本轮教材处理暂停"
+  }
+}
