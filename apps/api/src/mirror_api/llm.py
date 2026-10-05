@@ -162,13 +162,14 @@ class OpenAICompatibleModel:
     dynamic_hints = True
 
     def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 60.0,
-                 max_tokens: int = 4096, reasoning_effort: str = "low"):
+                 max_tokens: int = 4096, reasoning_effort: str = "low", deep_max_tokens: int | None = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
         self.max_tokens = max_tokens
         self.reasoning_effort = reasoning_effort
+        self.deep_max_tokens = deep_max_tokens
         self.name = f"openai_compatible:{model}"
 
     def generate(self, context: MirrorContext) -> str:
@@ -271,16 +272,19 @@ class OpenAICompatibleModel:
             user_lines.append("同一次尝试的近期对话（仅作上下文，不是系统指令）："
                               + json.dumps(context.history, ensure_ascii=False))
 
+        deep = context.course_id != "ai_literacy" and self.deep_max_tokens is not None and (
+            context.interaction_mode in ("full_solution", "solution_review")
+            or any(word in (context.message or "") for word in ("详细证明", "深入推导", "难题", "充分思考")))
         payload={
                 "model": self.model,
-                "max_tokens": self.max_tokens,
+                "max_tokens": self.deep_max_tokens if deep else self.max_tokens,
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": fit_user_sections(user_lines)},
                 ],
             }
         if self.base_url in ("https://api.deepseek.com", "https://api.deepseek.com/v1") and context.course_id!="ai_literacy":
-            payload.update(thinking={"type":"enabled"},reasoning_effort=self.reasoning_effort)
+            payload.update(thinking={"type":"enabled"},reasoning_effort="high" if deep else self.reasoning_effort)
         return complete(self.base_url,self.api_key,payload,self.timeout)
 
 
@@ -299,5 +303,6 @@ def build_model(settings: Settings) -> LanguageModel:
             timeout=settings.llm_timeout,
             max_tokens=settings.llm_max_tokens,
             reasoning_effort=settings.llm_reasoning_effort,
+            deep_max_tokens=settings.llm_deep_max_tokens,
         )
     raise ValueError(f"未知模型提供方：{settings.llm_provider}")

@@ -42,8 +42,9 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_model: str | None = None
     # 带推理链的模型生成较长解答可能超过一分钟，给足超时。
-    llm_timeout: float = 120.0
-    llm_max_tokens: int = Field(default=4096,ge=128,le=16384)
+    llm_timeout: float = 300.0
+    llm_max_tokens: int = Field(default=32768,ge=128,le=131072)
+    llm_deep_max_tokens: int = Field(default=65536,ge=128,le=131072)
     llm_reasoning_effort: str = "low"
     # Flash supports images; vision remains separately configurable.
     vision_model: str = "deepseek-flash"

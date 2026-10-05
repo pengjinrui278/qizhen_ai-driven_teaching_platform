@@ -5,7 +5,7 @@ const isProd = process.env.NODE_ENV === "production";
 // 开发：用默认 .next/ 并把 /api 代理到本机 uvicorn
 const nextConfig = {
   devIndicators: false,
-  experimental: { proxyTimeout: 180000 },
+  experimental: { proxyTimeout: 360000 },
   ...(isProd
     ? { output: "export", distDir: "dist" }
     : {
