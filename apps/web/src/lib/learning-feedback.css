@@ -76,3 +76,10 @@
 .learningFeedback .lf-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:900px){.learningFeedback .lf-charts{grid-template-columns:1fr}.learningFeedback .lf-heading{flex-direction:column;gap:14px}}
 @media(max-width:480px){.learningFeedback .lf-panel{padding:16px}.learningFeedback .lf-diagnoses{grid-template-columns:1fr}.learningFeedback .lf-filters{width:100%;flex-wrap:wrap}.learningFeedback .lf-filters label{flex:1}.learningFeedback select{width:100%;max-width:100%}.learningFeedback .lf-record{padding:12px}.learningFeedback .lf-record-head time{flex-basis:100%;margin-left:0}.learningFeedback .lf-outcomes li{grid-template-columns:84px minmax(0,1fr) 24px;gap:8px}.learningFeedback .lf-activity{gap:6px}.learningFeedback .lf-card-head{flex-wrap:wrap}}
+.learningFeedback .lf-session {border:0;border-top:1px solid #e3ebf4;padding:14px 0;margin-top:8px;}
+.learningFeedback .lf-session > summary {display:flex;justify-content:space-between;gap:12px;cursor:pointer;font-size:14px;}
+.learningFeedback .lf-session > summary span {color:#64748b;font-size:12px;}
+.learningFeedback .lf-session ol {list-style:none;padding:0;}
+.learningFeedback .lf-session li {margin:14px 0;padding:12px;background:#f5f9fe;border-radius:8px;}
+.learningFeedback .lf-question {white-space:pre-wrap;overflow-wrap:anywhere;}
+.learningFeedback .lf-session a {display:inline-block;margin-top:10px;color:#2464a0;}

@@ -1,6 +1,7 @@
 "use client";
 import {useRef, useState} from "react";
 import "./learning-feedback.css";
+import LearningActivities from "./LearningActivities";
 type Row = Record<string, any>;
 const themes: Row = {conditions: "定理条件", quantifiers: "量词与依赖", construction: "辅助构造"};
 const outcomes: Record<string,string> = {continued: "能够继续", solved: "自报完成", still_stuck: "仍有困难", independent_success: "自报独立完成"};
@@ -14,7 +15,7 @@ function Icon({kind}: {kind: "pulse" | "chart" | "clock" | "file"}) {
 }
 function sourceText(row: Row) {return `来源：${sources[row.source] || row.source || "未标注"} · 证据强度：${strengths[row.strength] || row.strength || "未标注"}`;}
 
-export default function LearningFeedback({memory, courses, onCorrect}: {memory: Row; courses: Row[]; onCorrect: (id: string, note: string) => Promise<void>}) {
+export default function LearningFeedback({memory, courses, onCorrect, loadState="ready", loadError="", onRetry}: {memory: Row; courses: Row[]; onCorrect: (id: string, note: string) => Promise<void>;loadState?:"loading"|"ready"|"error";loadError?:string;onRetry?:()=>void}) {
  const [course, setCourse] = useState("all"), [days, setDays] = useState("14");
  const [selected, setSelected] = useState<string | null>(null), [note, setNote] = useState("");
  const [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
@@ -23,16 +24,21 @@ export default function LearningFeedback({memory, courses, onCorrect}: {memory: 
  const cutoff = days === "all" ? 0 : Date.now() - Number(days) * 86400000;
  const rows = observations.filter(o => (course === "all" || o.course_id === course) && new Date(o.created_at).getTime() >= cutoff);
  const valid = rows.filter(o => !o.disputed), feedback = valid.filter(o => outcomes[o.kind]);
+ const activities:Row[]=(memory.activities||[]).filter((a:Row)=>(course==="all"||a.course_id===course)&&new Date(a.created_at).getTime()>=cutoff);
  // 后端假设保持原样；不根据前端时段或活动次数推断能力。
  const hypotheses: Row[] = (memory.hypotheses || []).filter((h: Row) => course === "all" || h.course_id === course);
  const dates = Array.from({length: 7}, (_, i) => {const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d;});
- const counts = dates.map(d => valid.filter(o => new Date(o.created_at).toDateString() === d.toDateString()).length), peak = Math.max(1, ...counts);
+ const activityRows=memory.activities===undefined?valid:activities;
+ const counts = dates.map(d => activityRows.filter(o => new Date(o.created_at).toDateString() === d.toDateString()).length), peak = Math.max(1, ...counts);
  const courseName = (id: string) => courses.find(c => c.course_id === id)?.display_name || id || "课程未标注";
+ if(loadState==="loading")return <section className="learningFeedback"><p role="status">正在加载学习记录…</p></section>;
+ if(loadState==="error")return <section className="learningFeedback"><p role="alert">学习记录加载失败：{loadError}</p><button onClick={onRetry}>重新加载</button></section>;
  return <section className="learningFeedback" ref={root} aria-label="学习档案与诊断">
   <header className="lf-heading"><div><h1>学习档案与诊断</h1><p>基于学习证据的持续观察，可核对、可更正。</p></div><div className="lf-filters">
    <label><span className="lf-sr">反馈课程</span><select aria-label="反馈课程" value={course} disabled={busy} onChange={e => setCourse(e.target.value)}><option value="all">全部课程</option>{courses.map(c => <option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>
    <label><span className="lf-sr">反馈时间</span><select aria-label="反馈时间" value={days} disabled={busy} onChange={e => setDays(e.target.value)}><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="all">全部时间</option></select></label>
   </div></header>
+  <LearningActivities activities={activities} courses={courses}/>
   <section className="lf-panel" aria-labelledby="lf-observations-title">
    <div className="lf-panel-head"><h2 id="lf-observations-title"><Icon kind="pulse"/>持续学习观察</h2><span className="lf-badge lf-info">{hypotheses.length} 项候选观察</span></div>
    <p className="lf-note">不是能力评分或已确认诊断。以下依据所选课程的历史有效证据；时间筛选仅影响活动图表和记录。</p>
@@ -49,8 +55,8 @@ export default function LearningFeedback({memory, courses, onCorrect}: {memory: 
    })}</div> : <div className="lf-empty"><p>暂无候选观察</p><p>有足够且可核对的证据后再形成观察；没有记录不代表能力不足。</p></div>}
   </section>
   <div className="lf-charts">
-   <section className="lf-panel" aria-labelledby="lf-activity-title"><h2 id="lf-activity-title"><Icon kind="chart"/>近 7 天学习活动</h2><p className="lf-note">有效记录数量，仅描述活动，不代表掌握程度。</p>
-    {counts.some(Boolean) ? <ol className="lf-activity" aria-label="每日有效记录数">{counts.map((n, i) => <li key={i} aria-label={`${dates[i].getMonth() + 1}月${dates[i].getDate()}日：${n} 条`}><span className="lf-bar-count">{n}</span><div className="lf-bar-space" aria-hidden="true"><span style={{height: `${n / peak * 100}%`}}/></div><span className="lf-day">{dates[i].getMonth() + 1}/{dates[i].getDate()}</span></li>)}</ol> : <div className="lf-empty"><p>近 7 天暂无有效记录</p><p>更正或撤回的记录不计入活动数量。</p></div>}
+   <section className="lf-panel" aria-labelledby="lf-activity-title"><h2 id="lf-activity-title"><Icon kind="chart"/>近 7 天学习活动</h2><p className="lf-note">交互记录数量，仅描述活动，不代表掌握程度。</p>
+    {counts.some(Boolean) ? <ol className="lf-activity" aria-label="每日交互记录数">{counts.map((n, i) => <li key={i} aria-label={`${dates[i].getMonth() + 1}月${dates[i].getDate()}日：${n} 条`}><span className="lf-bar-count">{n}</span><div className="lf-bar-space" aria-hidden="true"><span style={{height: `${n / peak * 100}%`}}/></div><span className="lf-day">{dates[i].getMonth() + 1}/{dates[i].getDate()}</span></li>)}</ol> : <div className="lf-empty"><p>近 7 天暂无交互记录</p><p>课程问答活动会自动记录。</p></div>}
    </section>
    <section className="lf-panel" aria-labelledby="lf-outcome-title"><h2 id="lf-outcome-title"><Icon kind="clock"/>主动反馈分布</h2><p className="lf-note">所选时段共 {feedback.length} 条自述，独立性与正确性尚需验证。</p>
     {feedback.length ? <ul className="lf-outcomes">{Object.entries(outcomes).map(([key, label]) => {const count = feedback.filter(o => o.kind === key).length; return <li key={key} data-kind={key}><span>{label}</span><div className="lf-track" aria-hidden="true"><span style={{width: `${count / feedback.length * 100}%`}}/></div><strong>{count}<span className="lf-sr"> 条</span></strong></li>;})}</ul> : <div className="lf-empty"><p>暂无主动反馈</p><p>只展示实际记录，不生成示例比例。</p></div>}
