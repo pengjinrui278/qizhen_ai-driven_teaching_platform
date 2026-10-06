@@ -10,7 +10,7 @@ export default function ChatHistoryList({sessions,activeId,onOpen}:{sessions:Row
  const rows=sessions.filter(row=>group(row.created_at)===label);if(!rows.length)return null;
  return <section className="chatHistoryGroup" key={label} aria-label={label+"的会话"}><h3>{label}</h3>{rows.map(row=>{
  const d=new Date(row.created_at||"");const stamp=Number.isNaN(d.getTime())?"创建时间未记录":"创建于 "+d.toLocaleString("zh-CN");
- return <button key={row.id} title={stamp} aria-current={activeId===row.id?"true":undefined} onClick={()=>onOpen(row)}><span className="chatHistoryTitle">{row.title||"课程讨论"}</span><span className="chatHistoryTime">{stamp}</span></button>;
+ return <button key={row.id} title={stamp} aria-description={stamp} aria-current={activeId===row.id?"true":undefined} onClick={()=>onOpen(row)}><span className="chatHistoryTitle">{row.title||"课程讨论"}</span></button>;
  })}</section>;
  })}</>;
 }

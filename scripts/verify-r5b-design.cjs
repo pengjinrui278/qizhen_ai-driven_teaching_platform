@@ -13,7 +13,7 @@ if(path==='/memory'){overview=u.searchParams.get('include_activities')==='false'
 await r.fulfill({json:value});});
 await p.goto('http://127.0.0.1:3011/student/learn?mode=live');await p.locator('.chatHistoryGroup').last().waitFor();
 assert.equal(await p.locator('.chatHistoryGroup').count(),3);
-const row=p.locator('.chatSessionList button').first();await row.focus();assert.equal(await row.locator('.chatHistoryTime').isVisible(),true);await row.click();await p.getByText('合成历史回答 0',{exact:true}).waitFor();
+const row=p.locator('.chatSessionList button').first();await row.focus();assert.equal(await row.locator('.chatHistoryTime').count(),0);assert.match(await row.getAttribute('title'),/^创建于 /);await row.click();await p.getByText('合成历史回答 0',{exact:true}).waitFor();
 await p.getByRole('button',{name:'收起左栏',exact:true}).click();await p.getByRole('button',{name:'展开左栏',exact:true}).click();
 await p.screenshot({path:'data/preview/r5b-chat.png',fullPage:true});
 await p.goto('http://127.0.0.1:3011/student/observations?mode=live');await p.getByText('暂不足以判断课程进展。',{exact:true}).waitFor();assert.ok(overview);assert.equal(await p.locator('.lf-session').count(),0);assert.equal(await p.locator('.lf-feedback-details').getAttribute('open'),null);
