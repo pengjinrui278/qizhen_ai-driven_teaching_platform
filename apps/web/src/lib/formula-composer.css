@@ -1,0 +1,33 @@
+.portal.lmStudentShell .lmCourseChat .chatComposer{grid-template-columns:36px 36px minmax(0,1fr) 44px;gap:6px;}
+.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments{grid-column:1;}
+.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments summary{width:36px;}
+.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments[open]{grid-column:1/-1;grid-row:2;}
+.portal.lmStudentShell .lmCourseChat .chatComposer .primary{grid-column:4;}
+.portal.lmStudentShell .lmCourseChat .formulaToggle{grid-column:2;grid-row:1;width:36px;min-width:0;height:44px;padding:6px;display:flex;align-items:center;justify-content:center;border:1px solid var(--lm-border);border-radius:10px;background:#fff;color:#47618c;}
+.formulaInputWrap{grid-column:3;grid-row:1;position:relative;min-width:0;}
+.formulaMessageInput{min-height:44px;max-height:140px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 12px;border:1.5px solid var(--lm-border,#dbe5ee);border-radius:11px;background:white;font:14px/1.6 system-ui,sans-serif;outline:none;}
+.formulaMessageInput:focus{border-color:#93b4ed;}
+.formulaMessageInput:empty:before{content:attr(data-placeholder);color:#8994a6;pointer-events:none;}
+.formulaMessageInput[aria-disabled=true]{opacity:.65;}
+.formulaChip{display:inline-block;vertical-align:middle;max-width:100%;overflow-x:auto;padding:1px 4px;border-radius:4px;background:#f0f5ff;cursor:pointer;white-space:normal;}
+.formulaChip:focus{outline:2px solid #93b4ed;}
+.formulaPanel{position:absolute;left:0;right:0;bottom:100%;z-index:20;background:#fff;border:1px solid #ccdcee;border-radius:12px 12px 0 0;box-shadow:0 -6px 22px #17335414;padding:10px;max-height:min(390px,55dvh);display:flex;flex-direction:column;gap:8px;overflow:auto;overscroll-behavior:contain;}
+.formulaPanelHead,.formulaPanelFoot,.formulaTools{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0;}
+.formulaPanelHead strong{font-size:14px;}.formulaPanel button{min-width:30px;min-height:30px;font-size:12px;padding:4px 7px;box-shadow:none;border:1px solid #e1e8f0;border-radius:6px;background:#f8faff;}
+.formulaPanel button:hover{background:#eaf2ff;}.formulaTools{flex-wrap:wrap;justify-content:flex-start;}
+.formulaField{min-height:54px;flex-shrink:0;overflow:auto;border:1px solid #d7e3f1;border-radius:7px;}
+.formulaField math-field{display:block;min-width:100%;font-size:22px;border:0;outline:none;background:#fbfdff;--caret-color:#2563eb;}
+.formulaField math-field::part(virtual-keyboard-toggle),.formulaField math-field::part(menu-toggle){display:none;}
+.formulaSymbols{overflow-y:auto;min-height:60px;overscroll-behavior:contain;}
+.formulaSymbols h3{font:500 12px/1.5 system-ui,sans-serif;color:#63758b;margin:8px 0 4px;}
+.formulaSymbols section>div{display:flex;flex-wrap:wrap;gap:5px;}.formulaSymbols button{min-width:38px;min-height:34px;}
+.formulaPanelFoot span{font-size:11px;color:#64748b;}.formulaPanelFoot button{background:#e6eeff;color:#1d4ed8;min-width:56px;}
+.portal.lmStudentShell .lmCourseChat .formulaPanel textarea{display:block;width:100%;height:60px;min-height:60px;grid-column:auto;grid-row:auto;padding:6px;font-size:13px;}
+.formulaPanel p,.formulaInputError{font-size:12px;color:#9b3737;margin:0;}
+.portal.lmStudentShell .lmCourseChat .formulaPanel button{min-height:30px;font-size:12px;padding:4px 7px;}
+@media(max-width:600px){
+ .portal.lmStudentShell .lmCourseChat .formulaInputWrap{grid-column:1/-1;grid-row:1;}
+ .portal.lmStudentShell .lmCourseChat .formulaToggle,.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments,.portal.lmStudentShell .lmCourseChat .chatComposer .primary{grid-row:2;}
+ .portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments[open]{grid-row:3;}
+ .formulaMessageInput{font-size:16px;}.formulaPanel{padding:7px;max-height:50dvh;}.formulaSymbols button{min-height:38px;}.formulaPanelFoot span{display:none;}.formulaPanelFoot{justify-content:flex-end;}
+}

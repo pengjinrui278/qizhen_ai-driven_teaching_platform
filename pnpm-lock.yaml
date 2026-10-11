@@ -13,6 +13,9 @@ importers:
       katex:
         specifier: ^0.18.4
         version: 0.18.4
+      mathlive:
+        specifier: 0.111.1
+        version: 0.111.1
       next:
         specifier: ^15.5.0
         version: 15.5.23(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -431,6 +434,9 @@ packages:
 
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
+
+  mathlive@0.111.1:
+    resolution: {integrity: sha512-RVaC7NO02Lmx3ZNUxOHR2xCRpcvTfBb2BtdgV60cTanAMufaUkWcPPB2VxChcsNeL+0rTQKqOPDYxXLPOXJI+A==}
 
   mdast-util-from-markdown@2.0.3:
     resolution: {integrity: sha512-W4mAWTvSlKvf8L6J+VN9yLSqQ9AOAAvHuoDAmPkz4dHf553m5gVj2ejadHJhoJmcmxEnOv6Pa8XJhpxE93kb8Q==}
@@ -1019,6 +1025,8 @@ snapshots:
       commander: 8.3.0
 
   longest-streak@3.1.0: {}
+
+  mathlive@0.111.1: {}
 
   mdast-util-from-markdown@2.0.3:
     dependencies:

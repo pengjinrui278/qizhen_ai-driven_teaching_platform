@@ -43,7 +43,7 @@ async function main(){
   assert.equal(await page.locator('.katex-error').count(),0);
   await page.getByRole('button',{name:'新对话',exact:true}).click();
   assert.equal(await page.locator('.chatAssistant').count(),0);
-  assert.equal(await page.getByLabel('发送消息',{exact:true}).inputValue(),'');
+  assert.equal(await page.getByLabel('发送消息',{exact:true}).innerText(),'');
   if(!await page.locator('.chatSessionList button').first().isVisible()) await page.getByRole('button',{name:'打开对话列表'}).click();
   await page.locator('.chatSessionList button').first().click();
   await page.locator('.chatAssistant .katex-display').waitFor();
@@ -81,7 +81,7 @@ async function main(){
    check(await page.getByAltText('待识别图片').count()===0,target+': preview must reset');
    await draft.fill('当前对话草稿');
    await finish(outcome==='success'?{text:'旧图片识别结果'}:{detail:'旧识别失败'},outcome==='success'?200:503);
-   check(await draft.inputValue()==='当前对话草稿',target+': stale recognition must not fill draft');
+   check(await draft.innerText()==='当前对话草稿',target+': stale recognition must not fill draft');
    check(await page.locator('.relatedPanel').count()===0,target+': stale recognition must not search textbooks');
    check(await page.locator('.courseChat [role="alert"]').count()===0,target+': stale errors must be ignored');
   }
@@ -91,14 +91,14 @@ async function main(){
   const canRemove=await remove.isEnabled();check(canRemove,'remove: must be available during recognition');
   if(canRemove)await remove.click();
   await draft.fill('移除后的草稿');await removed({text:'已移除图片的迟到结果'});
-  check(await draft.inputValue()==='移除后的草稿','remove: stale recognition must not fill draft');
+  check(await draft.innerText()==='移除后的草稿','remove: stale recognition must not fill draft');
   if(canRemove)check(await page.getByAltText('待识别图片').count()===0,'remove: preview must disappear');
   await page.getByRole('button',{name:'新对话',exact:true}).click();await upload();
   const failed=await beginRecognition();await failed({detail:'合成识别故障'},503);
   await page.getByRole('alert').filter({hasText:'暂时无法识别'}).waitFor();
   check(await page.getByAltText('待识别图片').count()===1,'retry: keep preview after failure');
   const retried=await beginRecognition();await retried({text:'请确认的合成题干'});
-  await page.waitForFunction(()=>document.querySelector('textarea[aria-label="发送消息"]').value==='请确认的合成题干');
+  await page.waitForFunction(()=>document.querySelector('[role="textbox"][aria-label="发送消息"]').innerText==='请确认的合成题干');
   check(await page.locator('.courseChat [role="alert"]').count()===0,'retry: clear old error');
   check(calls===2,'OCR must not automatically send a chat message');
   // A late failure from a removed image must not overwrite the next image's success.
@@ -109,7 +109,7 @@ async function main(){
    await staleFailure({detail:'旧图片失败'},503);
    check(await page.getByRole('button',{name:'处理中…',exact:true}).isDisabled(),'replacement: stale completion must not unlock current request');
    await latest({text:'新图片文字'});
-   check(await draft.inputValue()==='新图片文字','replacement: preserve latest text');
+   check(await draft.innerText()==='新图片文字','replacement: preserve latest text');
    check(await page.locator('.courseChat [role="alert"]').count()===0,'replacement: ignore stale errors');
   }else await staleFailure({detail:'旧图片失败'},503);
   assert.deepEqual(errors,[]);

@@ -10,7 +10,7 @@ const {chromium}=require('playwright');const fs=require('fs');const assert=requi
  assert.equal(await p.getByLabel('聊天课程',{exact:true}).count(),1);assert.equal(await p.getByLabel('当前课程',{exact:true}).count(),0);
  const question='请详细证明：闭区间上连续函数列的一致极限仍连续。重点说明量词顺序与三角不等式，给出完整的主要流程，最后一步估计留给我。';
  await p.getByLabel('发送消息',{exact:true}).fill(question);await p.getByRole('button',{name:'发送',exact:true}).click();
- assert.equal(await p.getByLabel('发送消息',{exact:true}).inputValue(),'');
+ assert.equal(await p.getByLabel('发送消息',{exact:true}).innerText(),'');
  await p.locator('.chatThinking').waitFor();console.log('Input cleared immediately; waiting for deep mathematical response');
  let aid;for(let i=0;i<12;i++){aid=new URL(p.url()).searchParams.get('attempt');if(aid)break;await p.waitForTimeout(300);}
  assert.ok(aid);

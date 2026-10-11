@@ -13,6 +13,7 @@ import {streamCourseMessage} from "./course-stream";
 import "./course-chat.css";
 import "./chat-refinement.css";
 import {courseIntro} from "./course-intro";
+import FormulaComposer from "./FormulaComposer";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
 function sessionTime(value?:string){if(!value)return "创建时间未记录";const d=new Date(value);return Number.isNaN(d.getTime())?"创建时间未记录":"创建于 "+d.toLocaleString("zh-CN");}
@@ -23,7 +24,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [course,setCourse]=useState("mathematical_analysis"),[sessions,setSessions]=useState<Row[]>([]),[active,setActive]=useState<Row|null>(null),[events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[pending,setPending]=useState<Row|null>(null),[copied,setCopied]=useState(""),[historyOpen,setHistoryOpen]=useState(false),[feedback,setFeedback]=useState("");
  const [relatedChunks,setRelatedChunks]=useState<Row[]>([]),[relatedLoading,setRelatedLoading]=useState(false),[showRelated,setShowRelated]=useState(false);
- const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<HTMLTextAreaElement>(null);
+ const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<HTMLDivElement>(null);
  const [historyLoading,setHistoryLoading]=useState(true),[historyError,setHistoryError]=useState("");
  const [failedSession,setFailedSession]=useState<Row|null>(null);
  const historyPanel=useRef<HTMLElement>(null),historyToggle=useRef<HTMLButtonElement>(null);
@@ -36,7 +37,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [historyEnd,setHistoryEnd]=useState(false);
  const [historyCollapsed,setHistoryCollapsed]=useState(false);
  async function loadOlder(){const serial=++historyEpoch.current;setHistoryLoading(true);setHistoryError("");try{const rows=await api("/attempts?offset="+sessions.length+"&limit=100");if(serial===historyEpoch.current){setSessions(old=>[...old,...rows.filter((r:Row)=>!old.some(o=>o.id===r.id))]);setHistoryEnd(rows.length<100);}}catch(e){if(serial===historyEpoch.current)setHistoryError((e as Error).message);}finally{if(serial===historyEpoch.current)setHistoryLoading(false);}}
- useEffect(()=>{const box=input.current;if(!box)return;const resize=()=>{box.style.height="auto";const style=getComputedStyle(box);const border=parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);box.style.height=Math.min(140,Math.max(44,Math.ceil(box.scrollHeight+border)))+"px";};resize();window.addEventListener("resize",resize);return()=>window.removeEventListener("resize",resize);},[draft]);
+
  useEffect(()=>{if(historyOpen)historyPanel.current?.querySelector<HTMLButtonElement>("button")?.focus();},[historyOpen]);
  function cancelActions(){if(actionTimer.current)clearTimeout(actionTimer.current);actionTimer.current=null;setActionId(null);}
  async function retryHistory(){const token=epoch.current;const rows=await loadHistory();if(token!==epoch.current||!rows||active)return;const id=new URLSearchParams(location.search).get("attempt");if(id)await resume(rows.find((row:Row)=>row.id===id)||{id});}
@@ -110,7 +111,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <form className="chatComposer" onSubmit={e=>{e.preventDefault();void send();}}>
- <textarea ref={input} aria-label="发送消息" placeholder="输入消息，或上传题目图片…（支持 LaTeX 公式）" value={draft} maxLength={6000} rows={1} disabled={busy||loading||user.status!=="active"} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/>
+ <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"}/>
  <div className="chatComposerActions"><details className="chatAttachments"><summary><StudentIcon name="camera"/>图片</summary><PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/></details><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
  </form>
  {events.length>0&&<details><summary>补充学习反馈</summary><label>反馈环节<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="conditions">定理条件</option><option value="quantifiers">量词与依赖</option><option value="construction">辅助对象</option></select></label><button disabled={busy} onClick={()=>report("still_stuck")}>仍有困难</button><button disabled={busy} onClick={()=>report("independent_success")}>这次独立完成</button>{feedback&&<p role="status">{feedback}</p>}</details>}
