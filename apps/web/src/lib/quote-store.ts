@@ -92,6 +92,28 @@ export function paneDepth(panes: PaneState[], id: string): number {
 }
 
 const key = (userId: string) => "learning-mirror.scissors.v1." + userId;
+// 追问链路独立存放（不随主会话切换而失效）：子会话 attemptId → 父会话 attemptId
+const linksKey = (userId: string) => "learning-mirror.scissors.links.v1." + userId;
+
+export function loadLinks(userId: string): Record<string, string> {
+  if (typeof window === "undefined" || !userId) return {};
+  try {
+    const raw = window.localStorage.getItem(linksKey(userId));
+    const value = raw ? JSON.parse(raw) : null;
+    return value && typeof value === "object" ? (value as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveLinks(userId: string, links: Record<string, string>) {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    window.localStorage.setItem(linksKey(userId), JSON.stringify(links));
+  } catch {
+    /* 配额或隐私模式：仅影响历史归组，不影响会话本身 */
+  }
+}
 
 export function loadWorkspace(userId: string, mainAttemptId: string | null): QuoteWorkspaceState | null {
   if (typeof window === "undefined" || !userId) return null;

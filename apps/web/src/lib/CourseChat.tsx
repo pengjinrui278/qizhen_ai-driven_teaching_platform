@@ -17,7 +17,7 @@ import QuotePanes from "./QuotePanes";
 import type {QuoteUi} from "./QuotePanes";
 import QuoteTray,{QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,quoteKeyOf} from "./chat-quote.mjs";
-import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveWorkspace,subtreeEnd} from "./quote-store";
+import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
 import type {PaneState,QuotePiece} from "./quote-store";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
@@ -76,9 +76,11 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  useEffect(()=>{ // 子页面绑定在主会话上：换会话即整套作废（不清 localStorage，回看旧会话仍可恢复）
   setQuotingPaneId(null);setTrays({});setQuoteError("");
   if(!active?.id){setPanes([]);return;}
+  // 追问链路是全用户级、跨会话的：先取本地账本，再并入本次工作区里记录的链路
   const stored=loadWorkspace(user.id,active.id);
-  if(stored){setPanes(stored.panes);setLinks(stored.links||{});setMainWeight(stored.mainWeight??1);}
-  else{setPanes([]);setLinks({});setMainWeight(1);}
+  setLinks({...loadLinks(user.id),...(stored?.links||{})});
+  if(stored){setPanes(stored.panes);setMainWeight(stored.mainWeight??1);}
+  else{setPanes([]);setMainWeight(1);}
  },[active?.id,user.id]);
  useEffect(()=>{ // 持久化 pane 树、追问链路与剪贴片段；会话未建立时不写
   if(!user?.id||!active?.id)return;
@@ -125,7 +127,9 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  function bindAttempt(paneId:string,attemptId:string,question:string){
   const pane=panes.find(p=>p.id===paneId);
   const parentAttempt=pane?(pane.parentId==="main"?active?.id??null:panes.find(p=>p.id===pane.parentId)?.attemptId??null):null;
-  if(parentAttempt)setLinks(cur=>({...cur,[attemptId]:parentAttempt}));
+  if(parentAttempt){
+   setLinks(cur=>{const next={...cur,[attemptId]:parentAttempt};saveLinks(user.id,next);return next;});
+  }
   setPanes(prev=>prev.map(p=>p.id===paneId?{...p,attemptId,question}:p));
  }
  function removePaneQuote(paneId:string,pieceId:string){setPanes(prev=>prev.map(p=>p.id===paneId?{...p,quotes:p.quotes.filter(q=>q.id!==pieceId)}:p));}
