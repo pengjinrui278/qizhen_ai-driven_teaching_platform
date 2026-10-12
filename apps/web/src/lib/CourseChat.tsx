@@ -46,6 +46,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [quotingPaneId,setQuotingPaneId]=useState<string|null>(null);
  const [pieces,setPieces]=useState<QuotePiece[]>([]);
  const [panes,setPanes]=useState<PaneState[]>([]);
+ const [links,setLinks]=useState<Record<string,string>>({});
  const [quoteError,setQuoteError]=useState("");
  const paneSeq=useRef(0);
  const sourcesRef=useRef<Record<string,SourceMeta>>({});
@@ -70,13 +71,13 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   setQuotingPaneId(null);setPieces([]);setQuoteError("");
   if(!active?.id){setPanes([]);return;}
   const stored=loadWorkspace(user.id,active.id);
-  if(stored){setPanes(stored.panes);paneSeq.current=stored.seq;}
-  else{setPanes([]);}
+  if(stored){setPanes(stored.panes);setLinks(stored.links||{});paneSeq.current=stored.seq;}
+  else{setPanes([]);setLinks({});}
  },[active?.id,user.id]);
  useEffect(()=>{ // 持久化 pane 树、追问链路与剪贴片段；会话未建立时不写
   if(!user?.id||!active?.id)return;
-  saveWorkspace({v:1,userId:user.id,mainAttemptId:active.id,course,panes,seq:paneSeq.current,updatedAt:Date.now()});
- },[panes,user?.id,active?.id,course]);
+  saveWorkspace({v:1,userId:user.id,mainAttemptId:active.id,course,panes,links,seq:paneSeq.current,updatedAt:Date.now()});
+ },[panes,links,user?.id,active?.id,course]);
  function toggleScissors(paneId:string){setQuoteError("");setQuotingPaneId(cur=>cur===paneId?null:paneId);}
  function exitScissors(){setQuotingPaneId(null);setQuoteError("");}
  function addPieces(incoming:QuotePiece[]){
@@ -103,7 +104,12 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   if(kids.length&&!window.confirm(`关闭将同时关闭其下 ${kids.length} 个子页面，继续？`))return;
   setPanes(prev=>prev.filter(p=>p.id!==id&&!kids.includes(p.id)));
  }
- function bindAttempt(paneId:string,attemptId:string,question:string){setPanes(prev=>prev.map(p=>p.id===paneId?{...p,attemptId,question}:p));}
+ function bindAttempt(paneId:string,attemptId:string,question:string){
+  const pane=panes.find(p=>p.id===paneId);
+  const parentAttempt=pane?(pane.parentId==="main"?active?.id??null:panes.find(p=>p.id===pane.parentId)?.attemptId??null):null;
+  if(parentAttempt)setLinks(cur=>({...cur,[attemptId]:parentAttempt}));
+  setPanes(prev=>prev.map(p=>p.id===paneId?{...p,attemptId,question}:p));
+ }
  function removePaneQuote(paneId:string,pieceId:string){setPanes(prev=>prev.map(p=>p.id===paneId?{...p,quotes:p.quotes.filter(q=>q.id!==pieceId)}:p));}
  async function copyPieces(){try{await navigator.clipboard.writeText(pieces.map(p=>p.source).join("\n\n---\n\n"));setQuoteError(`已复制 ${pieces.length} 处`);setTimeout(()=>setQuoteError(""),1600);}catch{setQuoteError("复制失败，请手动选择文字。");}}
  function locatePiece(piece:QuotePiece){
@@ -186,7 +192,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const suggestionList=(coursePrompts as Record<string,{title:string;question:string}[]>)[course]||[{title:"从一个问题开始",question:"请帮我拆解这个问题，并引导我检查自己的思路。"}];
  return <section className={"courseChat lmCourseChat"+(showRelated?" hasRelated":"")+(historyCollapsed?" historyCollapsed":"")}>
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
- <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
+ <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
  <QuotePanes panes={panes} quote={quoteUi()} api={api} user={user} streaming={streaming} course={course} sourcesRef={sourcesRef} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources} onRemoveQuote={removePaneQuote}>
  <section className="chatWorkspace" ref={workspace} data-quoting={quotingPaneId==="main"?"":undefined} onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={pieces.length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
