@@ -25,22 +25,23 @@
 /* 描述文案只留给读屏，避免长句在页头堆成一块 */
 .lmCourseChat .quoteToolHint{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}
 
-/* 面板（工作台）容器：卡片之间的软背景轨道 */
+/* 面板（工作台）容器：卡片之间才有软背景轨道 */
 .lmCourseChat .chatPanes{display:flex;gap:14px;min-width:0;min-height:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;position:relative;}
-.lmCourseChat .chatPanes.hasPanes{background:linear-gradient(180deg,rgba(99,102,241,.035),rgba(6,182,212,.03));border-radius:18px;padding:10px;}
+.lmCourseChat .chatPanes.hasPanes{background:linear-gradient(180deg,rgba(99,102,241,.035),rgba(6,182,212,.03));border-radius:18px;padding:10px;gap:12px;}
 .lmCourseChat .chatPaneInner{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
 
-/* 面板卡片：并排时才启用卡片外观，单面板保持原有的干净版面。
+/* 面板卡片：无论是否并排都用同一套白卡外观（用户反馈：添加子页面前后的主页面观感要一致）。
    卡片只留左右内边距，上下由页头/输入区自己撑满 —— 否则页头与卡片顶边、
    输入区与卡片底边之间会露出缝隙，滚动内容从缝里透出来。 */
-.lmCourseChat .chatPanes.hasPanes > .chatWorkspace,
-.lmCourseChat .chatPanes.hasPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 14px;}
+.lmCourseChat .chatPanes > .chatWorkspace,
+.lmCourseChat .chatPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 14px;}
 /* 卡片内的粘性页头/输入区跟卡片同底色，并补上卡片圆角，避免露出轨道背景或方角 */
-.portal.lmStudentShell .lmCourseChat .chatPanes.hasPanes > .chatWorkspace .chatHeader{background:var(--lm-card,#fff);border-radius:15px 15px 0 0;padding:12px 0;}
-.portal.lmStudentShell .lmCourseChat .chatPanes.hasPanes > .chatWorkspace .chatComposer{background:var(--lm-card,#fff);border-radius:0 0 15px 15px;padding-bottom:12px;}
-.portal.lmStudentShell .lmCourseChat .chatPanes.hasPanes > .chatWorkspace .chatMessages{padding-top:12px;}
-.lmCourseChat .chatPanes.hasPanes > .chatPane .chatPaneHead{padding:12px 0 10px;margin-top:0;}
-.lmCourseChat .chatPanes.hasPanes > .chatPane .chatComposer{border-radius:0 0 15px 15px;padding-bottom:12px;}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatHeader{background:var(--lm-card,#fff);border-radius:15px 15px 0 0;padding:12px 0;}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatComposer{background:var(--lm-card,#fff);border-radius:0 0 15px 15px;padding-bottom:12px;}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatMessages{padding-top:12px;}
+.lmCourseChat .chatPanes > .chatWorkspace > details{margin-bottom:0;padding-bottom:10px;}
+.lmCourseChat .chatPanes > .chatPane .chatPaneHead{padding:12px 0 10px;margin-top:0;}
+.lmCourseChat .chatPanes > .chatPane .chatComposer{border-radius:0 0 15px 15px;padding-bottom:12px;}
 
 /* 分隔条：拖动分配相邻两页宽度，双击恢复均分 */
 .lmCourseChat .paneResizer{flex:0 0 8px;align-self:stretch;cursor:col-resize;touch-action:none;position:relative;}
@@ -163,8 +164,8 @@
 
 /* 窄屏：并排改为整页横滑（每页 100% 宽，滚动吸附），剪刀交互保持可用 */
 @media(max-width:1023px){
- .lmCourseChat .chatPanes.hasPanes{padding:6px;border-radius:14px;gap:0;}
  .lmCourseChat .chatPanes{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;}
+ .lmCourseChat .chatPanes.hasPanes{padding:6px;border-radius:14px;gap:0;}
  .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatPane{flex:0 0 100%;min-width:0;scroll-snap-align:start;}
@@ -176,7 +177,7 @@
 }
 @media(max-width:680px){
  .lmCourseChat .chatPanes.hasPanes{padding:4px;}
- .lmCourseChat .chatPanes.hasPanes > .chatWorkspace,.lmCourseChat .chatPanes.hasPanes > .chatPane{padding:0 10px;border-radius:14px;}
+ .lmCourseChat .chatPanes > .chatWorkspace,.lmCourseChat .chatPanes > .chatPane{padding:0 10px;border-radius:14px;}
  .lmCourseChat .quoteHud{border-radius:14px;bottom:4px;justify-content:flex-start;padding:8px 10px;}
  .lmCourseChat .quoteTrayList{max-height:200px;}
  .lmCourseChat .quoteCardBody.isClipped{max-height:104px;}
