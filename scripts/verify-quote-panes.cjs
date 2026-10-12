@@ -257,6 +257,52 @@ const SUB_ANSWER = [
     assert.deepEqual(await page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.state)), stateBefore, '刷新后应收纳态一致');
     assert.deepEqual(await orderIds(), orderBeforeReload, '刷新后应保持顺序');
 
+    // ---- 11b. 素材拼图区：拖入本地文件、粘贴网址、占位格式、换位/缩放/关闭 ----
+    await page.route('https://example.com/**', r => r.fulfill({contentType: 'text/html', body: '<p>stub</p>'}));
+    const dropFiles = async files => page.evaluate(async list => {
+      const dt = new DataTransfer();
+      for (const f of list) dt.items.add(new File([f.body], f.name, {type: f.type}));
+      const el = document.querySelector('section.lmCourseChat');
+      el.dispatchEvent(new DragEvent('dragover', {bubbles: true, dataTransfer: dt}));
+      el.dispatchEvent(new DragEvent('drop', {bubbles: true, dataTransfer: dt}));
+    }, files);
+    await dropFiles([
+      {name: '笔记.md', type: 'text/markdown', body: '# 素材标题\n这是拖入的素材正文。'},
+      {name: '讲义.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', body: 'docx'},
+    ]);
+    await page.locator('.materialBoard').waitFor();
+    assert.equal(await page.locator('.materialTile').count(), 2, '应加入两个素材页');
+    assert.match(await page.locator('.materialTile').first().innerText(), /笔记\.md/);
+    assert.match(await page.locator('.materialTile').first().innerText(), /这是拖入的素材正文/);
+    const docx = page.locator('.materialTile', {hasText: '讲义.docx'});
+    assert.match(await docx.innerText(), /无法在线渲染|暂不支持在线预览/, 'Word 应给占位说明而不是假装能预览');
+    // 粘贴网址
+    await page.getByRole('button', {name: /^素材/}).click();
+    await page.getByRole('textbox', {name: '粘贴网址'}).fill('https://example.com/slide');
+    await page.getByRole('button', {name: '加入'}).click();
+    await page.locator('.materialTile', {hasText: 'example.com/slide'}).waitFor();
+    assert.equal(await page.locator('.materialTile iframe').count(), 1, '网址素材应以内嵌页面呈现');
+    // 高度缩放
+    const tile = page.locator('.materialTile').first();
+    const hBefore = await tile.evaluate(el => el.getBoundingClientRect().height);
+    const grip = await tile.locator('.materialResize').boundingBox();
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 + 90, {steps: 6});
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    assert.ok(await tile.evaluate(el => el.getBoundingClientRect().height) > hBefore + 40, '拖动底边应改变素材页高度');
+    // 换位（Alt+方向键等价通道）与关闭
+    const orderBefore = await page.locator('.materialTile .materialTitle').allInnerTexts();
+    await page.locator('.materialTile').nth(1).locator('.materialGrip').focus();
+    await page.keyboard.press('Alt+ArrowUp');
+    await page.waitForTimeout(150);
+    assert.notDeepEqual(await page.locator('.materialTile .materialTitle').allInnerTexts(), orderBefore, 'Alt+方向键应交换素材页位置');
+    await page.locator('.materialTile').first().getByRole('button', {name: /^关闭/}).click();
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.materialTile').count(), 2, '关闭后应少一个素材页');
+    await page.screenshot({path: 'data/preview/material-board-desktop.png', fullPage: true});
+
     // ---- 12. 关闭全部 → 主页面恢复全宽（关闭父页面会连带子页面，需确认） ----
     page.on('dialog', dialog => dialog.accept());
     const closeButtons = page.locator('.chatPane .chatPaneClose:visible, .chatPane .paneTabClose:visible');
@@ -265,6 +311,10 @@ const SUB_ANSWER = [
       await page.waitForTimeout(100);
     }
     assert.equal(await page.locator('.chatPane').count(), 0, '子页面应全部关闭');
+    // 素材区也要让出宽度，对话卡才能回到全宽
+    await page.getByRole('button', {name: '关闭全部素材'}).click();
+    await page.waitForTimeout(200);
+    assert.equal(await page.locator('.materialBoard').count(), 0, '素材区应可整体关闭');
     const width = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);
     assert.ok(width > splitWidth * 1.8, '主页面应恢复全宽：' + splitWidth + ' → ' + width);
     assert.ok(await page.locator('[data-quote-src] [data-quote-unit]').count() > 0);
@@ -275,7 +325,8 @@ const SUB_ANSWER = [
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390px 不应横向溢出');
     await page.screenshot({path: 'data/preview/quote-mobile.png', fullPage: true});
 
-    assert.deepEqual(external, [], '不应有外部请求');
+    // 素材区的网址内嵌是刻意为之（已用桩响应），其余外部请求仍应为零
+    assert.deepEqual(external.filter(u => !u.startsWith('https://example.com/')), [], '除素材内嵌外不应有外部请求');
     assert.deepEqual(errors, [], '不应有页面错误');
     console.log('PASS: 剪刀选块/公式、自由框选到字、每页独立计数、位置化编号、Esc 退出、拼接子页面、引用卡片渲染、子页面提问序列化、嵌套子页面、自动抽页收纳、抽页抽出、Alt+方向键换位、分隔条缩放、刷新恢复、关闭恢复、390px 无溢出');
   } finally {
