@@ -167,10 +167,12 @@ function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRe
  }
 }
 
-export default function QuotePanes({panes,quote,children,api,user,streaming,course,sourcesRef,mainWeight=1,layout,onClose,onBindAttempt,onSources}:{
+export default function QuotePanes({panes,quote,children,board,dropping,api,user,streaming,course,sourcesRef,mainWeight=1,layout,onClose,onBindAttempt,onSources}:{
  panes:PaneState[];
  quote:QuoteUi;
  children:ReactNode;
+ board?:ReactNode;        // 素材拼图区（含它的分隔条），与剪刀面板并列但互不干扰
+ dropping?:boolean;       // 正把文件拖到页面上
  api:Api;user:Row;streaming:boolean;course:string;
  sourcesRef:React.RefObject<Sources>;
  mainWeight?:number;
@@ -299,7 +301,9 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
   // map 出来的数组元素必须带 key，否则 React 会报 key 警告
   return cloneElement(element,{key:element.key??"main-pane",style:{...(element.props.style||{}),flexGrow:mainWeight}});
  });
- return <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
+ return <div className={"chatSplit"+(dropping?" isDropping":"")+(board?" hasBoard":"")}>
+  {dropping&&<div className="materialDropHint"><span>松开即可加入素材区（只在本地打开，不上传）</span></div>}
+  <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
   {styled}
   {panes.flatMap((pane,i)=>{
    const node=<SubChatPane key={pane.id} pane={pane} index={i+1} title={paneTitle(i+1)} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
@@ -311,5 +315,7 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
    }
    return [node];
   })}
+  </div>
+  {board}
  </div>;
 }
