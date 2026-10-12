@@ -20,21 +20,20 @@ const MESSAGE_LIMIT=12000;
 const MIN_PANE=340;      // 面板最小宽度（px），自动收纳的判据
 const STRIP_GAP=14;
 const RESIZER=8;
-const PREVIEW_RATIO=0.46; // 抽页悬停时的预览宽度占比
 
+// 剪贴托盘按面板隔离：每个面板只看到、只拼接自己剪下的片段
 export type QuoteUi={
- pieces:QuotePiece[];
+ piecesOf:(paneId:string)=>QuotePiece[];
+ setPieces:(paneId:string,next:QuotePiece[])=>void;
  quotingPaneId:string|null;
  error:string;
- canAssemble:boolean;
  busy:boolean;
  onToggle:(paneId:string)=>void;
  onAssemble:(parentPaneId:string)=>void;
- onCopy:()=>void;
- onClear:()=>void;
+ onCopy:(paneId:string)=>void;
+ onClear:(paneId:string)=>void;
  onExit:()=>void;
- onAddPieces:(pieces:QuotePiece[])=>void;
- setPieces:(pieces:QuotePiece[])=>void;
+ onAddPieces:(paneId:string,pieces:QuotePiece[])=>void;
  onSent:()=>void;
  onRemoveQuote:(paneId:string,pieceId:string)=>void;
  onLocate:(piece:QuotePiece)=>void;
@@ -48,10 +47,13 @@ export type PaneLayout={
  onPin:(id:string)=>void;
 };
 
-function paneSources(pane:PaneState,events:Row[]):Sources{
+// 子页面编号永远等于它在条带里的位置（主页面之后第 1 个就是「子页面 1」）
+export const paneTitle=(index:number)=>"子页面 "+index;
+
+function paneSources(pane:PaneState,title:string,events:Row[]):Sources{
  const map:Sources={};
  events.forEach((e:Row,i:number)=>{
-  const label=buildTurnLabel(pane.title,i+1);
+  const label=buildTurnLabel(title,i+1);
   if(e.message)map["q:"+pane.id+":"+e.request_id+":user"]={source:messageSource(e.message),label:label+"（提问）",paneId:pane.id,attemptId:pane.attemptId,requestId:e.request_id};
   if(e.response?.answer)map["q:"+pane.id+":"+e.request_id+":ai"]={source:messageSource(e.response.answer),label,paneId:pane.id,attemptId:pane.attemptId,requestId:e.request_id};
  });
@@ -59,8 +61,8 @@ function paneSources(pane:PaneState,events:Row[]):Sources{
 }
 
 // 子页面：一条独立会话（引用卡片 + 针对性追问），自身管理 attempt/流式/重试，回答可再被剪刀引用
-function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
- pane:PaneState;index:number;course:string;api:Api;user:Row;streaming:boolean;quote:QuoteUi;
+function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
+ pane:PaneState;index:number;title:string;course:string;api:Api;user:Row;streaming:boolean;quote:QuoteUi;
  sourcesRef:React.RefObject<Sources>;layout:PaneLayout;dropSide?:"before"|"after";
  onClose:(id:string)=>void;onBindAttempt:(paneId:string,attemptId:string,question:string)=>void;onSources:(paneId:string,sources:Sources|null)=>void;
  onDragStart:(e:React.PointerEvent,id:string)=>void;
@@ -71,6 +73,8 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(Boolean(pane.attemptId)),[stage,setStage]=useState(""),[error,setError]=useState(""),[missing,setMissing]=useState(false);
  const lock=useRef(false),epoch=useRef(0),abort=useRef<AbortController|null>(null),bottom=useRef<HTMLDivElement>(null),scroll=useRef<HTMLDivElement>(null),input=useRef<HTMLDivElement>(null);
  const pending=useRef<Row|null>(null),loaded=useRef<string|null>(null);
+ const pieces=quote.piecesOf(pane.id);
+ const quoting=quote.quotingPaneId===pane.id;
 
  useEffect(()=>()=>{epoch.current++;abort.current?.abort();},[]);
  useEffect(()=>{
@@ -82,9 +86,9 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
   return ()=>{live=false;};
  },[pane.attemptId,api]);
  useEffect(()=>{
-  onSources(pane.id,paneSources(pane,events));
+  onSources(pane.id,paneSources(pane,title,events));
   return ()=>onSources(pane.id,null);
- },[events,pane.id,pane.title,pane.attemptId]); // eslint-disable-line react-hooks/exhaustive-deps
+ },[events,pane.id,title,pane.attemptId]); // eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{bottom.current?.scrollIntoView({block:"nearest"});},[events,busy]);
 
  async function send(retry=false){
@@ -112,17 +116,20 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
   finally{if(token===epoch.current){lock.current=false;setBusy(false);setStage("");}}
  }
  const collapsed=pane.state==="tab";
- return <section className="chatPane" data-pane-id={pane.id} data-pane-index={index} data-state={pane.state} data-drop={dropSide} aria-label={pane.title} style={collapsed?undefined:{flexGrow:pane.weight}}>
-  {collapsed&&<div className="paneTabFace">
-   <button type="button" className="paneTabOpen" aria-label={pane.title+"，已收起，点击展开"} onClick={()=>layout.onPin(pane.id)}><span className="paneTabNo">{index}</span></button>
-   <button type="button" className="paneTabClose" aria-label={"关闭 "+pane.title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
+ return <section className="chatPane" data-pane-id={pane.id} data-pane-index={index} data-state={pane.state} data-drop={dropSide} aria-label={title} style={collapsed?undefined:{flexGrow:pane.weight}}>
+  {collapsed&&<div className="paneTabFace" onClick={e=>{if(!(e.target as HTMLElement).closest(".paneTabClose"))layout.onPin(pane.id);}}>
+   <button type="button" className="paneTabOpen" aria-label={title+"，已收起，点击展开"} title="点击展开此页" onClick={()=>layout.onPin(pane.id)}>
+    <StudentIcon name="up"/>
+    <span className="paneTabLabel">{title}</span>
+   </button>
+   <button type="button" className="paneTabClose" aria-label={"关闭 "+title} title="关闭此页" onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
   </div>}
   <div className="chatPaneInner">
   <header className="chatPaneHead">
-   <button type="button" className="paneGrip" aria-label={"拖动排序："+pane.title+"（可用 Alt+方向键换位）"} onPointerDown={e=>onDragStart(e,pane.id)} onKeyDown={e=>{if(!e.altKey)return;if(e.key==="ArrowLeft"){e.preventDefault();onSiblingMove(pane.id,-1);}if(e.key==="ArrowRight"){e.preventDefault();onSiblingMove(pane.id,1);}}}><StudentIcon name="menu"/></button>
-   <span className="chatPaneTitle">{pane.title}</span>
-   <QuoteToolbar quoting={quote.quotingPaneId===pane.id} count={quote.pieces.length} disabled={busy||loading||quote.busy} onToggle={()=>quote.onToggle(pane.id)}/>
-   <button type="button" className="chatPaneClose" aria-label={"关闭 "+pane.title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
+   <button type="button" className="paneGrip" aria-label={"拖动排序："+title+"（可用 Alt+方向键换位）"} title="拖动换位（Alt+方向键亦可）" onPointerDown={e=>onDragStart(e,pane.id)} onKeyDown={e=>{if(!e.altKey)return;if(e.key==="ArrowLeft"){e.preventDefault();onSiblingMove(pane.id,-1);}if(e.key==="ArrowRight"){e.preventDefault();onSiblingMove(pane.id,1);}}}><StudentIcon name="menu"/></button>
+   <span className="chatPaneTitle">{title}</span>
+   <QuoteToolbar quoting={quoting} count={pieces.length} disabled={busy||loading||quote.busy} onToggle={()=>quote.onToggle(pane.id)}/>
+   <button type="button" className="chatPaneClose" aria-label={"关闭 "+title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
   </header>
   <div className="chatPaneScroll" ref={scroll}>
    {missing&&<p className="chatPaneMissing" role="alert">该子页面已失效（会话可能已被删除）。<button type="button" onClick={()=>onClose(pane.id)}>关闭</button></p>}
@@ -130,7 +137,7 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
    {!loading&&!missing&&pane.quotes.length>0&&<ul className="quoteCardList">{pane.quotes.map((p,i)=><li key={p.id}><QuoteCard piece={p} index={i+1} onRemove={events.length?undefined:(id)=>quote.onRemoveQuote(pane.id,id)} onLocate={quote.onLocate}/></li>)}</ul>}
    {events.map((e:Row,i:number)=><div className="chatExchange" key={e.request_id}>
     <div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser" data-quote-src={"q:"+pane.id+":"+e.request_id+":user"}><ChatMarkdown text={i===0?(pane.question||"（引用追问）"):(e.message||"")}/></article></div></div>
-    <div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {pane.title}</div><article className="chatAssistant" data-quote-src={"q:"+pane.id+":"+e.request_id+":ai"}>
+    <div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {title}</div><article className="chatAssistant" data-quote-src={"q:"+pane.id+":"+e.request_id+":ai"}>
      <ChatMarkdown text={e.response?.answer||""}/>
      <div className="chatMessageTools"><button type="button" onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button></div>
     </article></div></div>
@@ -138,11 +145,11 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
    {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}
    <div ref={bottom}/>
   </div>
-  {quote.quotingPaneId===pane.id&&<QuoteHud count={quote.pieces.length} limit={12} error={quote.error} canAssemble={quote.canAssemble} onAssemble={()=>quote.onAssemble(pane.id)} onCopy={quote.onCopy} onClear={quote.onClear} onExit={quote.onExit}/>}
-  <QuoteSurface active={quote.quotingPaneId===pane.id} containerRef={scroll} sourcesRef={sourcesRef} pieces={quote.pieces} onChange={quote.setPieces} onExit={quote.onExit}/>
+  {quoting&&<QuoteHud count={pieces.length} limit={12} error={quote.error} canAssemble={pieces.length>0} onAssemble={()=>quote.onAssemble(pane.id)} onCopy={()=>quote.onCopy(pane.id)} onClear={()=>quote.onClear(pane.id)} onExit={quote.onExit}/>}
+  <QuoteSurface paneId={pane.id} active={quoting} containerRef={scroll} sourcesRef={sourcesRef} pieces={pieces} onChange={next=>quote.setPieces(pane.id,next)} onExit={quote.onExit}/>
   {error&&<div className="chatError" role="alert">{error}{pending.current&&!busy&&<button type="button" onClick={()=>void send(true)}>重试</button>}</div>}
   <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
-   <FormulaComposer key={pane.id} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||quote.quotingPaneId===pane.id||user.status!=="active"}/>
+   <FormulaComposer key={pane.id} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||quoting||user.status!=="active"}/>
    <div className="chatComposerActions"><span/><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
   </form>
   </div>
@@ -151,8 +158,8 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layo
  function quoteAnswer(requestId:string){
   const host=scroll.current?.querySelector<HTMLElement>(`[data-quote-src="q:${pane.id}:${requestId}:ai"]`);
   if(!host)return;
-  const found=collectUnitsWithin(host,paneSources(pane,events)).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
-  if(found.length)quote.onAddPieces(found as QuotePiece[]);
+  const found=collectUnitsWithin(host,paneSources(pane,title,events)).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
+  if(found.length)quote.onAddPieces(pane.id,found as QuotePiece[]);
  }
 }
 
@@ -174,13 +181,12 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
  const [drop,setDrop]=useState<{id:string;after:boolean}|null>(null);
  const [resizing,setResizing]=useState(false);
 
- // 自动收纳：只收不放、从右往左、固定页跳过；连带子树一起收
+ // 自动收纳：只收不放、从右往左、固定页跳过；连带子树一起收；主页面永不折叠
  useEffect(()=>{
   const el=strip.current;if(!el)return;
   const fit=()=>{
-   const openCount=1+panes.filter(p=>p.state==="open").length;
-   if(openCount*MIN_PANE+(openCount-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)return;
-   let open=openCount;
+   let open=1+panes.filter(p=>p.state==="open").length;
+   if(open*MIN_PANE+(open-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)return;
    const victims:string[]=[];
    for(let i=panes.length-1;i>=0;i-=1){
     if(open*MIN_PANE+(open-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)break;
@@ -287,10 +293,10 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
  return <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
   {styled}
   {panes.flatMap((pane,i)=>{
-   const node=<SubChatPane key={pane.id} pane={pane} index={i+1} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
+   const node=<SubChatPane key={pane.id} pane={pane} index={i+1} title={paneTitle(i+1)} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
    if(visible(pane)){
     const leftId=prevVisible; // 必须快照：回调在触发时才读，闭包里的 let 已经是终值
-    const resizer=<div key={pane.id+"-r"} className="paneResizer" role="separator" aria-orientation="vertical" aria-label={"调整 "+pane.title+" 宽度"} onPointerDown={e=>startResize(e,leftId,pane.id)} onDoubleClick={()=>resetResize(leftId,pane.id)}/>;
+    const resizer=<div key={pane.id+"-r"} className="paneResizer" role="separator" aria-orientation="vertical" aria-label={"调整 "+paneTitle(i+1)+" 宽度"} onPointerDown={e=>startResize(e,leftId,pane.id)} onDoubleClick={()=>resetResize(leftId,pane.id)}/>;
     prevVisible=pane.id;
     return [resizer,node];
    }

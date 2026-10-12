@@ -14,7 +14,7 @@ export type QuotePiece = {
 export type PaneState = {
   id: string;
   parentId: string;              // "main" 或其它 pane id
-  title: string;                 // "子页面 1"
+  title?: string;                // 历史字段；现在标题一律按位置派生（paneTitle），不再存入
   attemptId: string | null;      // 子页面的正式会话 id（发送后写入）
   quotes: QuotePiece[];          // 创建时固化的引用
   question: string;              // 发起子页面的问题
@@ -32,7 +32,7 @@ export type QuoteWorkspaceState = {
   panes: PaneState[];
   links?: Record<string, string>; // 子会话 attemptId → 父会话 attemptId（历史「追问」归组，关闭子页面后仍保留）
   mainWeight?: number;            // 主面板的 flex 权重（拖动分隔条后保存，M2）
-  seq: number;                   // 子页面编号序列
+  seq?: number;                   // 历史字段（编号已改为按位置派生）
   updatedAt: number;
 };
 

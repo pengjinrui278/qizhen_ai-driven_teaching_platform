@@ -31,4 +31,4 @@ export function topUnitsWithin(root: Element): HTMLElement[];
 export function collectUnitsWithin(root: Element, sources: Record<string, SourceMeta>): RawQuoteUnit[];
 export function quoteKeyOf(el: Element): string;
 export function readQuoteUnit(el: HTMLElement, sources: Record<string, SourceMeta> | undefined): RawQuoteUnit | null;
-export function readPartialQuote(selection: Selection | null): { source: string; block: HTMLElement } | null;
+export function readRangePiece(selection: Selection | null, container: Element | null): { source: string; host: Element | null } | null;

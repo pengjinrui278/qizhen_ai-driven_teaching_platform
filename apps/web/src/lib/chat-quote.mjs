@@ -148,7 +148,9 @@ function katexTex(el) {
   return annotation?.textContent ?? "";
 }
 
-// 段内拖选：按文档顺序遍历 Range 内容，文本原样、公式还原为 LaTeX 定界符
+// 自由框选：按文档顺序遍历 Range 内容，文字精确到字、公式还原为 LaTeX 定界符（原子）。
+// 注意 range.cloneContents() 给的是 DocumentFragment —— 它不是元素节点，必须继续下钻，
+// 否则整段拖选会取到空串（历史缺陷：自由框选一直退化成整块选中）。
 function rangeSource(range) {
   const parts = [];
   const visit = (node) => {
@@ -156,35 +158,35 @@ function rangeSource(range) {
       parts.push(node.textContent || "");
       return;
     }
-    if (!(node instanceof HTMLElement)) return;
-    if (node.classList.contains("katex-display") || node.classList.contains("katex")) {
-      const tex = katexTex(node);
-      if (tex) parts.push(node.classList.contains("katex-display") ? `\\[${tex}\\]` : `\\(${tex}\\)`);
-      return;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.classList.contains("katex-display") || node.classList.contains("katex")) {
+        const tex = katexTex(node);
+        if (tex) parts.push(node.classList.contains("katex-display") ? `\\[${tex}\\]` : `\\(${tex}\\)`);
+        return;
+      }
+      if (node.tagName === "BR") {
+        parts.push("\n");
+        return;
+      }
     }
-    if (node.tagName === "BR") {
-      parts.push("\n");
-      return;
-    }
-    node.childNodes.forEach(visit);
+    node.childNodes?.forEach(visit);
   };
   visit(range.cloneContents());
   return parts.join("").replace(/[ \t]+\n/g, "\n").trim();
 }
 
-// 段内拖选：起止落在同一个文本块内时，按 Range 内容还原片段源（文本原样、公式还原为 LaTeX）
-export function readPartialQuote(selection) {
+// 自由框选：任意拖选（跨块也行）都按 Range 精确取文——文字到字、公式还原为 LaTeX 原子
+export function readRangePiece(selection, container) {
   if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
   const range = selection.getRangeAt(0);
-  const inText = (node) => {
-    const el = node instanceof HTMLElement ? node : node.parentElement;
-    return el?.closest("[data-quote-unit='text']") ?? null;
-  };
-  const block = inText(range.startContainer);
-  if (!block || block !== inText(range.endContainer)) return null;
-  if (block.closest(".quoteCard,.quoteTray,.quoteHud")) return null;
+  const startEl = range.startContainer instanceof HTMLElement ? range.startContainer : range.startContainer.parentElement;
+  const endEl = range.endContainer instanceof HTMLElement ? range.endContainer : range.endContainer.parentElement;
+  if (!startEl || !endEl) return null;
+  if (container && (!container.contains(startEl) || !container.contains(endEl))) return null;
+  if (startEl.closest(QUOTE_SKIP) || endEl.closest(QUOTE_SKIP)) return null;
   const source = rangeSource(range);
-  return source ? { source, block } : null;
+  if (!source) return null;
+  return { source, host: startEl.closest("[data-quote-src]") };
 }
 
 // 这些容器里的内容不参与引用（引用卡片自身、托盘、操作条、输入区）

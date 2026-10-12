@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useRef} from "react";
-import {QUOTE_SKIP,quoteKeyOf,readPartialQuote,readQuoteUnit,topUnitsWithin} from "./chat-quote.mjs";
+import {QUOTE_SKIP,quoteKeyOf,readQuoteUnit,readRangePiece,topUnitsWithin} from "./chat-quote.mjs";
 import {holdPiece,pieceLimit} from "./quote-store";
 import type {QuotePiece} from "./quote-store";
 
@@ -24,7 +24,8 @@ function pieceOf(el:HTMLElement,sources:Sources):QuotePiece|null{
 
 // 剪刀选择层：只做逻辑，不产出可见 DOM。方案：点选整块（公式为原子）、拖拽跨块连选、段内拖选文字；
 // 选中态靠 data-quote-* 契约回贴类名，源文本在 pointerup 时从 pane 的 sources 现场解析。
-export default function QuoteSurface({active,containerRef,sourcesRef,pieces,onChange,onExit}:{
+export default function QuoteSurface({paneId,active,containerRef,sourcesRef,pieces,onChange,onExit}:{
+ paneId:string;
  active:boolean;
  containerRef:React.RefObject<HTMLElement|null>;
  sourcesRef:React.RefObject<Sources>;
@@ -71,13 +72,12 @@ export default function QuoteSurface({active,containerRef,sourcesRef,pieces,onCh
    if(!from)return;
    const sources=sourcesRef.current||{};
    const selection=window.getSelection();
-   // 1) 段内拖选文字
-   const partial=readPartialQuote(selection);
-   if(partial&&Math.abs(e.clientX-from.x)+Math.abs(e.clientY-from.y)>4){
+   // 1) 拖选：文字自由到字、跨块也行（公式在 rangeSource 里还原为 LaTeX 原子）
+   const range=readRangePiece(selection,container);
+   if(range&&Math.abs(e.clientX-from.x)+Math.abs(e.clientY-from.y)>4){
     selection?.removeAllRanges();
-    const block=partial.block;
-    const meta=sources[block.closest<HTMLElement>("[data-quote-src]")?.dataset.quoteSrc??""];
-    if(meta)add([holdPiece({id:crypto.randomUUID(),key:"part:"+crypto.randomUUID(),unit:"text",source:partial.source,text:partial.source,label:meta.label,paneId:meta.paneId,attemptId:meta.attemptId??null,requestId:meta.requestId})]);
+    const meta=sources[range.host?.getAttribute("data-quote-src")??""];
+    if(meta)add([holdPiece({id:crypto.randomUUID(),key:"part:"+crypto.randomUUID(),unit:"text",source:range.source,text:range.source,label:meta.label,paneId:meta.paneId,attemptId:meta.attemptId??null,requestId:meta.requestId})]);
     return;
    }
    selection?.removeAllRanges();
