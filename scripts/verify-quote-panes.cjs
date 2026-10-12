@@ -85,6 +85,9 @@ const SUB_ANSWER = [
 
     await page.goto(BASE + '/student/learn?mode=live&attempt=quote-session');
     await page.getByText('量词顺序不能交换').waitFor({timeout: 20000});
+    const orderNow = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.querySelector('.chatPaneTitle')?.textContent));
+    // 编号按位置派生后，标题序列恒为 1..N，判断真实顺序要用面板 id
+    const orderIds = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.paneId));
 
     // ---- 1. 打开剪刀，块级标记生效 ----
     const scissors = page.getByRole('button', {name: /^剪刀/});
@@ -102,6 +105,19 @@ const SUB_ANSWER = [
     assert.equal(await para.evaluate(el => getComputedStyle(el).outlineStyle), 'dashed');
     assert.equal(await formula.evaluate(el => getComputedStyle(el).outlineStyle), 'dashed');
 
+    // ---- 2b. 自由框选：拖选几个字（公式仍整块，文字到字） ----
+    const paraBox = await para.boundingBox();
+    await page.mouse.move(paraBox.x + 16, paraBox.y + paraBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(paraBox.x + 96, paraBox.y + paraBox.height / 2, {steps: 6});
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    await page.locator('.quoteHud').getByText(/已选 3 \/ \d+ 处/).waitFor();
+    const partialCard = page.locator('.quoteTray .quoteCard').last().locator('.quoteCardBody');
+    const partialText = (await partialCard.innerText()).trim();
+    assert.ok(partialText.length >= 2 && partialText.length < 40, '拖选应只取到一小段文字，实际 " ' + partialText + ' "');
+    assert.ok('先看定义：数列收敛要求对任意'.includes(partialText.slice(0, 4)), '拖选内容应来自该段落：' + partialText);
+
     // ---- 3. Esc 退出剪刀模式 ----
     await page.keyboard.press('Escape');
     assert.equal(await scissors.getAttribute('aria-pressed'), 'false');
@@ -110,7 +126,7 @@ const SUB_ANSWER = [
     await page.locator('.quoteTray').getByRole('button', {name: '拼接成子页面'}).click();
     const pane = page.locator('.chatPane[data-pane-index="1"]');
     await pane.waitFor();
-    assert.equal(await pane.locator('.quoteCard').count(), 2, '两张引用卡片');
+    assert.equal(await pane.locator('.quoteCard').count(), 3, '三张引用卡片（两整块 + 一段自由框选）');
     assert.ok(await pane.locator('.quoteCard .katex').count() > 0, '卡片内公式应渲染');
     const splitWidth = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);
     const panesWidth = await page.locator('.chatPanes').evaluate(el => el.getBoundingClientRect().width);
@@ -139,14 +155,18 @@ const SUB_ANSWER = [
     assert.match(await child.textContent(), /追问/);
     assert.match(await child.textContent(), /为什么 N 不能依赖 n/);
 
-    // ---- 6. 子页面内再剪 → 子页面 2（嵌套） ----
+    // ---- 6. 子页面内再剪 → 子页面 2（嵌套）；顺便验证计数按面板隔离 ----
     await pane.getByRole('button', {name: /^剪刀/}).click();
     const subPara = pane.locator('[data-quote-src$=":ai"] p[data-quote-unit="text"]').first();
     await subPara.click({position: {x: 8, y: 8}});
+    await pane.locator('.quoteHud').getByText(/已选 1 \/ \d+ 处/).waitFor();
+    assert.equal(await pane.locator('.quoteToolCount').innerText(), '1', '子页面工具条应显示本页计数');
+    assert.equal(await page.locator('.chatWorkspace .quoteToolCount').count(), 0, '主面板不应显示子页面的已选数');
     await pane.locator('.quoteHud').getByRole('button', {name: '拼接成子页面'}).click();
     const pane2 = page.locator('.chatPane[data-pane-index="2"]');
     await pane2.waitFor();
-    assert.equal(await pane2.locator('.chatPaneTitle').textContent(), '子页面 2');
+    assert.equal(await pane2.locator('.chatPaneTitle').textContent(), '子页面 2', '编号应等于位置');
+    assert.deepEqual(await orderNow(), ['子页面 1', '子页面 2'], '主页面之后的编号应连续：' + (await orderNow()).join(','));
     await page.screenshot({path: 'data/preview/quote-nested-desktop.png', fullPage: true});
 
     // ---- 7. M2：第三个面板自动收纳为抽页 ----
@@ -171,14 +191,14 @@ const SUB_ANSWER = [
     }
 
     // ---- 9. Alt+方向键换位（同父级相邻兄弟） ----
-    const orderNow = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.querySelector('.chatPaneTitle')?.textContent));
-    const before = await orderNow();
+    const before = await orderIds();
     await page.locator('.chatPane[data-pane-index="3"] .paneGrip').focus();
     await page.keyboard.press('Alt+ArrowLeft');
     await page.waitForTimeout(200);
-    const after = await orderNow();
+    const after = await orderIds();
     // 子页面 3 与它的前一个同父兄弟（子页面 1）交换；子页面 2 是子页面 1 的孩子，跟着走
     assert.deepEqual(after, [before[2], before[0], before[1]], '换位结果应为：' + before.join(',') + ' → ' + after.join(','));
+    assert.deepEqual(await orderNow(), ['子页面 1', '子页面 2', '子页面 3'], '编号应随位置重排');
 
     // ---- 9b. 关掉抽页标签，给分隔条留出可分配余量 ----
     page.on('dialog', dialog => dialog.accept());
@@ -206,14 +226,14 @@ const SUB_ANSWER = [
 
     // ---- 11. 刷新后宽度、顺序与收纳态恢复 ----
     const stateBefore = await page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.state));
-    const orderBeforeReload = await orderNow();
+    const orderBeforeReload = await orderIds();
     await page.reload();
     // 主面板的就绪标志（同一句话也可能出现在引用卡片里，必须限定在主面板内）
     await page.locator('.chatWorkspace').getByText('量词顺序不能交换').first().waitFor({timeout: 20000});
     await page.waitForTimeout(600);
     assert.equal(await page.locator('.chatPane').count(), stateBefore.length, '刷新后应恢复全部子页面');
     assert.deepEqual(await page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.state)), stateBefore, '刷新后应收纳态一致');
-    assert.deepEqual(await orderNow(), orderBeforeReload, '刷新后应保持顺序');
+    assert.deepEqual(await orderIds(), orderBeforeReload, '刷新后应保持顺序');
 
     // ---- 12. 关闭全部 → 主页面恢复全宽（关闭父页面会连带子页面，需确认） ----
     page.on('dialog', dialog => dialog.accept());
@@ -235,7 +255,7 @@ const SUB_ANSWER = [
 
     assert.deepEqual(external, [], '不应有外部请求');
     assert.deepEqual(errors, [], '不应有页面错误');
-    console.log('PASS: 剪刀选块/公式、计数与虚线框、Esc 退出、拼接子页面、引用卡片渲染、子页面提问序列化、嵌套子页面、自动抽页收纳、抽页抽出、Alt+方向键换位、分隔条缩放、刷新恢复、关闭恢复、390px 无溢出');
+    console.log('PASS: 剪刀选块/公式、自由框选到字、每页独立计数、位置化编号、Esc 退出、拼接子页面、引用卡片渲染、子页面提问序列化、嵌套子页面、自动抽页收纳、抽页抽出、Alt+方向键换位、分隔条缩放、刷新恢复、关闭恢复、390px 无溢出');
   } finally {
     await browser.close();
   }
