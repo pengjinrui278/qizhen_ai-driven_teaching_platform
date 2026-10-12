@@ -1,14 +1,23 @@
 /* ============================================================
    剪刀：引用片段 → 拼接 → 并行子页面追问
-   选择器都挂在 .lmCourseChat 下；比 student-chat.css 的同类规则更具体或后置，
-   不改动 chatWorkspace 既有滚动/粘性行为。
+   视觉基线沿用 --lm-* 设计令牌，在其上补一层「工作台」质感：
+   面板卡片化、抽页标签、软阴影分层、页头控件统一。
+   功能性约束（与 TS 常量/验收脚本联动，改动需同步）：
+   - 分隔条宽度 8px（QuotePanes 的 RESIZER）
+   - 面板最小宽 340px（MIN_PANE）、面板间距 14px（STRIP_GAP）
+   - 抽页宽度保持窄条（验收断言 < 80px）
    ============================================================ */
 
-/* 工具栏（chatHeader 内）：默认幽灵态，不抢视觉；进入剪刀模式才用品牌色填充 */
+/* 页头控件统一：与课程选择卡同一套「软按钮」 */
+.lmCourseChat .chatHeader{row-gap:8px;}
+.lmCourseChat .chatHeader > button{background:var(--lm-card,#fff);border:1px solid var(--lm-border,#e2e8f0);border-radius:10px;box-shadow:var(--lm-shadow,0 1px 3px rgba(15,23,42,.06));color:var(--lm-text,#0f172a);font-weight:500;transition:border-color .15s,box-shadow .15s,color .15s;}
+.lmCourseChat .chatHeader > button:hover:not(:disabled){border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);box-shadow:var(--lm-shadow-hover,0 8px 24px rgba(15,23,42,.1));}
+
+/* 剪刀工具：默认幽灵态，不抢视觉；进入剪刀模式才用品牌色填充 */
 .lmCourseChat .quoteToolbar{display:flex;align-items:center;gap:8px;min-width:0;}
 .lmCourseChat .quoteTool{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:transparent;border-radius:999px;padding:7px 12px;font-size:12.5px;color:var(--lm-muted,#64748b);cursor:pointer;min-height:40px;transition:background .15s,color .15s,box-shadow .15s;}
 .lmCourseChat .quoteTool:hover:not(:disabled){background:#eef2ff;color:var(--lm-primary-deep,#4338ca);}
-.lmCourseChat .quoteTool[aria-pressed="true"]{background:var(--lm-primary-deep,#4f46e5);border-color:transparent;color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(79,70,229,.28);}
+.lmCourseChat .quoteTool[aria-pressed="true"]{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 4px 14px rgba(79,70,229,.32);}
 .lmCourseChat .quoteTool:disabled{opacity:.5;cursor:not-allowed;}
 .lmCourseChat .quoteTool .lmIcon{width:15px;height:15px;}
 .lmCourseChat .quoteToolCount{background:var(--lm-primary-deep,#4f46e5);color:#fff;border-radius:999px;font-size:10.5px;padding:1px 6px;transition:background .15s;}
@@ -16,104 +25,126 @@
 /* 描述文案只留给读屏，避免长句在页头堆成一块 */
 .lmCourseChat .quoteToolHint{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}
 
-/* 剪刀光标与小抄（只在处于剪刀模式的面板里生效） */
+/* 面板（工作台）容器：卡片之间的软背景轨道 */
+.lmCourseChat .chatPanes{display:flex;gap:14px;min-width:0;min-height:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;position:relative;}
+.lmCourseChat .chatPanes.hasPanes{background:linear-gradient(180deg,rgba(99,102,241,.035),rgba(6,182,212,.03));border-radius:18px;padding:10px;}
+.lmCourseChat .chatPaneInner{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
+
+/* 面板卡片：并排时才启用卡片外观，单面板保持原有的干净版面 */
+.lmCourseChat .chatPanes.hasPanes > .chatWorkspace,
+.lmCourseChat .chatPanes.hasPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:12px 14px;}
+.lmCourseChat .chatPanes.hasPanes > .chatPane{border-left:1px solid #e6ecf5;padding-left:14px;}
+/* 卡片内的粘性页头/输入区要跟卡片同底色，否则会露出轨道背景 */
+.portal.lmStudentShell .lmCourseChat .chatPanes.hasPanes > .chatWorkspace .chatHeader{background:var(--lm-card,#fff);}
+.portal.lmStudentShell .lmCourseChat .chatPanes.hasPanes > .chatWorkspace .chatComposer{background:var(--lm-card,#fff);}
+
+/* 分隔条：拖动分配相邻两页宽度，双击恢复均分 */
+.lmCourseChat .paneResizer{flex:0 0 8px;align-self:stretch;cursor:col-resize;touch-action:none;position:relative;}
+.lmCourseChat .paneResizer::before{content:"";position:absolute;inset:14px 3px;border-radius:3px;background:transparent;transition:background .15s;}
+.lmCourseChat .paneResizer:hover::before,.lmCourseChat .chatPanes.isResizing .paneResizer::before{background:var(--lm-border-hover,#a5b4fc);}
+.lmCourseChat .chatPanes.isResizing{cursor:col-resize;user-select:none;}
+
+/* 页头抓手：拖动换位（Alt+方向键等价） */
+.lmCourseChat .paneGrip{border:0;background:transparent;color:#b6c2d6;cursor:grab;padding:4px;border-radius:8px;display:inline-flex;min-height:34px;min-width:30px;align-items:center;justify-content:center;touch-action:none;flex:none;transition:background .15s,color .15s;}
+.lmCourseChat .paneGrip:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .paneGrip .lmIcon{width:15px;height:15px;}
+.lmCourseChat .chatPane[data-drop="before"]{box-shadow:-3px 0 0 0 var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .chatPane[data-drop="after"]{box-shadow:3px 0 0 0 var(--lm-primary-deep,#4f46e5);}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace[data-drop]{box-shadow:-3px 0 0 0 var(--lm-primary-deep,#4f46e5);}
+
+/* 面板内页头：编号胶囊 + 抓手 + 工具 + 收起/关闭 */
+.lmCourseChat .chatPaneHead{display:flex;align-items:center;gap:6px;padding:0 0 10px;margin-bottom:8px;border-bottom:1px solid #eef2f8;flex-shrink:0;flex-wrap:wrap;}
+.lmCourseChat .chatPaneTitle{font:600 12.5px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);background:#eef2ff;border-radius:999px;padding:3px 11px;white-space:nowrap;}
+.lmCourseChat .chatPaneActions{margin-left:auto;display:inline-flex;align-items:center;gap:2px;}
+.lmCourseChat .chatPaneCollapse,.lmCourseChat .chatPaneClose{border:0;background:transparent;color:#93a2b8;cursor:pointer;padding:6px;border-radius:9px;display:inline-flex;min-height:34px;min-width:34px;align-items:center;justify-content:center;transition:background .15s,color .15s;}
+.lmCourseChat .chatPaneCollapse:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .chatPaneClose:hover{background:#fee2e2;color:#be123c;}
+.lmCourseChat .chatPaneCollapse .lmIcon{width:15px;height:15px;transform:rotate(90deg);}
+.lmCourseChat .chatPaneClose .lmIcon{width:15px;height:15px;}
+
+/* 抽页：竖排「子页面 N」+ 展开箭头 + 删除叉；悬停/聚焦抽出一半预览。
+   标号条在展开后仍保留（否则点击目标会在悬停瞬间消失，用户永远点不到）。 */
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 54px;min-width:54px;padding:0;overflow:hidden;flex-direction:row;background:linear-gradient(180deg,#f7f9fd,#eef2f9);border:1px solid #e6ecf5;border-left:3px solid var(--lm-border-hover,#a5b4fc);border-radius:14px;cursor:pointer;transition:flex-basis .22s cubic-bezier(.22,.61,.36,1),box-shadow .18s,border-color .18s;}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover{box-shadow:0 8px 22px rgba(16,32,64,.12);border-left-color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"] .chatPaneInner{display:none;min-width:0;}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within{flex-basis:min(52%,520px);background:transparent;border-left-color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover .chatPaneInner,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within .chatPaneInner{display:flex;flex:1;animation:panePull .22s ease;}
+@keyframes panePull{from{opacity:.35;transform:translateX(14px)}to{opacity:1;transform:none}}
+.lmCourseChat .paneTabFace{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;flex:0 0 54px;}
+.lmCourseChat .paneTabOpen{border:0;background:transparent;cursor:pointer;padding:4px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--lm-primary-deep,#4338ca);}
+.lmCourseChat .paneTabOpen:hover{background:rgba(99,102,241,.1);}
+.lmCourseChat .paneTabOpen .lmIcon{width:14px;height:14px;transform:rotate(-90deg);animation:nudgeLeft 2.4s ease-in-out infinite;}
+@keyframes nudgeLeft{0%,72%,100%{transform:rotate(-90deg) translateX(0)}80%{transform:rotate(-90deg) translateX(-3px)}90%{transform:rotate(-90deg) translateX(2px)}}
+.lmCourseChat .paneTabLabel{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:3px;font:600 12px/1.2 system-ui,sans-serif;}
+.lmCourseChat .paneTabClose{border:0;background:transparent;color:#93a2b8;cursor:pointer;padding:6px;border-radius:9px;display:inline-flex;transition:background .15s,color .15s;}
+.lmCourseChat .paneTabClose:hover{background:#fee2e2;color:#be123c;}
+.lmCourseChat .paneTabClose .lmIcon{width:14px;height:14px;}
+
+/* 主面板需要 .portal.lmStudentShell 前缀压过 student-chat.css 的 min-width:0；
+   子面板没有同特异性的竞争规则，保持低特异性，抽页/拖动规则才好覆盖。 */
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
+.lmCourseChat .chatPanes > .chatWorkspace{flex:1 1 0;min-width:340px;}
+.lmCourseChat .chatPanes > .chatPane{flex:1 1 0;min-width:340px;display:flex;flex-direction:column;min-height:0;height:100%;}
+.lmCourseChat .chatPaneScroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:10px 4px 12px;scrollbar-gutter:stable;}
+.lmCourseChat .chatPaneScroll .chatExchange{display:flex;flex-direction:column;gap:14px;margin:0 0 16px;}
+.lmCourseChat .chatPaneScroll .lmMessageRow{display:flex;align-items:flex-start;gap:8px;max-width:100%;min-width:0;}
+.lmCourseChat .chatPaneScroll .lmMessageMe{flex-direction:row-reverse;margin-left:auto;max-width:88%;}
+.lmCourseChat .chatPaneScroll .lmMessageAvatar{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;background:#e8edf9;color:var(--lm-muted,#64748b);}
+.lmCourseChat .chatPaneScroll .lmMessageAvatar .lmIcon{width:14px;height:14px;}
+.lmCourseChat .chatPaneScroll .lmMessageAI{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;}
+.lmCourseChat .chatPaneScroll .lmMessageBody{min-width:0;}
+.lmCourseChat .chatPaneScroll .lmMessageName{font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:3px;}
+/* 卡片里不再给气泡重复描边：用浅底区分助手回答 */
+.lmCourseChat .chatPaneScroll .chatAssistant{background:#f8fafc;border:1px solid transparent;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+.lmCourseChat .chatPaneScroll .chatUser{background:#eef2ff;border:1px solid #dfe6fb;border-radius:12px 4px 12px 12px;padding:10px 12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+.lmCourseChat .chatPaneMissing{padding:10px 4px;color:#be123c;font-size:12.5px;}
+.lmCourseChat .chatPaneMissing button{margin-left:8px;border:1px solid #fecdd3;background:#fff1f2;color:#be123c;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;}
+.lmCourseChat .chatPane .chatComposer{margin-top:10px;}
+.lmCourseChat .chatPane .chatThinking{font-size:12.5px;padding:8px 4px;}
+
+/* 剪刀光标与选中态（只在处于剪刀模式的面板里生效） */
 [data-quoting] .chatMessages,[data-quoting] .chatPaneScroll{cursor:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='1.7' stroke-linecap='round'%3E%3Ccircle cx='6' cy='6' r='3'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Cpath d='M20 4 8.12 15.88'/%3E%3Cpath d='m14.47 14.48 5.53 5.52'/%3E%3Cpath d='M8.12 8.12 12 12'/%3E%3C/svg%3E") 5 5,crosshair;}
 [data-quoting] a,[data-quoting] button{cursor:pointer;}
-.quoteHover{outline:2px dashed #93b4ed;outline-offset:2px;border-radius:4px;}
-.quoteSelected{outline:2px dashed #4f46e5;outline-offset:2px;background:rgba(99,102,241,.07);border-radius:4px;position:relative;}
-.quoteSelected::before{content:attr(data-quote-index);position:absolute;top:-9px;left:-9px;min-width:18px;height:18px;border-radius:9px;background:#4f46e5;color:#fff;font:600 11px/18px system-ui,sans-serif;text-align:center;padding:0 4px;box-sizing:border-box;}
-.quoteFlash{outline:2px solid #4f46e5!important;outline-offset:2px;background:rgba(99,102,241,.16);transition:background .3s;}
+.quoteHover{outline:2px dashed #93b4ed;outline-offset:2px;border-radius:6px;}
+.quoteSelected{outline:2px dashed var(--lm-primary-deep,#4f46e5);outline-offset:2px;background:rgba(99,102,241,.07);border-radius:6px;position:relative;}
+.quoteSelected::before{content:attr(data-quote-index);position:absolute;top:-9px;left:-9px;min-width:18px;height:18px;border-radius:9px;background:var(--lm-primary-deep,#4f46e5);color:#fff;font:600 11px/18px system-ui,sans-serif;text-align:center;padding:0 4px;box-sizing:border-box;box-shadow:0 2px 6px rgba(79,70,229,.35);}
+.quoteFlash{outline:2px solid var(--lm-primary-deep,#4f46e5)!important;outline-offset:2px;background:rgba(99,102,241,.16);transition:background .3s;}
 
 /* 浮动操作条（贴消息区底部） */
-.lmCourseChat .quoteHud{position:sticky;bottom:8px;z-index:4;align-self:center;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px auto;padding:8px 12px;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:999px;box-shadow:0 6px 20px rgba(15,23,42,.12);font-size:12px;max-width:100%;}
-.lmCourseChat .quoteHud button{border:1px solid var(--lm-border,#e2e8f0);background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;color:#475569;cursor:pointer;min-height:32px;}
-.lmCourseChat .quoteHud button:hover:not(:disabled){background:#f8fafc;}
-.lmCourseChat .quoteHud button.primary{background:var(--lm-primary-deep,#4f46e5);border-color:var(--lm-primary-deep,#4f46e5);color:#fff;font-weight:600;}
+.lmCourseChat .quoteHud{position:sticky;bottom:8px;z-index:4;align-self:center;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px auto;padding:9px 12px 9px 16px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 10px 30px rgba(16,32,64,.14);font-size:12px;max-width:100%;animation:hudIn .18s ease;}
+@keyframes hudIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.lmCourseChat .quoteHud button{border:1px solid transparent;background:transparent;border-radius:10px;padding:7px 12px;font-size:12px;color:var(--lm-muted,#64748b);cursor:pointer;min-height:34px;transition:background .15s,color .15s;}
+.lmCourseChat .quoteHud button:hover:not(:disabled){background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .quoteHud button.primary{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(79,70,229,.28);}
 .lmCourseChat .quoteHud button:disabled{opacity:.45;cursor:not-allowed;}
 .lmCourseChat .quoteHudCount{color:#475569;}
 .lmCourseChat .quoteHudError{color:#be123c;max-width:260px;}
 
 /* 已剪片段托盘（输入框上方） */
-.lmCourseChat .quoteTray{margin:12px 0 0;padding:10px 12px;border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;background:#fff;box-shadow:var(--lm-shadow,0 1px 2px rgba(15,23,42,.04));}
-.lmCourseChat .quoteTrayHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
-.lmCourseChat .quoteTrayHead strong{font-size:12.5px;color:#334155;}
-.lmCourseChat .quoteTrayHead .primary{border:1px solid var(--lm-primary-deep,#4f46e5);background:var(--lm-primary-deep,#4f46e5);color:#fff;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;}
+.lmCourseChat .quoteTray{margin:12px 0 0;padding:12px;border:1px solid #e6ecf5;border-radius:16px;background:linear-gradient(180deg,#fbfcff,#f5f8ff);box-shadow:0 1px 2px rgba(16,32,64,.04);}
+.lmCourseChat .quoteTrayHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.lmCourseChat .quoteTrayHead strong{font-size:12.5px;color:#334155;font-weight:600;}
+.lmCourseChat .quoteTrayHead .primary{border:1px solid transparent;background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;box-shadow:0 3px 10px rgba(79,70,229,.26);transition:opacity .15s;}
+.lmCourseChat .quoteTrayHead .primary:hover:not(:disabled){opacity:.92;}
 .lmCourseChat .quoteTrayHead .primary:disabled{opacity:.45;cursor:not-allowed;}
 .lmCourseChat .quoteTrayList{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;}
 .lmCourseChat .quoteCardList{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px;}
 
-/* 引用卡片：默认只露一段并底部署渐隐，悬停/点击展开全文 */
-.lmCourseChat .quoteCard{padding:10px 12px;border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;background:#fff;box-shadow:var(--lm-shadow,0 1px 2px rgba(15,23,42,.04));}
-.lmCourseChat .quoteCardHead{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.lmCourseChat .quoteCardTag{background:#eef2ff;color:#4338ca;border-radius:6px;font-size:11px;font-weight:600;padding:2px 7px;flex:none;}
+/* 引用卡片：默认只露一段并在底部渐隐，悬停/点击展开全文 */
+.lmCourseChat .quoteCard{padding:11px 13px;border:1px solid #e6ecf5;border-radius:14px;background:var(--lm-card,#fff);box-shadow:0 1px 2px rgba(16,32,64,.04);transition:box-shadow .18s,border-color .18s;}
+.lmCourseChat .quoteCard:hover{box-shadow:0 8px 22px rgba(16,32,64,.09);border-color:#dbe3f2;}
+.lmCourseChat .quoteCardHead{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.lmCourseChat .quoteCardTag{background:#eef2ff;color:var(--lm-primary-deep,#4338ca);border-radius:999px;font-size:10.5px;font-weight:600;padding:2px 9px;flex:none;}
 .lmCourseChat .quoteCardLabel{font-size:11.5px;color:var(--lm-muted,#64748b);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lmCourseChat .quoteCardAction{border:0;background:transparent;color:#64748b;font-size:11.5px;cursor:pointer;padding:4px 6px;border-radius:6px;display:inline-flex;align-items:center;flex:none;}
-.lmCourseChat .quoteCardAction:hover{background:#f1f5f9;color:#334155;}
+.lmCourseChat .quoteCardAction{border:0;background:transparent;color:#8ea0bb;font-size:11.5px;cursor:pointer;padding:5px 7px;border-radius:8px;display:inline-flex;align-items:center;flex:none;transition:background .15s,color .15s;}
+.lmCourseChat .quoteCardAction:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
 .lmCourseChat .quoteCardAction .lmIcon{width:14px;height:14px;}
 .lmCourseChat .quoteCardBody{font-size:13px;line-height:1.7;overflow:hidden;}
 .lmCourseChat .quoteCardBody.isClipped{max-height:132px;-webkit-mask-image:linear-gradient(180deg,#000 62%,transparent);mask-image:linear-gradient(180deg,#000 62%,transparent);}
 .lmCourseChat .quoteCard.isExpanded .quoteCardBody{max-height:none;}
 .lmCourseChat .quoteCard.isExpanded .quoteCardBody.isClipped{-webkit-mask-image:none;mask-image:none;}
 .lmCourseChat .quoteCardBody p{margin:4px 0;font-size:13px;}
-.lmCourseChat .quoteCardToggle{display:block;margin-top:4px;border:0;background:transparent;color:#4f46e5;font-size:11.5px;cursor:pointer;padding:4px 0;}
-
-/* 并排面板：主页面 + 子页面。
-   注意用 .portal.lmStudentShell 前缀对齐 student-chat.css 的特异性 —— 那里对 .chatWorkspace
-   设了 min-width:0，低特异性的规则会被吃掉，导致面板被压到不可读的宽度。 */
-.lmCourseChat .chatPanes{display:flex;gap:14px;min-width:0;min-height:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;position:relative;}
-.lmCourseChat .chatPaneInner{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
-/* 分隔条：拖动分配相邻两页宽度，双击恢复均分 */
-.lmCourseChat .paneResizer{flex:0 0 8px;align-self:stretch;cursor:col-resize;touch-action:none;position:relative;}
-.lmCourseChat .paneResizer::before{content:"";position:absolute;inset:8px 3px;border-radius:3px;background:transparent;transition:background .15s;}
-.lmCourseChat .paneResizer:hover::before,.lmCourseChat .chatPanes.isResizing .paneResizer::before{background:#c7d2fe;}
-.lmCourseChat .chatPanes.isResizing{cursor:col-resize;user-select:none;}
-/* 页头抓手：拖动换位（Alt+方向键等价） */
-.lmCourseChat .paneGrip{border:0;background:transparent;color:#94a3b8;cursor:grab;padding:4px;border-radius:6px;display:inline-flex;min-height:32px;min-width:28px;align-items:center;justify-content:center;touch-action:none;flex:none;}
-.lmCourseChat .paneGrip:hover{background:#f1f5f9;color:#475569;}
-.lmCourseChat .paneGrip .lmIcon{width:15px;height:15px;}
-.lmCourseChat .chatPane[data-drop="before"]{box-shadow:-3px 0 0 0 #4f46e5;}
-.lmCourseChat .chatPane[data-drop="after"]{box-shadow:3px 0 0 0 #4f46e5;}
-.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace[data-drop]{box-shadow:-3px 0 0 0 #4f46e5;}
-/* 抽页：收起时是竖排的「页面 N」+ 展开箭头 + 删除叉；悬停/聚焦时抽出一半预览。
-   标号条在展开后仍保留（否则点击目标会在悬停瞬间消失，用户永远点不到）。 */
-.lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 52px;min-width:52px;padding-left:0;overflow:hidden;flex-direction:row;background:#f1f5f9;border-left:1px solid var(--lm-border,#e2e8f0);border-radius:12px;cursor:pointer;transition:flex-basis .22s cubic-bezier(.22,.61,.36,1),background .18s;}
-.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover{background:#e8edf9;}
-.lmCourseChat .chatPanes > .chatPane[data-state="tab"] .chatPaneInner{display:none;min-width:0;}
-.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within{flex-basis:min(52%,520px);background:transparent;}
-.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover .chatPaneInner,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within .chatPaneInner{display:flex;flex:1;animation:panePull .22s ease;}
-@keyframes panePull{from{opacity:.35;transform:translateX(14px)}to{opacity:1;transform:none}}
-.lmCourseChat .paneTabFace{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;flex:0 0 52px;}
-.lmCourseChat .paneTabOpen{border:0;background:transparent;cursor:pointer;padding:2px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--lm-primary-deep,#4338ca);}
-.lmCourseChat .paneTabOpen:hover{background:#e0e7ff;}
-.lmCourseChat .paneTabOpen .lmIcon{width:14px;height:14px;transform:rotate(-90deg);}
-.lmCourseChat .paneTabLabel{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:3px;font:600 12px/1.2 system-ui,sans-serif;}
-.lmCourseChat .paneTabClose{border:0;background:transparent;color:#94a3b8;cursor:pointer;padding:6px;border-radius:8px;display:inline-flex;}
-.lmCourseChat .paneTabClose:hover{background:#fee2e2;color:#be123c;}
-.lmCourseChat .paneTabClose .lmIcon{width:14px;height:14px;}
-/* 主面板需要 .portal.lmStudentShell 前缀压过 student-chat.css 的 min-width:0；
-   子面板没有同特异性的竞争规则，保持低特异性，抽页/拖动规则才好覆盖。 */
-.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
-.lmCourseChat .chatPanes > .chatWorkspace{flex:1 1 0;min-width:340px;}
-.lmCourseChat .chatPanes > .chatPane{flex:1 1 0;min-width:340px;display:flex;flex-direction:column;min-height:0;height:100%;border-left:1px solid var(--lm-border,#e2e8f0);padding-left:14px;}
-.lmCourseChat .chatPaneHead{display:flex;align-items:center;gap:8px;padding:0 0 10px;border-bottom:1px solid #f1f5f9;flex-shrink:0;flex-wrap:wrap;}
-.lmCourseChat .chatPaneTitle{font:600 13.5px/1.5 system-ui,sans-serif;color:#0f172a;white-space:nowrap;}
-.lmCourseChat .chatPaneClose{margin-left:auto;border:0;background:transparent;color:#64748b;cursor:pointer;padding:6px;border-radius:8px;display:inline-flex;min-height:36px;min-width:36px;align-items:center;justify-content:center;}
-.lmCourseChat .chatPaneClose:hover{background:#f1f5f9;color:#334155;}
-.lmCourseChat .chatPaneScroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:12px 4px;scrollbar-gutter:stable;}
-.lmCourseChat .chatPaneScroll .chatExchange{display:flex;flex-direction:column;gap:14px;margin:0 0 16px;}
-.lmCourseChat .chatPaneScroll .lmMessageRow{display:flex;align-items:flex-start;gap:8px;max-width:100%;min-width:0;}
-.lmCourseChat .chatPaneScroll .lmMessageMe{flex-direction:row-reverse;margin-left:auto;max-width:88%;}
-.lmCourseChat .chatPaneScroll .lmMessageAvatar{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;background:#e2e8f0;color:var(--lm-muted,#64748b);}
-.lmCourseChat .chatPaneScroll .lmMessageAvatar .lmIcon{width:14px;height:14px;}
-.lmCourseChat .chatPaneScroll .lmMessageAI{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#2563eb));color:#fff;}
-.lmCourseChat .chatPaneScroll .lmMessageBody{min-width:0;}
-.lmCourseChat .chatPaneScroll .lmMessageName{font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:3px;}
-.lmCourseChat .chatPaneScroll .chatUser,.lmCourseChat .chatPaneScroll .chatAssistant{background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
-.lmCourseChat .chatPaneScroll .chatUser{background:#eef2ff;border-color:#c7d2fe;max-width:100%;}
-.lmCourseChat .chatPaneMissing{padding:10px 4px;color:#be123c;font-size:12.5px;}
-.lmCourseChat .chatPaneMissing button{margin-left:8px;border:1px solid #fecdd3;background:#fff1f2;color:#be123c;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;}
-.lmCourseChat .chatPane .chatComposer{margin-top:10px;}
-.lmCourseChat .chatPane .chatThinking{font-size:12.5px;padding:8px 4px;}
+.lmCourseChat .quoteCardToggle{display:block;margin-top:4px;border:0;background:transparent;color:var(--lm-primary-deep,#4f46e5);font-size:11.5px;cursor:pointer;padding:4px 0;}
 
 /* 历史里的「追问」归组：父会话行 + 展开钮 + 缩进的追问行 */
 .lmCourseChat .chatHistoryRow{display:flex;align-items:center;gap:4px;}
@@ -121,26 +152,31 @@
 .lmCourseChat .chatHistoryKids{flex:none;border:0;background:transparent;color:#64748b;font-size:11px;cursor:pointer;padding:4px 6px;border-radius:6px;min-height:32px;white-space:nowrap;width:auto!important;}
 .lmCourseChat .chatHistoryKids:hover{background:#f0f5ff;color:#334155;}
 .lmCourseChat .chatSessionList .chatHistoryChild{display:flex;align-items:center;gap:6px;padding-left:16px!important;}
-.lmCourseChat .chatHistoryBadge{flex:none;background:#eef2ff;color:#4338ca;border-radius:5px;font-size:10px;font-weight:600;padding:1px 5px;}
+.lmCourseChat .chatHistoryBadge{flex:none;background:#eef2ff;color:#4338ca;border-radius:999px;font-size:10px;font-weight:600;padding:1px 7px;}
 
 /* 窄屏：并排改为整页横滑（每页 100% 宽，滚动吸附），剪刀交互保持可用 */
 @media(max-width:1023px){
- .lmCourseChat .chatPanes{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;gap:0;}
- .portal.lmStudentShell .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
+ .lmCourseChat .chatPanes.hasPanes{padding:6px;border-radius:14px;gap:0;}
+ .lmCourseChat .chatPanes{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;}
+ .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatPane{flex:0 0 100%;min-width:0;scroll-snap-align:start;}
- .lmCourseChat .chatPane{border-left:0;padding-left:0;}
- .lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 44px;min-width:44px;}
+ .lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 48px;min-width:48px;}
  .lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within{flex-basis:100%;}
  .lmCourseChat .chatPaneHead{padding-top:4px;}
  .lmCourseChat .quoteToolHint{display:none;}
  .lmCourseChat .paneResizer{display:none;}
 }
 @media(max-width:680px){
- .lmCourseChat .quoteHud{border-radius:14px;bottom:4px;justify-content:flex-start;}
+ .lmCourseChat .chatPanes.hasPanes{padding:4px;}
+ .lmCourseChat .chatPanes.hasPanes > .chatWorkspace,.lmCourseChat .chatPanes.hasPanes > .chatPane{padding:10px;border-radius:14px;}
+ .lmCourseChat .quoteHud{border-radius:14px;bottom:4px;justify-content:flex-start;padding:8px 10px;}
  .lmCourseChat .quoteTrayList{max-height:200px;}
  .lmCourseChat .quoteCardBody.isClipped{max-height:104px;}
 }
 @media(prefers-reduced-motion:reduce){
  .lmCourseChat .quoteFlash{transition:none;}
+ .lmCourseChat .paneTabOpen .lmIcon{animation:none;}
+ .lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover .chatPaneInner{animation:none;}
+ .lmCourseChat .quoteHud{animation:none;}
 }
