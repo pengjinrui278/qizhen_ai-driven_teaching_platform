@@ -190,6 +190,19 @@ const SUB_ANSWER = [
       assert.equal(await tabThree.getAttribute('data-state'), 'open', '点击抽页应抽出');
     }
 
+    // ---- 8b. 手动折叠键：按意愿收起，再点页边展开；顺序始终按编号 ----
+    const indexOrder = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => Number(e.dataset.paneIndex)));
+    assert.deepEqual(await indexOrder(), [1, 2, 3], '折叠页边与展开页面应统一按编号排列');
+    const openPane = page.locator('.chatPane[data-state="open"]').first();
+    const openIndex = await openPane.getAttribute('data-pane-index');
+    await openPane.locator('.chatPaneCollapse').click();
+    await page.waitForTimeout(320);
+    assert.equal(await page.locator(`.chatPane[data-pane-index="${openIndex}"]`).getAttribute('data-state'), 'tab', '手动收起应立即收成页边');
+    assert.deepEqual(await indexOrder(), [1, 2, 3], '收起后仍按编号排列');
+    await page.locator(`.chatPane[data-pane-index="${openIndex}"] .paneTabOpen`).click();
+    await page.waitForTimeout(320);
+    assert.equal(await page.locator(`.chatPane[data-pane-index="${openIndex}"]`).getAttribute('data-state'), 'open', '点击页边应重新展开');
+
     // ---- 9. Alt+方向键换位（同父级相邻兄弟） ----
     const before = await orderIds();
     await page.locator('.chatPane[data-pane-index="3"] .paneGrip').focus();
