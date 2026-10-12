@@ -42,3 +42,14 @@
 .portal .lmAIChat :focus-visible {outline:3px solid var(--lm-primary-deep);outline-offset:2px;}
 @media(max-width:680px){.portal .lmAIChat .pageHeading {align-items:flex-start;}.portal .lmAIChat .pageHeading button {font-size:12px;flex:none;padding:8px;}.portal .lmAIChat .lmAIMessage {max-width:100%;gap:7px;}.portal .lmAIChat .lmAIAvatar {width:26px;height:26px;}.portal .lmAIChat .aiQuestion,.portal .lmAIChat .aiAnswer {padding:10px 12px;}.portal .lmAIChat .aiComposer textarea {font-size:16px;}.portal .lmAIChat .aiFile {padding:8px;}.portal .lmAIChat .aiAnswer>button {min-height:44px;}}
 @media(prefers-reduced-motion:reduce){.portal .lmAIChat button,.portal .lmAIChat textarea {transition:none;}}
+
+/* 与课程对话页统一：AI 问答的输入区改用可混排公式的编辑器（FormulaComposer）。
+   公式按钮是输入框的兄弟节点，课程页靠 composer 的 grid 把它放在左侧列，这里用同一套网格。 */
+.portal .lmAIChat .aiComposer {display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:start;}
+.portal .lmAIChat .aiComposer .formulaToggle {grid-column:1;grid-row:1;width:44px;height:44px;min-width:0;padding:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--lm-border);border-radius:11px;background:#fff;color:#47618c;cursor:pointer;}
+.portal .lmAIChat .aiComposer .formulaToggle:hover {border-color:var(--lm-border-hover);color:var(--lm-primary-deep);}
+.portal .lmAIChat .aiComposer .formulaInputWrap {grid-column:2;grid-row:1;display:block;}
+.portal .lmAIChat .aiComposer .formulaMessageInput {min-height:64px;max-height:180px;font-size:14px;}
+.portal .lmAIChat .aiComposer .aiAttachment,
+.portal .lmAIChat .aiComposer .aiActions,
+.portal .lmAIChat .aiComposer .aiPrivacy {grid-column:1/-1;}

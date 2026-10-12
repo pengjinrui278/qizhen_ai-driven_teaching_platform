@@ -4,21 +4,19 @@ import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import WindowsInstaller from "./WindowsInstaller";
 import AIToolDirectory from "./AIToolDirectory"; import coursePrompts from "./course-prompts.json";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import {liveApi} from "./Pilot";
 import StudentIcon from "./StudentIcon";
-import {normalizeMath} from "./math-markdown.mjs";
+import ChatMarkdown from "./ChatMarkdown";
+import FormulaComposer from "./FormulaComposer";
 import "./student-ai-chat.css";
 import "katex/dist/katex.min.css";
 import "./ai-learning.css";
 import "./ai-prompts.css";
 type Row=Record<string,any>;
 const tabs=[["","知识问答"],["resources","学习资料"],["notes","我的笔记"],["tools","工具中心"],["setup","本地安装"]];
+// 与课程对话页统一：同一套渲染管线（ChatMarkdown），公式、引用标记行为一致
 function Markdown({text}:{text:string}){
- const normalized=normalizeMath(text);
- return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{normalized}</ReactMarkdown>;
+ return <ChatMarkdown text={text}/>;
 }
 function saveFile(name:string,content:string){const u=URL.createObjectURL(new Blob([content],{type:"text/markdown;charset=utf-8"}));const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
 export default function AILearning({section=""}:{section?:string}){
@@ -28,7 +26,7 @@ export default function AILearning({section=""}:{section?:string}){
  const [resources,setResources]=useState<Row[]>([]),[notes,setNotes]=useState<Row[]>([]),[results,setResults]=useState<Row[]>([]),[query,setQuery]=useState("");
  const [draft,setDraft]=useState<Row|null>(null);
  const [historyOpen,setHistoryOpen]=useState(false);
- const lock=useRef(false),bottom=useRef<HTMLDivElement>(null),pending=useRef<{id:string;text:string;image:string}|null>(null);
+ const lock=useRef(false),bottom=useRef<HTMLDivElement>(null),pending=useRef<{id:string;text:string;image:string}|null>(null),aiInput=useRef<HTMLDivElement>(null);
  async function run(task:()=>Promise<void>){if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");try{await task();}catch(e){setError(e instanceof Error?e.message:"暂时无法完成");}finally{lock.current=false;setBusy(false);}}
  useEffect(()=>{if(tab==="tools"||tab==="setup")return;let live=true;Promise.all([liveApi("/ai/sessions"),liveApi("/ai/resources"),liveApi("/ai/notes")]).then(([s,r,n])=>{if(live){setSessions(s);setResources(r);setNotes(n);}}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
  useEffect(()=>{bottom.current?.scrollIntoView({block:"nearest",behavior:"smooth"});},[messages,busy]);
@@ -49,12 +47,13 @@ export default function AILearning({section=""}:{section?:string}){
  {error&&<p role="alert" className="portalError">{error}</p>}{notice&&<p role="status">{notice}</p>}
  {tab===""&&<div className="aiChatLayout"><aside className={"aiHistory"+(historyOpen?" isOpen":"")}><button disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button>{sessions.map(s=><div className="aiHistoryRow" key={s.id}><button disabled={busy} aria-pressed={active?.id===s.id} onClick={()=>run(async()=>{const d=await liveApi("/ai/sessions/"+s.id);setHistoryOpen(false);setActive(d);setMessages(d.messages);pending.current=null;setText("");setPicture("");})}>{s.title}</button><button title="删除对话" aria-label={"删除对话 "+s.title} disabled={busy} onClick={()=>{if(window.confirm("删除这段对话？已保存的笔记会保留。"))void run(async()=>{await liveApi("/ai/sessions/"+s.id,"DELETE");setSessions(await liveApi("/ai/sessions"));if(active?.id===s.id){setActive(null);setMessages([]);}});}}>×</button></div>)}</aside>
  <section className="aiChat" aria-label="AI 知识问答"><div className="aiMessages" aria-live="polite">
- {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);document.getElementById("ai-question")?.focus();}}>{p.title}</button>)}</div></div>}
+ {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);aiInput.current?.focus();}}>{p.title}</button>)}</div></div>}
  {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion"><Markdown text={m.question}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer"><Markdown text={m.answer}/>{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
  {busy&&<p role="status">正在处理…</p>}<div ref={bottom}/></div>
  <form className="aiComposer" onSubmit={e=>{e.preventDefault();void send();}}>
  {picture&&<div className="aiAttachment"><img src={picture} alt="待发送图片"/><button type="button" onClick={()=>setPicture("")} disabled={busy}>移除图片</button></div>}
- <textarea id="ai-question" aria-label="你的问题" placeholder="输入问题…" maxLength={12000} value={text} disabled={busy} onChange={e=>setText(e.target.value)}/>
+ {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
+ <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}/>
  <div className="aiActions"><label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><label className="aiFile"><StudentIcon name="camera"/>拍照<input aria-label="拍照" type="file" accept="image/*" capture="environment" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><button className="aiPrimary" disabled={busy||!text.trim()} type="submit"><StudentIcon name="send"/>发送</button></div>
  <p className="aiPrivacy">消息及图片会发送至 DeepSeek；图片仅用于本次回答，不保存原图。</p>
  </form></section></div>}
