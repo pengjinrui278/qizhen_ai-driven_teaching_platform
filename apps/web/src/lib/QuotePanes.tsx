@@ -185,10 +185,13 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
  const [drop,setDrop]=useState<{id:string;after:boolean}|null>(null);
  const [resizing,setResizing]=useState(false);
 
- // 自动收纳：只收不放、从右往左、固定页跳过；连带子树一起收；主页面永不折叠
+ // 自动收纳：只收不放、从右往左、固定页跳过；连带子树一起收；主页面永不折叠。
+ // 必须防抖：截图、滚动条出现等瞬时重排会触发 ResizeObserver，若立即收纳，面板会被
+ // 永久收成页边（只收不放）。等布局稳定 >140ms 再判定，并忽略明显异常的窄宽度。
  useEffect(()=>{
   const el=strip.current;if(!el)return;
   const fit=()=>{
+   if(el.clientWidth<MIN_PANE)return;
    let open=1+panes.filter(p=>p.state==="open").length;
    if(open*MIN_PANE+(open-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)return;
    const victims:string[]=[];
@@ -202,9 +205,11 @@ export default function QuotePanes({panes,quote,children,api,user,streaming,cour
    }
    if(victims.length)layoutRef.current.onCollapse(victims);
   };
-  const frame=requestAnimationFrame(fit);
-  const ro=new ResizeObserver(fit);ro.observe(el);
-  return ()=>{cancelAnimationFrame(frame);ro.disconnect();};
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  const schedule=()=>{clearTimeout(timer);timer=setTimeout(fit,140);};
+  schedule();
+  const ro=new ResizeObserver(schedule);ro.observe(el);
+  return ()=>{clearTimeout(timer);ro.disconnect();};
  },[panes]);
 
  // 分隔条：拖动分配相邻两页的权重（总和守恒），双击恢复均分
