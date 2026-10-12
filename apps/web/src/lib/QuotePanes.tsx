@@ -1,13 +1,13 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
-import type {ReactNode} from "react";
+import {cloneElement,isValidElement,useEffect,useRef,useState} from "react";
+import type {ReactElement,ReactNode} from "react";
 import ChatMarkdown,{messageSource} from "./ChatMarkdown";
 import FormulaComposer from "./FormulaComposer";
 import StudentIcon from "./StudentIcon";
 import QuoteSurface from "./QuoteSurface";
 import {QuoteCard,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,serializeFollowUp} from "./chat-quote.mjs";
-import {holdPiece} from "./quote-store";
+import {descendantIds,holdPiece} from "./quote-store";
 import type {PaneState,QuotePiece} from "./quote-store";
 import {streamCourseMessage} from "./course-stream";
 import "./chat-quote.css";
@@ -17,6 +17,10 @@ type Api=(path:string,method?:string,body?:any)=>Promise<any>;
 type SourceMeta={source:string;label:string;paneId:string;attemptId?:string|null;requestId:string};
 type Sources=Record<string,SourceMeta>;
 const MESSAGE_LIMIT=12000;
+const MIN_PANE=340;      // 面板最小宽度（px），自动收纳的判据
+const STRIP_GAP=14;
+const RESIZER=8;
+const PREVIEW_RATIO=0.46; // 抽页悬停时的预览宽度占比
 
 export type QuoteUi={
  pieces:QuotePiece[];
@@ -36,6 +40,14 @@ export type QuoteUi={
  onLocate:(piece:QuotePiece)=>void;
 };
 
+// M2 布局回调：权重拖动、换位、抽页收纳、抽出定格
+export type PaneLayout={
+ onWeights:(patch:Record<string,number>)=>void;
+ onReorder:(id:string,insertIndex:number)=>void;
+ onCollapse:(ids:string[])=>void;
+ onPin:(id:string)=>void;
+};
+
 function paneSources(pane:PaneState,events:Row[]):Sources{
  const map:Sources={};
  events.forEach((e:Row,i:number)=>{
@@ -47,10 +59,12 @@ function paneSources(pane:PaneState,events:Row[]):Sources{
 }
 
 // 子页面：一条独立会话（引用卡片 + 针对性追问），自身管理 attempt/流式/重试，回答可再被剪刀引用
-function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,onClose,onBindAttempt,onSources}:{
+function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
  pane:PaneState;index:number;course:string;api:Api;user:Row;streaming:boolean;quote:QuoteUi;
- sourcesRef:React.RefObject<Sources>;
+ sourcesRef:React.RefObject<Sources>;layout:PaneLayout;dropSide?:"before"|"after";
  onClose:(id:string)=>void;onBindAttempt:(paneId:string,attemptId:string,question:string)=>void;onSources:(paneId:string,sources:Sources|null)=>void;
+ onDragStart:(e:React.PointerEvent,id:string)=>void;
+ onSiblingMove:(id:string,dir:-1|1)=>void;
 }){
  const [events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState("");
@@ -97,8 +111,15 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,onCl
   }catch(e){if(token===epoch.current)setError((e as Error).message);}
   finally{if(token===epoch.current){lock.current=false;setBusy(false);setStage("");}}
  }
- return <section className="chatPane" data-pane-id={pane.id} data-pane-index={index} aria-label={pane.title}>
+ const collapsed=pane.state==="tab";
+ return <section className="chatPane" data-pane-id={pane.id} data-pane-index={index} data-state={pane.state} data-drop={dropSide} aria-label={pane.title} style={collapsed?undefined:{flexGrow:pane.weight}}>
+  {collapsed&&<div className="paneTabFace">
+   <button type="button" className="paneTabOpen" aria-label={pane.title+"，已收起，点击展开"} onClick={()=>layout.onPin(pane.id)}><span className="paneTabNo">{index}</span></button>
+   <button type="button" className="paneTabClose" aria-label={"关闭 "+pane.title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
+  </div>}
+  <div className="chatPaneInner">
   <header className="chatPaneHead">
+   <button type="button" className="paneGrip" aria-label={"拖动排序："+pane.title+"（可用 Alt+方向键换位）"} onPointerDown={e=>onDragStart(e,pane.id)} onKeyDown={e=>{if(!e.altKey)return;if(e.key==="ArrowLeft"){e.preventDefault();onSiblingMove(pane.id,-1);}if(e.key==="ArrowRight"){e.preventDefault();onSiblingMove(pane.id,1);}}}><StudentIcon name="menu"/></button>
    <span className="chatPaneTitle">{pane.title}</span>
    <QuoteToolbar quoting={quote.quotingPaneId===pane.id} count={quote.pieces.length} disabled={busy||loading||quote.busy} onToggle={()=>quote.onToggle(pane.id)}/>
    <button type="button" className="chatPaneClose" aria-label={"关闭 "+pane.title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
@@ -124,6 +145,7 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,onCl
    <FormulaComposer key={pane.id} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||quote.quotingPaneId===pane.id||user.status!=="active"}/>
    <div className="chatComposerActions"><span/><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
   </form>
+  </div>
  </section>;
 
  function quoteAnswer(requestId:string){
@@ -134,19 +156,145 @@ function SubChatPane({pane,index,course,api,user,streaming,quote,sourcesRef,onCl
  }
 }
 
-export default function QuotePanes({panes,quote,children,api,user,streaming,course,sourcesRef,onClose,onBindAttempt,onSources,onRemoveQuote}:{
+export default function QuotePanes({panes,quote,children,api,user,streaming,course,sourcesRef,mainWeight=1,layout,onClose,onBindAttempt,onSources}:{
  panes:PaneState[];
  quote:QuoteUi;
  children:ReactNode;
  api:Api;user:Row;streaming:boolean;course:string;
  sourcesRef:React.RefObject<Sources>;
+ mainWeight?:number;
+ layout:PaneLayout;
  onClose:(id:string)=>void;
  onBindAttempt:(paneId:string,attemptId:string,question:string)=>void;
  onSources:(paneId:string,sources:Sources|null)=>void;
- onRemoveQuote:(paneId:string,pieceId:string)=>void;
 }){
- return <div className={"chatPanes"+(panes.length?" hasPanes":"")}>
-  {children}
-  {panes.map((pane,i)=><SubChatPane key={pane.id} pane={pane} index={i+1} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources}/>)}
+ const strip=useRef<HTMLDivElement>(null);
+ const layoutRef=useRef(layout);layoutRef.current=layout;
+ const drag=useRef<{id:string;x:number}|null>(null);
+ const [drop,setDrop]=useState<{id:string;after:boolean}|null>(null);
+ const [resizing,setResizing]=useState(false);
+
+ // 自动收纳：只收不放、从右往左、固定页跳过；连带子树一起收
+ useEffect(()=>{
+  const el=strip.current;if(!el)return;
+  const fit=()=>{
+   const openCount=1+panes.filter(p=>p.state==="open").length;
+   if(openCount*MIN_PANE+(openCount-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)return;
+   let open=openCount;
+   const victims:string[]=[];
+   for(let i=panes.length-1;i>=0;i-=1){
+    if(open*MIN_PANE+(open-1)*(STRIP_GAP+RESIZER)<=el.clientWidth)break;
+    const pane=panes[i];
+    if(pane.state!=="open"||pane.pinned)continue;
+    victims.push(pane.id);
+    const kids=descendantIds(panes,pane.id).filter(id=>panes.find(p=>p.id===id)?.state==="open");
+    open-=1+kids.length;
+   }
+   if(victims.length)layoutRef.current.onCollapse(victims);
+  };
+  const frame=requestAnimationFrame(fit);
+  const ro=new ResizeObserver(fit);ro.observe(el);
+  return ()=>{cancelAnimationFrame(frame);ro.disconnect();};
+ },[panes]);
+
+ // 分隔条：拖动分配相邻两页的权重（总和守恒），双击恢复均分
+ function startResize(e:React.PointerEvent,leftId:string,rightId:string){
+  e.preventDefault();
+  const el=strip.current;if(!el)return;
+  const weightOf=(id:string)=>id==="main"?mainWeight:(panes.find(p=>p.id===id)?.weight??1);
+  // 用相邻两面板的实际像素宽度标定「权重/像素」，这样抽页标签、间距、分隔条都自然被算进去
+  const elOf=(id:string)=>id==="main"
+   ?el.querySelector<HTMLElement>(":scope > .chatWorkspace")
+   :el.querySelector<HTMLElement>(`[data-pane-id="${id}"]`);
+  const px=(elOf(leftId)?.getBoundingClientRect().width??0)+(elOf(rightId)?.getBoundingClientRect().width??0);
+  const sum=weightOf(leftId)+weightOf(rightId);
+  const perPx=sum/Math.max(1,px);
+  const minW=MIN_PANE*perPx;
+  if(sum<2*minW)return;
+  const startX=e.clientX,leftW=weightOf(leftId);
+  setResizing(true);
+  const move=(ev:PointerEvent)=>{
+   const next=Math.min(Math.max(leftW+(ev.clientX-startX)*perPx,minW),sum-minW);
+   layoutRef.current.onWeights({[leftId]:next,[rightId]:sum-next});
+  };
+  const up=()=>{setResizing(false);window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  window.addEventListener("pointermove",move);
+  window.addEventListener("pointerup",up);
+ }
+ function resetResize(leftId:string,rightId:string){
+  const weightOf=(id:string)=>id==="main"?mainWeight:(panes.find(p=>p.id===id)?.weight??1);
+  const half=(weightOf(leftId)+weightOf(rightId))/2;
+  layoutRef.current.onWeights({[leftId]:half,[rightId]:half});
+ }
+
+ // 换位：按住页头拖动，整棵子树一起移动；键盘 Alt+方向键走同一通道
+ function withoutSubtree(panes:PaneState[],id:string){
+  const ids=new Set([id,...descendantIds(panes,id)]);
+  return panes.filter(p=>!ids.has(p.id));
+ }
+ // 同父级的相邻兄弟间移动一格（Alt+方向键用）
+ function siblingMove(id:string,dir:-1|1){
+  const pane=panes.find(p=>p.id===id);if(!pane)return;
+  const siblings=panes.filter(p=>p.parentId===pane.parentId);
+  const partner=siblings[siblings.findIndex(p=>p.id===id)+dir];
+  if(!partner)return;
+  const rest=withoutSubtree(panes,id);
+  const at=dir>0
+   ?rest.findIndex(p=>p.id===partner.id)+1+descendantIds(panes,partner.id).length
+   :rest.findIndex(p=>p.id===partner.id);
+  if(at>=0)layoutRef.current.onReorder(id,at);
+ }
+ function startDrag(e:React.PointerEvent,id:string){
+  if((e.target as HTMLElement).closest("button:not(.paneGrip)"))return;
+  e.preventDefault();
+  const startX=e.clientX;
+  let moved=false;
+  let target:{id:string;after:boolean}|null=null;
+  const move=(ev:PointerEvent)=>{
+   if(!moved&&Math.abs(ev.clientX-startX)<8)return;
+   moved=true;
+   const under=document.elementFromPoint(ev.clientX,ev.clientY)?.closest<HTMLElement>("[data-pane-id],.chatWorkspace");
+   if(!under)return;
+   const paneId=under.dataset.paneId;
+   const box=under.getBoundingClientRect();
+   const after=ev.clientX>box.left+box.width/2;
+   target=paneId?{id:paneId,after}:{id:"main",after:true};
+   setDrop(target);
+  };
+  const up=()=>{
+   window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);
+   setDrop(null);
+   if(!moved||!target)return;
+   const rest=withoutSubtree(panes,id);
+   const at=target.id==="main"?0:rest.findIndex(p=>p.id===target!.id)+(target!.after?1:0);
+   if(at<0)return;
+   layoutRef.current.onReorder(id,at);
+  };
+  window.addEventListener("pointermove",move);
+  window.addEventListener("pointerup",up);
+ }
+
+ const visible=(pane:PaneState)=>pane.state==="open";
+ let prevVisible="main";
+ // 主面板的 flex 权重（拖动分隔条时与相邻子面板分配宽度）。
+ // 注意 children 可能是数组（工作区 + 隐藏的选择层），只给第一个元素挂 style。
+ const styled=(Array.isArray(children)?children:[children]).map((child,i)=>{
+  if(i!==0||!isValidElement(child))return child;
+  const element=child as ReactElement<{style?:Record<string,unknown>}>;
+  // map 出来的数组元素必须带 key，否则 React 会报 key 警告
+  return cloneElement(element,{key:element.key??"main-pane",style:{...(element.props.style||{}),flexGrow:mainWeight}});
+ });
+ return <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
+  {styled}
+  {panes.flatMap((pane,i)=>{
+   const node=<SubChatPane key={pane.id} pane={pane} index={i+1} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
+   if(visible(pane)){
+    const leftId=prevVisible; // 必须快照：回调在触发时才读，闭包里的 let 已经是终值
+    const resizer=<div key={pane.id+"-r"} className="paneResizer" role="separator" aria-orientation="vertical" aria-label={"调整 "+pane.title+" 宽度"} onPointerDown={e=>startResize(e,leftId,pane.id)} onDoubleClick={()=>resetResize(leftId,pane.id)}/>;
+    prevVisible=pane.id;
+    return [resizer,node];
+   }
+   return [node];
+  })}
  </div>;
 }

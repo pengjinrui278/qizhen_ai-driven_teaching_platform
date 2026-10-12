@@ -31,6 +31,7 @@ export type QuoteWorkspaceState = {
   course: string;
   panes: PaneState[];
   links?: Record<string, string>; // 子会话 attemptId → 父会话 attemptId（历史「追问」归组，关闭子页面后仍保留）
+  mainWeight?: number;            // 主面板的 flex 权重（拖动分隔条后保存，M2）
   seq: number;                   // 子页面编号序列
   updatedAt: number;
 };
@@ -63,6 +64,22 @@ export function subtreeEnd(panes: PaneState[], parentId: string) {
 export function descendantIds(panes: PaneState[], id: string): string[] {
   const direct = panes.filter((p) => p.parentId === id);
   return direct.flatMap((p) => [p.id, ...descendantIds(panes, p.id)]);
+}
+
+// 换位：整棵子树一起移动；insertIndex 是「卸载子树后」数组中的插入位
+export function reorderPane(panes: PaneState[], id: string, insertIndex: number): PaneState[] {
+  const moving = new Set([id, ...descendantIds(panes, id)]);
+  const block = panes.filter((p) => moving.has(p.id));
+  if (!block.length) return panes;
+  const rest = panes.filter((p) => !moving.has(p.id));
+  const at = Math.max(0, Math.min(insertIndex, rest.length));
+  return [...rest.slice(0, at), ...block, ...rest.slice(at)];
+}
+
+// 收起：连带子树一起收（父子并排才有阅读意义）
+export function collapseWithSubtree(panes: PaneState[], ids: string[]): PaneState[] {
+  const all = new Set(ids.flatMap((id) => [id, ...descendantIds(panes, id)]));
+  return panes.map((p) => (all.has(p.id) && p.state === "open" ? { ...p, state: "tab" as const } : p));
 }
 
 export function paneDepth(panes: PaneState[], id: string): number {

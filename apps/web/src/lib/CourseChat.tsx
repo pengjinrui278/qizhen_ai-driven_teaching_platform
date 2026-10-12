@@ -17,7 +17,7 @@ import QuotePanes from "./QuotePanes";
 import type {QuoteUi} from "./QuotePanes";
 import QuoteTray,{QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,quoteKeyOf} from "./chat-quote.mjs";
-import {canAddPane,clearWorkspace,descendantIds,holdPiece,loadWorkspace,newPaneId,paneLimit,pieceLimit,saveWorkspace,subtreeEnd} from "./quote-store";
+import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveWorkspace,subtreeEnd} from "./quote-store";
 import type {PaneState,QuotePiece} from "./quote-store";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
@@ -47,6 +47,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [pieces,setPieces]=useState<QuotePiece[]>([]);
  const [panes,setPanes]=useState<PaneState[]>([]);
  const [links,setLinks]=useState<Record<string,string>>({});
+ const [mainWeight,setMainWeight]=useState(1);
  const [quoteError,setQuoteError]=useState("");
  const paneSeq=useRef(0);
  const sourcesRef=useRef<Record<string,SourceMeta>>({});
@@ -71,13 +72,18 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   setQuotingPaneId(null);setPieces([]);setQuoteError("");
   if(!active?.id){setPanes([]);return;}
   const stored=loadWorkspace(user.id,active.id);
-  if(stored){setPanes(stored.panes);setLinks(stored.links||{});paneSeq.current=stored.seq;}
-  else{setPanes([]);setLinks({});}
+  if(stored){setPanes(stored.panes);setLinks(stored.links||{});setMainWeight(stored.mainWeight??1);paneSeq.current=stored.seq;}
+  else{setPanes([]);setLinks({});setMainWeight(1);}
  },[active?.id,user.id]);
  useEffect(()=>{ // 持久化 pane 树、追问链路与剪贴片段；会话未建立时不写
   if(!user?.id||!active?.id)return;
-  saveWorkspace({v:1,userId:user.id,mainAttemptId:active.id,course,panes,links,seq:paneSeq.current,updatedAt:Date.now()});
- },[panes,links,user?.id,active?.id,course]);
+  saveWorkspace({v:1,userId:user.id,mainAttemptId:active.id,course,panes,links,mainWeight,seq:paneSeq.current,updatedAt:Date.now()});
+ },[panes,links,mainWeight,user?.id,active?.id,course]);
+ // M2 布局：权重拖动、换位、抽页收纳、抽出定格（都落在 pane 树上，随上面的 effect 持久化）
+ function resizePanes(patch:Record<string,number>){setPanes(prev=>prev.map(p=>patch[p.id]!==undefined?{...p,weight:patch[p.id]}:p));if(patch.main!==undefined)setMainWeight(patch.main);}
+ function movePane(id:string,insertIndex:number){setPanes(prev=>reorderPane(prev,id,insertIndex));}
+ function collapsePanes(ids:string[]){if(!ids.length)return;setPanes(prev=>collapseWithSubtree(prev,ids));}
+ function pinPane(id:string){setPanes(prev=>prev.map(p=>p.id===id?{...p,state:"open",pinned:true}:p));}
  function toggleScissors(paneId:string){setQuoteError("");setQuotingPaneId(cur=>cur===paneId?null:paneId);}
  function exitScissors(){setQuotingPaneId(null);setQuoteError("");}
  function addPieces(incoming:QuotePiece[]){
@@ -193,7 +199,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  return <section className={"courseChat lmCourseChat"+(showRelated?" hasRelated":"")+(historyCollapsed?" historyCollapsed":"")}>
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
  <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
- <QuotePanes panes={panes} quote={quoteUi()} api={api} user={user} streaming={streaming} course={course} sourcesRef={sourcesRef} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources} onRemoveQuote={removePaneQuote}>
+ <QuotePanes panes={panes} quote={quoteUi()} api={api} user={user} streaming={streaming} course={course} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
  <section className="chatWorkspace" ref={workspace} data-quoting={quotingPaneId==="main"?"":undefined} onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={pieces.length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
  {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>{courseIntro(course)}</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}

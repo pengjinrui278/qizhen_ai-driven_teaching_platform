@@ -58,10 +58,37 @@
 /* 并排面板：主页面 + 子页面。
    注意用 .portal.lmStudentShell 前缀对齐 student-chat.css 的特异性 —— 那里对 .chatWorkspace
    设了 min-width:0，低特异性的规则会被吃掉，导致面板被压到不可读的宽度。 */
-.lmCourseChat .chatPanes{display:flex;gap:14px;min-width:0;min-height:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+.lmCourseChat .chatPanes{display:flex;gap:14px;min-width:0;min-height:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;position:relative;}
+.lmCourseChat .chatPaneInner{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
+/* 分隔条：拖动分配相邻两页宽度，双击恢复均分 */
+.lmCourseChat .paneResizer{flex:0 0 8px;align-self:stretch;cursor:col-resize;touch-action:none;position:relative;}
+.lmCourseChat .paneResizer::before{content:"";position:absolute;inset:8px 3px;border-radius:3px;background:transparent;transition:background .15s;}
+.lmCourseChat .paneResizer:hover::before,.lmCourseChat .chatPanes.isResizing .paneResizer::before{background:#c7d2fe;}
+.lmCourseChat .chatPanes.isResizing{cursor:col-resize;user-select:none;}
+/* 页头抓手：拖动换位（Alt+方向键等价） */
+.lmCourseChat .paneGrip{border:0;background:transparent;color:#94a3b8;cursor:grab;padding:4px;border-radius:6px;display:inline-flex;min-height:32px;min-width:28px;align-items:center;justify-content:center;touch-action:none;flex:none;}
+.lmCourseChat .paneGrip:hover{background:#f1f5f9;color:#475569;}
+.lmCourseChat .paneGrip .lmIcon{width:15px;height:15px;}
+.lmCourseChat .chatPane[data-drop="before"]{box-shadow:-3px 0 0 0 #4f46e5;}
+.lmCourseChat .chatPane[data-drop="after"]{box-shadow:3px 0 0 0 #4f46e5;}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace[data-drop]{box-shadow:-3px 0 0 0 #4f46e5;}
+/* 抽页：收起时只露标号与删除叉；悬停/聚焦时抽出一半预览。
+   注意标号条在展开后仍保留（否则点击目标会在悬停瞬间消失，用户永远点不到）。 */
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 46px;min-width:46px;padding-left:0;overflow:hidden;flex-direction:row;transition:flex-basis .18s ease;}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"] .chatPaneInner{display:none;min-width:0;}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within{flex-basis:min(52%,520px);}
+.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover .chatPaneInner,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within .chatPaneInner{display:flex;flex:1;}
+.lmCourseChat .paneTabFace{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0;flex:0 0 46px;}
+.lmCourseChat .paneTabOpen{border:0;background:transparent;cursor:pointer;padding:2px;border-radius:8px;}
+.lmCourseChat .paneTabOpen:hover .paneTabNo{background:#4f46e5;color:#fff;}
+.lmCourseChat .paneTabNo{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#eef2ff;color:#4338ca;font:600 12px/1 system-ui,sans-serif;transition:background .15s;}
+.lmCourseChat .paneTabClose{border:0;background:transparent;color:#94a3b8;cursor:pointer;padding:4px;border-radius:6px;display:inline-flex;}
+.lmCourseChat .paneTabClose:hover{background:#fee2e2;color:#be123c;}
+.lmCourseChat .paneTabClose .lmIcon{width:14px;height:14px;}
+/* 主面板需要 .portal.lmStudentShell 前缀压过 student-chat.css 的 min-width:0；
+   子面板没有同特异性的竞争规则，保持低特异性，抽页/拖动规则才好覆盖。 */
 .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
 .lmCourseChat .chatPanes > .chatWorkspace{flex:1 1 0;min-width:340px;}
-.portal.lmStudentShell .lmCourseChat .chatPanes > .chatPane,
 .lmCourseChat .chatPanes > .chatPane{flex:1 1 0;min-width:340px;display:flex;flex-direction:column;min-height:0;height:100%;border-left:1px solid var(--lm-border,#e2e8f0);padding-left:14px;}
 .lmCourseChat .chatPaneHead{display:flex;align-items:center;gap:8px;padding:0 0 10px;border-bottom:1px solid #f1f5f9;flex-shrink:0;flex-wrap:wrap;}
 .lmCourseChat .chatPaneTitle{font:600 13.5px/1.5 system-ui,sans-serif;color:#0f172a;white-space:nowrap;}
@@ -94,13 +121,15 @@
 /* 窄屏：并排改为整页横滑（每页 100% 宽，滚动吸附），剪刀交互保持可用 */
 @media(max-width:1023px){
  .lmCourseChat .chatPanes{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;gap:0;}
- .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
- .portal.lmStudentShell .lmCourseChat .chatPanes > .chatPane,
+ .portal.lmStudentShell .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatWorkspace,
  .lmCourseChat .chatPanes > .chatPane{flex:0 0 100%;min-width:0;scroll-snap-align:start;}
  .lmCourseChat .chatPane{border-left:0;padding-left:0;}
+ .lmCourseChat .chatPanes > .chatPane[data-state="tab"]{flex:0 0 44px;min-width:44px;}
+ .lmCourseChat .chatPanes > .chatPane[data-state="tab"]:hover,.lmCourseChat .chatPanes > .chatPane[data-state="tab"]:focus-within{flex-basis:100%;}
  .lmCourseChat .chatPaneHead{padding-top:4px;}
  .lmCourseChat .quoteToolHint{display:none;}
+ .lmCourseChat .paneResizer{display:none;}
 }
 @media(max-width:680px){
  .lmCourseChat .quoteHud{border-radius:14px;bottom:4px;justify-content:flex-start;}
