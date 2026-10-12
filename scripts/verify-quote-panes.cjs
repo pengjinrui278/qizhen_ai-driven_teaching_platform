@@ -35,6 +35,11 @@ const SUB_ANSWER = [
 
     // ---- 合成接口 ----
     const stores = {
+      // 旧会话：本地没有链路记录，只能靠服务端标题里的【引用追问】识别（跨浏览器/早期会话）
+      'legacy-followup': {
+        id: 'legacy-followup', course_id: 'mathematical_analysis', title: '【引用追问】旧的追问：一致连续',
+        created_at: new Date(Date.now() - 3600e3).toISOString(), problem: {text: '（旧追问）'}, events: [],
+      },
       'quote-session': {
         id: 'quote-session', course_id: 'mathematical_analysis', title: '一致收敛的讨论',
         created_at: new Date().toISOString(), problem: {text: '请解释数列收敛的定义。'}, events: [
@@ -150,10 +155,14 @@ const SUB_ANSWER = [
     await kids.waitFor({timeout: 15000});
     assert.match(await kids.textContent(), /追问 1/);
     await kids.click();
-    const child = page.locator('.chatHistoryChild').first();
+    const child = page.locator('.chatHistoryRow[data-depth="1"]').first();
     await child.waitFor();
     assert.match(await child.textContent(), /追问/);
     assert.match(await child.textContent(), /为什么 N 不能依赖 n/);
+    assert.equal(await page.locator('.chatHistoryBadge').count() >= 1, true, '追问行应带徽标');
+    // 没有本地链路的旧追问也要被认出来：按标题标记显示徽标，而不是混成普通会话
+    const legacy = page.locator('.chatHistoryRow[data-depth="0"]', {hasText: '旧的追问'}).first();
+    assert.equal(await legacy.locator('.chatHistoryBadge').count(), 1, '仅凭标题标记也应识别为追问');
 
     // ---- 6. 子页面内再剪 → 子页面 2（嵌套）；顺便验证计数按面板隔离 ----
     await pane.getByRole('button', {name: /^剪刀/}).click();
