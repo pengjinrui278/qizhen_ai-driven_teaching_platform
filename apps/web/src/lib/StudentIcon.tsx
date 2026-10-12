@@ -18,6 +18,7 @@ export default function StudentIcon({name}:{name:string}){
   up:"m6 12 6-6 6 6M12 6v14",
   camera:"M14 4h-4L8 7H3v13h18V7h-5zM16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
   send:"m22 2-7 20-4-9-9-4zM22 2 11 13",
+  scissors:"M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12",
   download:"M21 15v5H3v-5M7 10l5 5 5-5M12 15V3",
  };
  return <svg className="lmIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]||paths.library}/></svg>;
