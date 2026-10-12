@@ -43,7 +43,8 @@ export type QuoteUi={
 export type PaneLayout={
  onWeights:(patch:Record<string,number>)=>void;
  onReorder:(id:string,insertIndex:number)=>void;
- onCollapse:(ids:string[])=>void;
+ onCollapse:(ids:string[])=>void;      // 自动收纳：连同子树一起收
+ onCollapseOne:(id:string)=>void;      // 手动收起：只收这一页，按用户意愿
  onPin:(id:string)=>void;
 };
 
@@ -129,7 +130,10 @@ function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRe
    <button type="button" className="paneGrip" aria-label={"拖动排序："+title+"（可用 Alt+方向键换位）"} title="拖动换位（Alt+方向键亦可）" onPointerDown={e=>onDragStart(e,pane.id)} onKeyDown={e=>{if(!e.altKey)return;if(e.key==="ArrowLeft"){e.preventDefault();onSiblingMove(pane.id,-1);}if(e.key==="ArrowRight"){e.preventDefault();onSiblingMove(pane.id,1);}}}><StudentIcon name="menu"/></button>
    <span className="chatPaneTitle">{title}</span>
    <QuoteToolbar quoting={quoting} count={pieces.length} disabled={busy||loading||quote.busy} onToggle={()=>quote.onToggle(pane.id)}/>
-   <button type="button" className="chatPaneClose" aria-label={"关闭 "+title} onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
+   <span className="chatPaneActions">
+    <button type="button" className="chatPaneCollapse" aria-label={"收起 "+title+" 为页边"} title="收起为页边" onClick={()=>layout.onCollapseOne(pane.id)}><StudentIcon name="up"/></button>
+    <button type="button" className="chatPaneClose" aria-label={"关闭 "+title} title="关闭此页" onClick={()=>onClose(pane.id)}><StudentIcon name="close"/></button>
+   </span>
   </header>
   <div className="chatPaneScroll" ref={scroll}>
    {missing&&<p className="chatPaneMissing" role="alert">该子页面已失效（会话可能已被删除）。<button type="button" onClick={()=>onClose(pane.id)}>关闭</button></p>}
