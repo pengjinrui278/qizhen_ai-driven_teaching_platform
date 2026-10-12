@@ -149,12 +149,78 @@ const SUB_ANSWER = [
     assert.equal(await pane2.locator('.chatPaneTitle').textContent(), '子页面 2');
     await page.screenshot({path: 'data/preview/quote-nested-desktop.png', fullPage: true});
 
-    // ---- 7. 关闭全部 → 主页面恢复全宽（关闭父页面会连带子页面，需确认） ----
+    // ---- 7. M2：第三个面板自动收纳为抽页 ----
+    const mainScissors = page.locator('.chatWorkspace').getByRole('button', {name: /^剪刀/});
+    await mainScissors.click();
+    await page.locator('.chatWorkspace [data-quote-src$=":ai"] li[data-quote-unit="text"]').first().click();
+    await page.locator('.chatWorkspace .quoteHud').getByRole('button', {name: '拼接成子页面'}).click();
+    await page.locator('.chatPane[data-pane-index="3"]').waitFor();
+    await page.waitForTimeout(400);
+    const tabs = page.locator('.chatPane[data-state="tab"]');
+    assert.ok(await tabs.count() >= 1, '放不下的面板应自动收纳为抽页，实际 ' + await tabs.count());
+    await page.screenshot({path: 'data/preview/quote-drawer-desktop.png', fullPage: true});
+
+    // ---- 8. 点击抽页标签 → 抽出定格 ----
+    const tabThree = page.locator('.chatPane[data-pane-index="3"]');
+    if (await tabThree.getAttribute('data-state') === 'tab') {
+      const tabWidth = await tabThree.evaluate(e => e.getBoundingClientRect().width);
+      assert.ok(tabWidth < 80, '抽页应收成窄条（实际 ' + tabWidth + 'px）');
+      await tabThree.locator('.paneTabOpen').click();
+      await page.waitForTimeout(300);
+      assert.equal(await tabThree.getAttribute('data-state'), 'open', '点击抽页应抽出');
+    }
+
+    // ---- 9. Alt+方向键换位（同父级相邻兄弟） ----
+    const orderNow = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.querySelector('.chatPaneTitle')?.textContent));
+    const before = await orderNow();
+    await page.locator('.chatPane[data-pane-index="3"] .paneGrip').focus();
+    await page.keyboard.press('Alt+ArrowLeft');
+    await page.waitForTimeout(200);
+    const after = await orderNow();
+    // 子页面 3 与它的前一个同父兄弟（子页面 1）交换；子页面 2 是子页面 1 的孩子，跟着走
+    assert.deepEqual(after, [before[2], before[0], before[1]], '换位结果应为：' + before.join(',') + ' → ' + after.join(','));
+
+    // ---- 9b. 关掉抽页标签，给分隔条留出可分配余量 ----
     page.on('dialog', dialog => dialog.accept());
-    const closeButtons = page.locator('.chatPane .chatPaneClose');
-    for (let guard = 0; guard < 6 && await closeButtons.count(); guard += 1) {
+    for (let guard = 0; guard < 6 && await page.locator('.paneTabClose:visible').count(); guard += 1) {
+      await page.locator('.paneTabClose:visible').first().click();
+      await page.waitForTimeout(120);
+    }
+    assert.equal(await page.locator('.chatPane[data-state="open"]').count(), 1, '应只剩一个展开的子页面');
+
+    // ---- 10. 分隔条拖动缩放 ----
+    const resizer = page.locator('.paneResizer').first();
+    const neighbor = page.locator('.chatPane[data-state="open"]').first();
+    const rb = await resizer.boundingBox();
+    const widthBefore = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);
+    const nbBefore = await neighbor.evaluate(el => el.getBoundingClientRect().width);
+    await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rb.x + rb.width / 2 + 140, rb.y + rb.height / 2, {steps: 8});
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const widthAfter = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);
+    const nbAfter = await neighbor.evaluate(el => el.getBoundingClientRect().width);
+    assert.ok(widthAfter > widthBefore + 25, '拖动分隔条应加宽主面板：' + widthBefore + ' → ' + widthAfter);
+    assert.ok(nbAfter < nbBefore - 25, '相邻面板应等量变窄：' + nbBefore + ' → ' + nbAfter);
+
+    // ---- 11. 刷新后宽度、顺序与收纳态恢复 ----
+    const stateBefore = await page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.state));
+    const orderBeforeReload = await orderNow();
+    await page.reload();
+    // 主面板的就绪标志（同一句话也可能出现在引用卡片里，必须限定在主面板内）
+    await page.locator('.chatWorkspace').getByText('量词顺序不能交换').first().waitFor({timeout: 20000});
+    await page.waitForTimeout(600);
+    assert.equal(await page.locator('.chatPane').count(), stateBefore.length, '刷新后应恢复全部子页面');
+    assert.deepEqual(await page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.state)), stateBefore, '刷新后应收纳态一致');
+    assert.deepEqual(await orderNow(), orderBeforeReload, '刷新后应保持顺序');
+
+    // ---- 12. 关闭全部 → 主页面恢复全宽（关闭父页面会连带子页面，需确认） ----
+    page.on('dialog', dialog => dialog.accept());
+    const closeButtons = page.locator('.chatPane .chatPaneClose:visible, .chatPane .paneTabClose:visible');
+    for (let guard = 0; guard < 8 && await closeButtons.count(); guard += 1) {
       await closeButtons.first().click();
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(100);
     }
     assert.equal(await page.locator('.chatPane').count(), 0, '子页面应全部关闭');
     const width = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);
@@ -169,7 +235,7 @@ const SUB_ANSWER = [
 
     assert.deepEqual(external, [], '不应有外部请求');
     assert.deepEqual(errors, [], '不应有页面错误');
-    console.log('PASS: 剪刀选块/公式、计数与虚线框、Esc 退出、拼接子页面、引用卡片渲染、子页面提问序列化、嵌套子页面、关闭恢复、390px 无溢出');
+    console.log('PASS: 剪刀选块/公式、计数与虚线框、Esc 退出、拼接子页面、引用卡片渲染、子页面提问序列化、嵌套子页面、自动抽页收纳、抽页抽出、Alt+方向键换位、分隔条缩放、刷新恢复、关闭恢复、390px 无溢出');
   } finally {
     await browser.close();
   }
