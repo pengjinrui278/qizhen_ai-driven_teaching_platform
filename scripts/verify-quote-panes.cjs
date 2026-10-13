@@ -264,13 +264,40 @@ const SUB_ANSWER = [
 
     // ---- 11b. 素材拼图区：拖入本地文件、粘贴网址、占位格式、换位/缩放/关闭 ----
     await page.route('https://example.com/**', r => r.fulfill({contentType: 'text/html', body: '<p>stub</p>'}));
-    const dropFiles = async files => page.evaluate(async list => {
+    // ratio: 0=最左(上传提问区) 1=最右(并排查看区)；只拖不落时用于检查图层
+    const dragFiles = async (files, ratio, drop = true) => page.evaluate(async arg => {
       const dt = new DataTransfer();
-      for (const f of list) dt.items.add(new File([f.body], f.name, {type: f.type}));
+      for (const f of arg.files) dt.items.add(new File([f.body], f.name, {type: f.type}));
+      const x = Math.round(window.innerWidth * arg.ratio);
       const el = document.querySelector('section.lmCourseChat');
-      el.dispatchEvent(new DragEvent('dragover', {bubbles: true, dataTransfer: dt}));
-      el.dispatchEvent(new DragEvent('drop', {bubbles: true, dataTransfer: dt}));
-    }, files);
+      el.dispatchEvent(new DragEvent('dragover', {bubbles: true, dataTransfer: dt, clientX: x, clientY: 300}));
+      if (arg.drop) el.dispatchEvent(new DragEvent('drop', {bubbles: true, dataTransfer: dt, clientX: x, clientY: 300}));
+    }, {files, ratio, drop});
+    const dropFiles = (files, ratio = 0.9) => dragFiles(files, ratio);
+
+    // ---- 11a. 拖入图层：整页半透明 + 右 1/3 虚线分区 ----
+    await dragFiles([{name: '笔记.md', type: 'text/markdown', body: '# x'}], 0.9, false);
+    await page.locator('.dropOverlay').waitFor();
+    assert.equal(await page.locator('.dropOverlay .dropZoneAsk').count(), 1, '左侧应有「上传文件」分区');
+    assert.equal(await page.locator('.dropOverlay .dropZoneBoard').count(), 1, '右侧应有「并排查看」分区');
+    assert.equal(await page.locator('.dropOverlay.isboard').count(), 1, '指针在右 1/3 时应高亮并排查看区');
+    assert.ok(await page.locator('.dropZoneLine').evaluate(el => getComputedStyle(el).borderLeftStyle === 'dashed'), '分区之间应为虚线');
+    await page.screenshot({path: 'data/preview/drop-overlay.png'});
+    await page.evaluate(() => document.querySelector('section.lmCourseChat').dispatchEvent(new DragEvent('dragleave', {bubbles: true})));
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.dropOverlay').count(), 0, '拖离后图层应消失');
+
+    // ---- 11b. 左区拖入文本：作为提问附件进入输入框（不上传到素材区） ----
+    await dropFiles([{name: '题干.txt', type: 'text/plain', body: '求 f(x)=x^2 在 [0,1] 上的最大值。'}], 0.3);
+    await page.waitForTimeout(300);
+    const draftText = await page.locator('.chatWorkspace [role="textbox"][aria-label="发送消息"]').innerText();
+    assert.match(draftText, /【文件：题干\.txt】/, '左区拖入的文本应进入输入框作为提问附件');
+    assert.match(draftText, /最大值/, '附件正文应一并带入');
+    assert.equal(await page.locator('.materialBoard').count(), 0, '左区拖入不应产生素材页');
+    await page.evaluate(() => { const el = document.querySelector('.chatWorkspace [role="textbox"][aria-label="发送消息"]'); el.innerHTML = ''; el.dispatchEvent(new Event('input', {bubbles: true})); });
+    await page.waitForTimeout(150);
+
+    // ---- 11c. 右区拖入文件：自动成为并排的素材页（无需再选文件） ----
     await dropFiles([
       {name: '笔记.md', type: 'text/markdown', body: '# 素材标题\n这是拖入的素材正文。'},
       {name: '讲义.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', body: 'docx'},
