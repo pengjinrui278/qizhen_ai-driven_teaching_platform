@@ -25,3 +25,9 @@
 .aiToolCard .aiIntroToggle:hover {color:#3730a3;text-decoration:underline;background:none;transform:none;}
 .aiToolCard .aiIntro {margin-top:8px;padding:10px 12px;border-left:3px solid var(--lm-border-hover,#a5b4fc);background:#f8faff;border-radius:0 10px 10px 0;}
 .aiToolCard .aiIntro p {margin:0;font-size:12.5px;line-height:1.7;color:var(--lm-text,#0f172a);}
+
+/* 官方图标（公开 favicon，本地随包分发；缺失时回退到字母/汉字标记） */
+.aiToolMark.hasIcon {background:#fff;box-shadow:inset 0 0 0 1px var(--lm-border,#e2e8f0);}
+.aiToolMark.hasIcon > img {width:26px;height:26px;object-fit:contain;border-radius:6px;}
+.aiToolMark .aiToolIconProbe {position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.aiToolMark {position:relative;}

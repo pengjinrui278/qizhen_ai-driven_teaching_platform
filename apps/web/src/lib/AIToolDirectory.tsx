@@ -1,11 +1,13 @@
 "use client";
 import {useState} from "react";
 import catalog from "./ai-tools.json";
+import iconMap from "./tool-icons.json";
+const icons=iconMap as Record<string,string>;
 import "./ai-tools.css";
 const categories=["全部","对话","生图","视频","音乐","文案","办公","编程","辅助"];
 
-// 每个工具一个字母/汉字标记作为图标：不用各家的品牌 logo（避免商标问题），
-// 但每个工具都有自己的字形与配色，扫一眼能区分。
+// 图标优先用各家官网的 favicon（构建期抓取到本地，离线可用）；缺失或加载失败时,
+// 回退到字母/汉字标记 + 按 id 分配的配色，保证每个工具仍有可辨识的标识。
 function mark(name:string){
  const latin=name.replace(/[^A-Za-z]/g,"");
  if(latin.length>=2)return latin.slice(0,2).toUpperCase();
@@ -16,6 +18,8 @@ function hue(id:string){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))%997
 
 export default function AIToolDirectory(){
  const [category,setCategory]=useState("全部"),[query,setQuery]=useState(""),[notice,setNotice]=useState(""),[help,setHelp]=useState(""),[intro,setIntro]=useState("");
+ // 官方图标：构建期抓取到 public/tool-icons/（清单在 tool-icons.json），本地离线可用；加载失败或缺失则回退到字母标记
+ const [iconFailed,setIconFailed]=useState<Record<string,boolean>>({});
  const filtered=catalog.filter(t=>(category==="全部"||t.categories.includes(category))&&
    (t.name+" "+t.description+" "+t.categories.join(" ")).toLowerCase().includes(query.trim().toLowerCase()));
  async function copy(url:string){try{await navigator.clipboard.writeText(url);setNotice("已复制，可粘贴到系统浏览器打开");}catch{setNotice("无法自动复制，请长按或右键官网链接复制地址");}}
@@ -25,7 +29,11 @@ export default function AIToolDirectory(){
  {notice&&<p role="status">{notice}</p>}
  <div className="aiGrid">{filtered.map(t=><article className="portalPanel aiToolCard" key={t.id} data-tool={t.id}>
  <div className="aiToolTop">
-  <span className={"aiToolMark h"+hue(t.id)} aria-hidden="true">{mark(t.name)}</span>
+  <span className={"aiToolMark h"+hue(t.id)+(icons[t.id]&&!iconFailed[t.id]?" hasIcon":"")} aria-hidden="true">
+   {icons[t.id]&&!iconFailed[t.id]
+    ? <img src={"/tool-icons/"+icons[t.id]} alt="" onError={()=>setIconFailed(cur=>({...cur,[t.id]:true}))}/>
+    : mark(t.name)}
+  </span>
   <div className="aiToolHead"><h2>{t.name}</h2><div className="aiToolTags">{t.categories.map(c=><span key={c}>{c}</span>)}{t.international&&<span>国际服务</span>}</div></div>
  </div>
  <p>{t.description}</p>

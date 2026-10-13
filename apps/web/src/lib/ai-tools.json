@@ -61,16 +61,16 @@
     "intro": "腾讯的 AI 助手，可切换混元等自研模型，联网搜索与微信生态内的资料引用是其特点。"
   },
   {
-    "id": "xinghuo",
-    "name": "讯飞星火",
+    "id": "yiyan",
+    "name": "文心一言",
     "categories": [
       "对话",
       "文案"
     ],
-    "url": "https://xinghuo.xfyun.cn/",
-    "description": "中文问答与写作辅助",
+    "url": "https://yiyan.baidu.com/",
+    "description": "百度中文对话与写作",
     "international": false,
-    "intro": "科大讯飞的对话助手，中文语音识别与教育场景积累深，适合口述记录后再整理。"
+    "intro": "百度文心一言，中文知识问答与公文、作文写作，与百度搜索生态联动。"
   },
   {
     "id": "metaso",
@@ -85,232 +85,29 @@
     "intro": "面向资料检索的 AI 搜索，答案给出可追溯的来源链接，查文献、做综述很省事。"
   },
   {
-    "id": "jimeng",
-    "name": "即梦",
+    "id": "xinghuo",
+    "name": "讯飞星火",
     "categories": [
-      "生图",
-      "视频"
-    ],
-    "url": "https://jimeng.jianying.com/",
-    "description": "图像与视频创作",
-    "international": false,
-    "intro": "字节跳动的图像与视频生成平台，中文提示词友好，适合做课件插图与课程短片素材。"
-  },
-  {
-    "id": "kling",
-    "name": "可灵AI",
-    "categories": [
-      "视频",
-      "生图"
-    ],
-    "url": "https://klingai.com/",
-    "description": "视频、图像生成与编辑",
-    "international": false,
-    "intro": "快手可灵的视频生成模型，镜头运动与物理一致性表现较好，支持图生视频。"
-  },
-  {
-    "id": "wan",
-    "name": "万相",
-    "categories": [
-      "生图",
-      "视频"
-    ],
-    "url": "https://tongyi.aliyun.com/wan/",
-    "description": "图像与视频生成",
-    "international": false,
-    "intro": "阿里通义的图像/视频生成系列（万相），中文场景与写实风格可用，适合快速出素材。"
-  },
-  {
-    "id": "liblib",
-    "name": "LiblibAI",
-    "categories": [
-      "生图"
-    ],
-    "url": "https://www.liblib.art/",
-    "description": "图像创作与模型社区",
-    "international": false,
-    "intro": "国内 Stable Diffusion 模型与工作流社区，可在线生图，也能下载模型到本机使用。"
-  },
-  {
-    "id": "midjourney",
-    "name": "Midjourney",
-    "categories": [
-      "生图"
-    ],
-    "url": "https://www.midjourney.com/",
-    "description": "视觉设计与图像创作",
-    "international": true,
-    "intro": "老牌图像生成服务，审美与风格化能力突出；需要国际网络与付费订阅。"
-  },
-  {
-    "id": "hailuo",
-    "name": "海螺AI",
-    "categories": [
-      "视频"
-    ],
-    "url": "https://hailuoai.video/",
-    "description": "文字与图片生成视频",
-    "international": true,
-    "intro": "MiniMax 海螺的视频生成，写实人物与镜头语言见长，适合做讲解视频的片段。"
-  },
-  {
-    "id": "haimian",
-    "name": "海绵音乐",
-    "categories": [
-      "音乐"
-    ],
-    "url": "https://www.haimian.com/",
-    "description": "中文写歌与音乐创作",
-    "international": false,
-    "intro": "海绵音乐，输入歌词与风格即可生成歌曲，国内可直接使用，适合做课程片头曲。"
-  },
-  {
-    "id": "suno",
-    "name": "Suno",
-    "categories": [
-      "音乐"
-    ],
-    "url": "https://suno.com/",
-    "description": "歌曲生成与音乐创作",
-    "international": true,
-    "intro": "目前最流行的 AI 歌曲生成服务，中文歌词也可用；需要国际网络。"
-  },
-  {
-    "id": "udio",
-    "name": "Udio",
-    "categories": [
-      "音乐"
-    ],
-    "url": "https://www.udio.com/",
-    "description": "歌曲与音乐创作",
-    "international": true,
-    "intro": "与 Suno 齐名的音乐生成服务，编曲细节与音质常被称道；需要国际网络。"
-  },
-  {
-    "id": "stableaudio",
-    "name": "Stable Audio",
-    "categories": [
-      "音乐"
-    ],
-    "url": "https://stableaudio.com/",
-    "description": "音乐与声音生成",
-    "international": true,
-    "intro": "Stability 的音频生成模型，适合生成音效与器乐片段，版权条款相对清晰。"
-  },
-  {
-    "id": "wps",
-    "name": "WPS AI",
-    "categories": [
-      "办公",
+      "对话",
       "文案"
     ],
-    "url": "https://ai.wps.cn/",
-    "description": "文档、表格与演示辅助",
+    "url": "https://xinghuo.xfyun.cn/",
+    "description": "中文问答与写作辅助",
     "international": false,
-    "intro": "WPS 办公套件内置的 AI 助手，写文档、做表格和 PPT 时可以随手调用，国内直接可用。"
+    "intro": "科大讯飞的对话助手，中文语音识别与教育场景积累深，适合口述记录后再整理。"
   },
   {
-    "id": "canva",
-    "name": "Canva 可画",
+    "id": "glm",
+    "name": "智谱清言 GLM",
     "categories": [
-      "办公",
-      "生图",
-      "文案"
-    ],
-    "url": "https://www.canva.cn/",
-    "description": "海报、演示与视觉设计",
-    "international": false,
-    "intro": "在线设计平台可画，模板库与 AI 生图、排版结合，做海报、封面和课件很方便。"
-  },
-  {
-    "id": "zhiwen",
-    "name": "讯飞智文",
-    "categories": [
-      "办公"
-    ],
-    "url": "https://zhiwen.xfyun.cn/",
-    "description": "文档与演示文稿制作",
-    "international": false,
-    "intro": "讯飞智文，从一句话生成 PPT 或文档大纲，中文排版模板较多。"
-  },
-  {
-    "id": "workbuddy",
-    "name": "WorkBuddy",
-    "categories": [
-      "办公",
+      "对话",
+      "文案",
       "编程"
     ],
-    "url": "https://www.workbuddy.cn/",
-    "description": "本地文件与办公任务助手",
+    "url": "https://chatglm.cn/",
+    "description": "清华系中文大模型助手",
     "international": false,
-    "intro": "面向办公场景的 AI 助手，可整理文档与表格；本站的 Windows 安装助手支持一键装到本机。"
-  },
-  {
-    "id": "trae",
-    "name": "TRAE",
-    "categories": [
-      "编程"
-    ],
-    "url": "https://www.trae.cn/",
-    "description": "AI 编程与项目开发",
-    "international": false,
-    "intro": "字节跳动的 AI 编程 IDE，中文界面，可以用对话方式生成与修改项目代码。"
-  },
-  {
-    "id": "codebuddy",
-    "name": "CodeBuddy",
-    "categories": [
-      "编程"
-    ],
-    "url": "https://www.codebuddy.cn/",
-    "description": "AI 编程助手与开发工具",
-    "international": false,
-    "intro": "腾讯的 AI 编程助手，有插件与独立 IDE 两种形态，中文文档友好。"
-  },
-  {
-    "id": "cursor",
-    "name": "Cursor",
-    "categories": [
-      "编程"
-    ],
-    "url": "https://cursor.com/",
-    "description": "AI 代码编辑与开发",
-    "international": true,
-    "intro": "目前最流行的 AI 代码编辑器，整库理解与多文件改写能力强，适合边写边改。"
-  },
-  {
-    "id": "codex",
-    "name": "Codex",
-    "categories": [
-      "编程"
-    ],
-    "url": "https://developers.openai.com/zh-Hans/docs/codex/cli",
-    "description": "代码理解与开发工具",
-    "international": true,
-    "intro": "OpenAI 的命令行编程智能体，可读写仓库、执行命令完成任务；本站安装助手可一键安装。"
-  },
-  {
-    "id": "claudecode",
-    "name": "Claude Code",
-    "categories": [
-      "编程"
-    ],
-    "url": "https://code.claude.com/docs/en/overview",
-    "description": "终端中的编程助手",
-    "international": true,
-    "intro": "Anthropic 的命令行编程智能体，长任务与大型代码库理解见长；本站安装助手可一键安装。"
-  },
-  {
-    "id": "ccswitch",
-    "name": "CC Switch",
-    "categories": [
-      "编程",
-      "辅助"
-    ],
-    "url": "https://github.com/farion1231/cc-switch",
-    "description": "编程工具的本地配置管理",
-    "international": true,
-    "intro": "在多个 AI 编程工具之间一键切换配置（API 供应商与密钥）的小工具，适合同时用好几家模型；本站安装助手支持一键安装。"
+    "intro": "智谱清言的对话入口，中文知识问答与代码能力均衡，带有智能体与工具调用生态。"
   },
   {
     "id": "chatgpt",
@@ -349,18 +146,6 @@
     "intro": "Google 的对话助手，与搜索和 Workspace 联动，多模态与长上下文能力强；需要国际网络。"
   },
   {
-    "id": "yiyan",
-    "name": "文心一言",
-    "categories": [
-      "对话",
-      "文案"
-    ],
-    "url": "https://yiyan.baidu.com/",
-    "description": "百度中文对话与写作",
-    "international": false,
-    "intro": "百度文心一言，中文知识问答与公文、作文写作，与百度搜索生态联动。"
-  },
-  {
     "id": "grok",
     "name": "Grok",
     "categories": [
@@ -373,17 +158,73 @@
     "intro": "xAI 的对话助手，可结合 X 上的实时讨论回答；需要国际网络。"
   },
   {
-    "id": "glm",
-    "name": "智谱清言 GLM",
+    "id": "jimeng",
+    "name": "即梦",
     "categories": [
-      "对话",
-      "文案",
-      "编程"
+      "生图",
+      "视频"
     ],
-    "url": "https://chatglm.cn/",
-    "description": "清华系中文大模型助手",
+    "url": "https://jimeng.jianying.com/",
+    "description": "图像与视频创作",
     "international": false,
-    "intro": "智谱清言的对话入口，中文知识问答与代码能力均衡，带有智能体与工具调用生态。"
+    "intro": "字节跳动的图像与视频生成平台，中文提示词友好，适合做课件插图与课程短片素材。"
+  },
+  {
+    "id": "kling",
+    "name": "可灵AI",
+    "categories": [
+      "视频",
+      "生图"
+    ],
+    "url": "https://klingai.com/",
+    "description": "视频、图像生成与编辑",
+    "international": false,
+    "intro": "快手可灵的视频生成模型，镜头运动与物理一致性表现较好，支持图生视频。"
+  },
+  {
+    "id": "hailuo",
+    "name": "海螺AI",
+    "categories": [
+      "视频"
+    ],
+    "url": "https://hailuoai.video/",
+    "description": "文字与图片生成视频",
+    "international": true,
+    "intro": "MiniMax 海螺的视频生成，写实人物与镜头语言见长，适合做讲解视频的片段。"
+  },
+  {
+    "id": "wan",
+    "name": "万相",
+    "categories": [
+      "生图",
+      "视频"
+    ],
+    "url": "https://tongyi.aliyun.com/wan/",
+    "description": "图像与视频生成",
+    "international": false,
+    "intro": "阿里通义的图像/视频生成系列（万相），中文场景与写实风格可用，适合快速出素材。"
+  },
+  {
+    "id": "liblib",
+    "name": "LiblibAI",
+    "categories": [
+      "生图"
+    ],
+    "url": "https://www.liblib.art/",
+    "description": "图像创作与模型社区",
+    "international": false,
+    "intro": "国内 Stable Diffusion 模型与工作流社区，可在线生图，也能下载模型到本机使用。"
+  },
+  {
+    "id": "midjourney",
+    "name": "Midjourney",
+    "categories": [
+      "生图"
+    ],
+    "url": "https://www.midjourney.com/",
+    "description": "视觉设计与图像创作",
+    "international": true,
+    "intro": "老牌图像生成服务，审美与风格化能力突出；需要国际网络与付费订阅。"
   },
   {
     "id": "muse",
@@ -396,6 +237,141 @@
     "description": "AI 绘画与短视频素材",
     "international": false,
     "intro": "面向创作的 AI 生成平台，可产出插画与短视频素材，中文界面。"
+  },
+  {
+    "id": "wps",
+    "name": "WPS AI",
+    "categories": [
+      "办公",
+      "文案"
+    ],
+    "url": "https://ai.wps.cn/",
+    "description": "文档、表格与演示辅助",
+    "international": false,
+    "intro": "WPS 办公套件内置的 AI 助手，写文档、做表格和 PPT 时可以随手调用，国内直接可用。"
+  },
+  {
+    "id": "canva",
+    "name": "Canva 可画",
+    "categories": [
+      "办公",
+      "生图",
+      "文案"
+    ],
+    "url": "https://www.canva.cn/",
+    "description": "海报、演示与视觉设计",
+    "international": false,
+    "intro": "在线设计平台可画，模板库与 AI 生图、排版结合，做海报、封面和课件很方便。"
+  },
+  {
+    "id": "zhiwen",
+    "name": "讯飞智文",
+    "categories": [
+      "办公"
+    ],
+    "url": "https://zhiwen.xfyun.cn/",
+    "description": "文档与演示文稿制作",
+    "international": false,
+    "intro": "讯飞智文，从一句话生成 PPT 或文档大纲，中文排版模板较多。"
+  },
+  {
+    "id": "suno",
+    "name": "Suno",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://suno.com/",
+    "description": "歌曲生成与音乐创作",
+    "international": true,
+    "intro": "目前最流行的 AI 歌曲生成服务，中文歌词也可用；需要国际网络。"
+  },
+  {
+    "id": "haimian",
+    "name": "海绵音乐",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://www.haimian.com/",
+    "description": "中文写歌与音乐创作",
+    "international": false,
+    "intro": "海绵音乐，输入歌词与风格即可生成歌曲，国内可直接使用，适合做课程片头曲。"
+  },
+  {
+    "id": "udio",
+    "name": "Udio",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://www.udio.com/",
+    "description": "歌曲与音乐创作",
+    "international": true,
+    "intro": "与 Suno 齐名的音乐生成服务，编曲细节与音质常被称道；需要国际网络。"
+  },
+  {
+    "id": "stableaudio",
+    "name": "Stable Audio",
+    "categories": [
+      "音乐"
+    ],
+    "url": "https://stableaudio.com/",
+    "description": "音乐与声音生成",
+    "international": true,
+    "intro": "Stability 的音频生成模型，适合生成音效与器乐片段，版权条款相对清晰。"
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://cursor.com/",
+    "description": "AI 代码编辑与开发",
+    "international": true,
+    "intro": "目前最流行的 AI 代码编辑器，整库理解与多文件改写能力强，适合边写边改。"
+  },
+  {
+    "id": "trae",
+    "name": "TRAE",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://www.trae.cn/",
+    "description": "AI 编程与项目开发",
+    "international": false,
+    "intro": "字节跳动的 AI 编程 IDE，中文界面，可以用对话方式生成与修改项目代码。"
+  },
+  {
+    "id": "codebuddy",
+    "name": "CodeBuddy",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://www.codebuddy.cn/",
+    "description": "AI 编程助手与开发工具",
+    "international": false,
+    "intro": "腾讯的 AI 编程助手，有插件与独立 IDE 两种形态，中文文档友好。"
+  },
+  {
+    "id": "codex",
+    "name": "Codex",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://developers.openai.com/zh-Hans/docs/codex/cli",
+    "description": "代码理解与开发工具",
+    "international": true,
+    "intro": "OpenAI 的命令行编程智能体，可读写仓库、执行命令完成任务；本站安装助手可一键安装。"
+  },
+  {
+    "id": "claudecode",
+    "name": "Claude Code",
+    "categories": [
+      "编程"
+    ],
+    "url": "https://code.claude.com/docs/en/overview",
+    "description": "终端中的编程助手",
+    "international": true,
+    "intro": "Anthropic 的命令行编程智能体，长任务与大型代码库理解见长；本站安装助手可一键安装。"
   },
   {
     "id": "qoder",
@@ -420,16 +396,16 @@
     "intro": "Google 的 Agent 式编程环境，可同时管理多个编码任务并产出验证记录；需要国际网络。"
   },
   {
-    "id": "zion",
-    "name": "Zion",
+    "id": "workbuddy",
+    "name": "WorkBuddy",
     "categories": [
-      "编程",
-      "办公"
+      "办公",
+      "编程"
     ],
-    "url": "https://www.functorz.com/",
-    "description": "可视化无代码开发平台",
+    "url": "https://www.workbuddy.cn/",
+    "description": "本地文件与办公任务助手",
     "international": false,
-    "intro": "国产无代码开发平台，用可视化方式搭建网站与小程序，并可接入 AI 能力做原型。"
+    "intro": "面向办公场景的 AI 助手，可整理文档与表格；本站的 Windows 安装助手支持一键装到本机。"
   },
   {
     "id": "cherrystudio",
@@ -465,6 +441,18 @@
     "intro": "开源可自部署的 AI 对话框架，插件、知识库与多模型接入生态丰富，适合想自己掌控数据的用户。"
   },
   {
+    "id": "ccswitch",
+    "name": "CC Switch",
+    "categories": [
+      "编程",
+      "辅助"
+    ],
+    "url": "https://github.com/farion1231/cc-switch",
+    "description": "编程工具的本地配置管理",
+    "international": true,
+    "intro": "在多个 AI 编程工具之间一键切换配置（API 供应商与密钥）的小工具，适合同时用好几家模型；本站安装助手支持一键安装。"
+  },
+  {
     "id": "immersivetranslate",
     "name": "沉浸式翻译",
     "categories": [
@@ -475,5 +463,17 @@
     "description": "AI 双语对照翻译插件",
     "international": false,
     "intro": "浏览器翻译插件，用 AI 做双语对照翻译，读英文教材与论文时逐段对照很省力。"
+  },
+  {
+    "id": "zion",
+    "name": "Zion",
+    "categories": [
+      "编程",
+      "办公"
+    ],
+    "url": "https://www.functorz.com/",
+    "description": "可视化无代码开发平台",
+    "international": false,
+    "intro": "国产无代码开发平台，用可视化方式搭建网站与小程序，并可接入 AI 能力做原型。"
   }
 ]
