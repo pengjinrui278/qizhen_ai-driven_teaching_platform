@@ -302,7 +302,6 @@ export default function QuotePanes({panes,quote,children,board,dropping,api,user
   return cloneElement(element,{key:element.key??"main-pane",style:{...(element.props.style||{}),flexGrow:mainWeight}});
  });
  return <div className={"chatSplit"+(dropping?" isDropping":"")+(board?" hasBoard":"")}>
-  {dropping&&<div className="materialDropHint"><span>松开即可加入素材区（只在本地打开，不上传）</span></div>}
   <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
   {styled}
   {panes.flatMap((pane,i)=>{

@@ -19,7 +19,7 @@ import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,isFollowUpText,quoteKeyOf} from "./chat-quote.mjs";
 import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
 import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
-import {inputFromFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
+import {fileToDataUrl,inputFromFile,isImageFile,isTextFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
 import type {MaterialPane} from "./material-store";
 import type {PaneState,QuotePiece} from "./quote-store";
 type Row=Record<string,any>;
@@ -154,6 +154,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  // 素材拼图区：拖入本地文件或网址 → 停靠在对话卡片右侧，只作阅读用，不含 agent 对话
  const [materials,setMaterials]=useState<MaterialPane[]>([]);
  const [dropping,setDropping]=useState(false);
+ const [dropZone,setDropZone]=useState<"ask"|"board"|null>(null);
  const [boardWidth,setBoardWidth]=useState(360);
  const materialsRef=useRef<MaterialPane[]>([]);materialsRef.current=materials;
  useEffect(()=>()=>{materialsRef.current.forEach(releaseMaterial);},[]);
@@ -179,14 +180,60 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  function closeMaterial(id:string){setMaterials(cur=>{const pane=cur.find(p=>p.id===id);if(pane)releaseMaterial(pane);return cur.filter(p=>p.id!==id);});}
  function moveMaterial(id:string,delta:number){setMaterials(cur=>{const i=cur.findIndex(p=>p.id===id),j=i+delta;if(i<0||j<0||j>=cur.length)return cur;const next=[...cur];[next[i],next[j]]=[next[j],next[i]];return next;});}
  function clearMaterials(){setMaterials(cur=>{cur.forEach(releaseMaterial);return [];});}
- function onDragOver(e:React.DragEvent){const types=e.dataTransfer?.types||[];const hasFile=Array.from(types).includes("Files");const hasText=Array.from(types).some(t=>t==="text/uri-list"||t==="text/plain");if(!hasFile&&!hasText)return;e.preventDefault();e.dataTransfer.dropEffect="copy";if(!dropping)setDropping(true);}
- function onDragLeave(e:React.DragEvent){if(e.currentTarget.contains(e.relatedTarget as Node))return;setDropping(false);}
+ // 拖入分区：右侧 1/3 = 并排查看（素材页），其余 = 上传文件向 AI 提问
+ function zoneOf(clientX:number){return clientX>=window.innerWidth*2/3?"board":"ask";}
+ function onDragOver(e:React.DragEvent){
+  const types=e.dataTransfer?.types||[];
+  const hasFile=Array.from(types).includes("Files");
+  const hasText=Array.from(types).some(t=>t==="text/uri-list"||t==="text/plain");
+  if(!hasFile&&!hasText)return;
+  e.preventDefault();e.dataTransfer.dropEffect="copy";
+  const zone=zoneOf(e.clientX);
+  if(!dropping)setDropping(true);
+  if(dropZone!==zone)setDropZone(zone);
+ }
+ function onDragLeave(e:React.DragEvent){if(e.currentTarget.contains(e.relatedTarget as Node))return;setDropping(false);setDropZone(null);}
  function onDrop(e:React.DragEvent){
-  e.preventDefault();setDropping(false);
+  e.preventDefault();
+  const zone=zoneOf(e.clientX);
+  setDropping(false);setDropZone(null);
   const files=e.dataTransfer?.files;
-  if(files?.length){void addFiles(files);return;}
-  const url=e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain");
-  if(url)addUrl(url);
+  // 网址只能并排查看（浏览器无法抓取外部网页正文），不论落在哪边都进素材区
+  if(!files?.length){
+   const url=e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain");
+   if(url)addUrl(url);
+   return;
+  }
+  if(zone==="board")void addFiles(files);
+  else void attachToQuestion(files);
+ }
+ // 左侧分区：把文件作为提问附件——文本类直接读入输入框，图片走既有识别链路
+ async function attachToQuestion(files:FileList|File[]){
+  const list=Array.from(files);
+  let appended="";
+  for(const file of list){
+   if(isTextFile(file)){
+    let text="";
+    try{text=await file.text();}catch{text="";}
+    appended+=`\n\n【文件：${file.name}】\n${text.slice(0,4000)}`;
+   }else if(isImageFile(file)){
+    try{
+     const dataUrl=await fileToDataUrl(file);
+     const result=await api("/recognize","POST",{data_url:dataUrl});
+     appended+=`\n\n【图片识别：${file.name}】\n${(result?.text||"").slice(0,4000)}`;
+    }catch{
+     setError(`${file.name} 识别失败，可以先存成图片再拖进来，或改用相机入口。`);
+     return;
+    }
+   }else{
+    setError(`暂不支持把 ${file.name} 作为提问附件（浏览器无法读取该格式正文）。拖到右侧可并排查看。`);
+    return;
+   }
+  }
+  if(!appended)return;
+  setDraft(cur=>cur+appended);
+  setError("");
+  window.setTimeout(()=>input.current?.focus(),0);
  }
  function startBoardResize(e:React.PointerEvent){
   e.preventDefault();
@@ -260,6 +307,19 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const courseSymbol:Record<string,string>={mathematical_analysis:"ε",linear_algebra_analytic_geometry:"⟨⟩",university_physics:"ω",point_set_topology:"τ",ordinary_differential_equations:"y′"};
  const suggestionList=(coursePrompts as Record<string,{title:string;question:string}[]>)[course]||[{title:"从一个问题开始",question:"请帮我拆解这个问题，并引导我检查自己的思路。"}];
  return <section className={"courseChat lmCourseChat"+(showRelated?" hasRelated":"")+(historyCollapsed?" historyCollapsed":"")} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+ {dropping&&<div className={"dropOverlay"+(dropZone?" is"+dropZone:"")} aria-hidden="true">
+  <div className="dropZone dropZoneAsk">
+   <StudentIcon name="file"/>
+   <strong>上传文件 · 向 AI 提问</strong>
+   <span>文本/Markdown 直接读入输入框；图片先识别成文字再提问</span>
+  </div>
+  <div className="dropZoneLine" aria-hidden="true"/>
+  <div className="dropZone dropZoneBoard">
+   <StudentIcon name="library"/>
+   <strong>并排查看 · 不参与提问</strong>
+   <span>作为素材页停在右侧，只看不聊（文件不出本机）</span>
+  </div>
+ </div>}
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
  <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
  <QuotePanes panes={panes} quote={quoteUi()} board={materials.length>0?<>

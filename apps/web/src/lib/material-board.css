@@ -11,7 +11,9 @@
 .lmCourseChat .materialBoardHead .lmIcon{width:16px;height:16px;color:var(--lm-primary-deep,#4f46e5);}
 .lmCourseChat .materialBoardHead strong{font:600 12.5px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);background:#eef2ff;border-radius:999px;padding:3px 11px;}
 .lmCourseChat .materialBoardHint{font-size:11px;color:var(--lm-muted,#94a3b8);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lmCourseChat .materialBoardList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 0 12px;scrollbar-gutter:stable;}
+/* 列表左右留出 10px 余量：鼠标停在这条空隙上时滚轮滚的是素材列表（方便在多份材料间切换），
+   停在文件内部（PDF/文本自身可滚动）时滚的是文件本身。 */
+.lmCourseChat .materialBoardList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 10px;scrollbar-gutter:stable;}
 
 /* 瓷砖 */
 .lmCourseChat .materialTile{position:relative;display:flex;flex-direction:column;min-height:160px;border:1px solid #e6ecf5;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(16,32,64,.04);overflow:hidden;flex:none;}
@@ -41,10 +43,23 @@
 .lmCourseChat .materialResize::after{content:"";position:absolute;left:50%;bottom:3px;width:44px;height:3px;margin-left:-22px;border-radius:3px;background:#e2e8f0;transition:background .15s;}
 .lmCourseChat .materialResize:hover::after{background:var(--lm-border-hover,#a5b4fc);}
 
-/* 拖入提示：文件拖到对话区任意位置即可加入 */
+/* 拖入分区图层：覆盖整页的半透明层，右侧 1/3 为「并排查看」，其余为「上传提问」 */
+.dropOverlay{position:fixed;inset:0;z-index:60;display:flex;pointer-events:none;background:rgba(15,23,42,.26);backdrop-filter:blur(1.5px);animation:dropIn .14s ease;}
+@keyframes dropIn{from{opacity:0}to{opacity:1}}
+.dropOverlay .dropZone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;transition:background .15s;}
+.dropOverlay .dropZoneAsk{flex:2;}
+.dropOverlay .dropZoneBoard{flex:1;}
+.dropOverlay .dropZone .lmIcon{width:34px;height:34px;}
+.dropOverlay .dropZone strong{font:600 15px/1.5 system-ui,sans-serif;}
+.dropOverlay .dropZone span{font-size:12.5px;line-height:1.6;max-width:280px;color:#dbe4f5;}
+.dropOverlay .dropZoneAsk{color:#eef2ff;}
+.dropOverlay .dropZoneBoard{color:#eef2ff;}
+.dropOverlay .dropZoneLine{flex:0 0 0;border-left:2px dashed rgba(255,255,255,.75);margin:18px 0;}
+.dropOverlay .dropZoneAsk{border:2px dashed transparent;border-right:0;border-radius:18px 0 0 18px;margin:14px 0 14px 14px;}
+.dropOverlay .dropZoneBoard{border:2px dashed transparent;border-left:0;border-radius:0 18px 18px 0;margin:14px 14px 14px 0;}
+.dropOverlay.isask .dropZoneAsk{background:rgba(99,102,241,.34);border-color:rgba(199,210,254,.9);}
+.dropOverlay.isboard .dropZoneBoard{background:rgba(6,182,212,.32);border-color:rgba(165,243,252,.9);}
 .lmCourseChat .chatPanes.isDropping{outline:2px dashed var(--lm-primary-deep,#4f46e5);outline-offset:-6px;border-radius:18px;}
-.lmCourseChat .materialDropHint{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;pointer-events:none;font:600 13px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);}
-.lmCourseChat .materialDropHint span{background:rgba(255,255,255,.96);border:1px dashed var(--lm-border-hover,#a5b4fc);border-radius:14px;padding:10px 18px;box-shadow:0 10px 26px rgba(16,32,64,.12);}
 
 /* 素材工具（页头） */
 .lmCourseChat .materialToolbar{position:relative;display:inline-flex;align-items:center;}

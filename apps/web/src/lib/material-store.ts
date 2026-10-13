@@ -47,6 +47,22 @@ export function inputFromFile(file: File): MaterialInput {
   return {kind:"unsupported",title:name,source:URL.createObjectURL(file),size:file.size,note:"暂不支持在线预览此格式，可在此打开或下载后查看"};
 }
 
+// 能否作为“提问附件”：文本类直接读入，图片走现有识别链路；PDF/Office 暂不支持（不假装支持）
+export function isTextFile(file: File){
+  return TEXT_EXT.test(file.name||"")||(file.type||"").startsWith("text/");
+}
+export function isImageFile(file: File){
+  return IMAGE_EXT.test(file.name||"")||(file.type||"").startsWith("image/");
+}
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("无法读取文件"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function newMaterialPane(input: MaterialInput, order: number): MaterialPane {
   return {id:"mat-"+Math.random().toString(36).slice(2,10),kind:input.kind,title:input.title,source:input.source,note:input.note,size:input.size,height:input.kind==="image"?280:360,order};
 }
