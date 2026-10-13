@@ -14,18 +14,16 @@ function displayTitle(row:Row){const value=String(row.title||"课程讨论").rep
 // 会话列表规则（用户要求）：「最近对话」里只允许出现主页面的提问会话；
 // 追问一律折叠到父词条右侧的「追问 N」里，点开像目录一样一环套一环。
 // 追问识别双通道：本地链路（followUpOf）优先，其次看服务端标题里的【引用追问】标记。
-// 极少数既无链路、列表里也找不到父会话的追问（换设备/父会话已删）单独收进末尾的
-// 「未关联的追问」折叠组，避免它们混进主对话列表、也避免彻底找不到。
+// 既无本地链路、列表里也找不到父会话的追问（换设备/父会话已删）不再出现在列表里：
+// 它们不是主对话、也无法归入目录。数据仍保留在服务器上，只是不在这里展示。
 export default function ChatHistoryList({sessions,activeId,onOpen,followUpOf}:{sessions:Row[];activeId?:string;onOpen:(row:Row)=>void;followUpOf?:(id:string)=>string|null}){
  const [open,setOpen]=useState<Record<string,boolean>>({});
- const [orphanOpen,setOrphanOpen]=useState(false);
  const byId=new Map(sessions.map(s=>[s.id,s]));
  const parentOf=(row:Row)=>{const parent=followUpOf?.(row.id);return parent&&byId.has(parent)?parent:null;};
  const isFollowUp=(row:Row)=>Boolean(followUpOf?.(row.id))||isFollowUpTitle(row.title);
  const kidsOf=(id:string)=>sessions.filter(s=>parentOf(s)===id).sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||"")));
  const countAll=(id:string):number=>kidsOf(id).reduce((n,k)=>n+1+countAll(k.id),0);
  const roots=sessions.filter(row=>!isFollowUp(row));
- const orphans=sessions.filter(row=>isFollowUp(row)&&!parentOf(row));
 
  function renderRow(item:Row,depth:number){
   const kids=kidsOf(item.id);
@@ -48,10 +46,5 @@ export default function ChatHistoryList({sessions,activeId,onOpen,followUpOf}:{s
    const rows=roots.filter(item=>group(item.created_at)===label);if(!rows.length)return null;
    return <section className="chatHistoryGroup" key={label} aria-label={label+"的会话"}><h3>{label}</h3>{rows.map(item=>renderRow(item,0))}</section>;
   })}
-  {orphans.length>0&&<section className="chatHistoryGroup chatHistoryOrphans" aria-label="未关联的追问">
-   <button type="button" className="chatHistoryOrphanToggle" aria-expanded={orphanOpen} onClick={()=>setOrphanOpen(v=>!v)}>未关联的追问 {orphans.length} <span aria-hidden="true">{orphanOpen?"▾":"▸"}</span></button>
-   <p className="chatHistoryOrphanNote">这些追问的父对话已不在当前列表（或来自其他设备），无法归入目录。</p>
-   {orphanOpen&&orphans.map(item=>renderRow(item,0))}
-  </section>}
  </>;
 }
