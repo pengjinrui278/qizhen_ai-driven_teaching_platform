@@ -45,7 +45,8 @@ const BASE = process.env.MIRROR_WEB_PREVIEW_URL || 'http://127.0.0.1:3011';
     // 点击连接 → 出现"正在等待本地连接器"
     const popupPromise = page.waitForEvent('popup');
     await page.getByRole('button', {name: '在本机连接浙大'}).click();
-    await page.locator('.zjuWaiting').waitFor();
+    // 模拟连接器可能瞬间握手完成，等待态一闪而过：断言'等待或已连接'先出现即可
+    await page.locator('.zjuWaiting, .zjuScheduleNotice').first().waitFor();
     const popup = await popupPromise;
     await popup.waitForLoadState('domcontentloaded');
     // ready 握手后父页面应切换为"已连接，请登录并同步"
