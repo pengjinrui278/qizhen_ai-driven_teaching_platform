@@ -41,14 +41,15 @@
    卡片只留左右内边距，上下由页头/输入区自己撑满 —— 否则页头与卡片顶边、
    输入区与卡片底边之间会露出缝隙，滚动内容从缝里透出来。 */
 .lmCourseChat .chatPanes > .chatWorkspace,
-.lmCourseChat .chatPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 14px;}
-/* 卡片内的粘性页头/输入区跟卡片同底色，并补上卡片圆角，避免露出轨道背景或方角 */
-.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatHeader{background:var(--lm-card,#fff);border-radius:15px 15px 0 0;padding:12px 0;}
-.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatComposer{background:var(--lm-card,#fff);border-radius:0 0 15px 15px;padding-bottom:12px;}
+.lmCourseChat .chatPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 20px;}
+/* 卡片内的粘性页头/输入区跟卡片同底色，并补上卡片圆角，避免露出轨道背景或方角。
+   上下留白比左右略大：页头与输入区不贴到卡片边。 */
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatHeader{background:var(--lm-card,#fff);border-radius:15px 15px 0 0;padding:14px 0;}
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatComposer{background:var(--lm-card,#fff);border-radius:0 0 15px 15px;padding:4px 0 14px;}
 .portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace .chatMessages{padding-top:12px;}
 .lmCourseChat .chatPanes > .chatWorkspace > details{margin-bottom:0;padding-bottom:10px;}
-.lmCourseChat .chatPanes > .chatPane .chatPaneHead{padding:12px 0 10px;margin-top:0;}
-.lmCourseChat .chatPanes > .chatPane .chatComposer{border-radius:0 0 15px 15px;padding-bottom:12px;}
+.lmCourseChat .chatPanes > .chatPane .chatPaneHead{padding:14px 0 10px;margin-top:0;}
+.lmCourseChat .chatPanes > .chatPane .chatComposer{border-radius:0 0 15px 15px;padding:4px 0 14px;}
 
 /* 分隔条：拖动分配相邻两页宽度，双击恢复均分 */
 .lmCourseChat .paneResizer{flex:0 0 8px;align-self:stretch;cursor:col-resize;touch-action:none;position:relative;}
@@ -106,9 +107,11 @@
 .lmCourseChat .chatPaneScroll .lmMessageAI{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;}
 .lmCourseChat .chatPaneScroll .lmMessageBody{min-width:0;}
 .lmCourseChat .chatPaneScroll .lmMessageName{font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:3px;}
-/* 卡片里不再给气泡重复描边：用浅底区分助手回答 */
-.lmCourseChat .chatPaneScroll .chatAssistant{background:#f8fafc;border:1px solid transparent;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
-.lmCourseChat .chatPaneScroll .chatUser{background:#eef2ff;border:1px solid #dfe6fb;border-radius:12px 4px 12px 12px;padding:10px 12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+/* 子页面的回答与主页面完全一致：白底圆角矩形 + 淡阴影，把回答和白色对话区分开 */
+.lmCourseChat .chatPaneScroll .chatAssistant{background:#fff;border:1px solid #eef2f8;border-radius:4px 12px 12px 12px;padding:12px 14px;box-shadow:0 1px 2px rgba(16,32,64,.05),0 8px 20px rgba(16,32,64,.05);font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+.lmCourseChat .chatPaneScroll .chatUser{background:#eef2ff;border:1px solid #dfe6fb;border-radius:12px 4px 12px 12px;padding:10px 13px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+/* 对话区底色统一为白（跟随卡片），不再有灰底/渐变差异 */
+.lmCourseChat .chatPaneScroll,.lmCourseChat .chatMessages{background:transparent;}
 .lmCourseChat .chatPaneMissing{padding:10px 4px;color:#be123c;font-size:12.5px;}
 .lmCourseChat .chatPaneMissing button{margin-left:8px;border:1px solid #fecdd3;background:#fff1f2;color:#be123c;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;}
 .lmCourseChat .chatPane .chatComposer{margin-top:10px;}
@@ -141,6 +144,11 @@
 .lmCourseChat .quoteTrayHead .primary:disabled{opacity:.45;cursor:not-allowed;}
 .lmCourseChat .quoteTrayList{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;}
 .lmCourseChat .quoteCardList{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px;}
+/* 追问消息（历史点进来的主会话与子页面同款）：引用卡片 + 问题 */
+.lmCourseChat .followUpBlock{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.lmCourseChat .followUpBlock .quoteCardList{margin:0 0 10px;}
+.lmCourseChat .followUpBlock .quoteCard{background:#fff;}
+.lmCourseChat .followUpQuestion{margin:0;font-size:13.5px;line-height:1.7;color:var(--lm-text,#0f172a);overflow-wrap:anywhere;}
 
 /* 引用卡片：默认只露一段并在底部渐隐，悬停/点击展开全文 */
 .lmCourseChat .quoteCard{padding:11px 13px;border:1px solid #e6ecf5;border-radius:14px;background:var(--lm-card,#fff);box-shadow:0 1px 2px rgba(16,32,64,.04);transition:box-shadow .18s,border-color .18s;}

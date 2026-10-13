@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import ChatMarkdown from "./ChatMarkdown";
 import StudentIcon from "./StudentIcon";
 import {pieceLimit} from "./quote-store";
+import {parseFollowUp} from "./chat-quote.mjs";
 import type {QuotePiece} from "./quote-store";
 import "./chat-quote.css";
 
@@ -24,6 +25,17 @@ export function QuoteCard({piece,index,onRemove,onLocate}:{piece:QuotePiece;inde
   <div className={"quoteCardBody"+(overflow?" isClipped":"")} ref={body}><ChatMarkdown text={piece.source}/></div>
   {(overflow||expanded)&&<button type="button" className="quoteCardToggle" aria-expanded={expanded} onClick={toggle}>{expanded?"收起":"展开全文"}</button>}
  </article>;
+}
+
+// 追问消息的呈现：无论它是子页面里的首条消息，还是从历史点进来成为主页面会话，
+// 都渲染成「引用卡片 + 问题」，而不是把 ⟦引用 N⟧ 的序列化原文直接铺出来。
+export function FollowUpMessage({text}:{text:string}){
+ const parsed=parseFollowUp(text);
+ if(!parsed)return null;
+ return <div className="followUpBlock">
+  {parsed.fragments.length>0&&<ul className="quoteCardList">{parsed.fragments.map((frag,index)=><li key={frag.index+"-"+index}><QuoteCard index={frag.index||index+1} piece={{id:"fu-"+index,key:"fu-"+index,unit:"text",source:frag.source,text:frag.source,label:frag.label||"引用片段",paneId:"",attemptId:null,requestId:""}}/></li>)}</ul>}
+  {parsed.question&&<p className="followUpQuestion">{parsed.question}</p>}
+ </div>;
 }
 
 export function QuoteToolbar({quoting,count,disabled,onToggle}:{quoting:boolean;count:number;disabled:boolean;onToggle:()=>void}){
