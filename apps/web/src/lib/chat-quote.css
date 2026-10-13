@@ -40,6 +40,9 @@
 /* 面板卡片：无论是否并排都用同一套白卡外观（用户反馈：添加子页面前后的主页面观感要一致）。
    卡片只留左右内边距，上下由页头/输入区自己撑满 —— 否则页头与卡片顶边、
    输入区与卡片底边之间会露出缝隙，滚动内容从缝里透出来。 */
+/* 主面板要带 .portal.lmStudentShell 前缀：student-chat.css 里有一条同元素的 padding:0（0,4,0），
+   否则主页面页头与输入区会贴到卡片边（子页面没有这条竞争规则，所以一直是有留白的）。 */
+.portal.lmStudentShell .lmCourseChat .chatPanes > .chatWorkspace,
 .lmCourseChat .chatPanes > .chatWorkspace,
 .lmCourseChat .chatPanes > .chatPane{background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 20px;}
 /* 卡片内的粘性页头/输入区跟卡片同底色，并补上卡片圆角，避免露出轨道背景或方角。
@@ -107,8 +110,13 @@
 .lmCourseChat .chatPaneScroll .lmMessageAI{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;}
 .lmCourseChat .chatPaneScroll .lmMessageBody{min-width:0;}
 .lmCourseChat .chatPaneScroll .lmMessageName{font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:3px;}
-/* 子页面的回答与主页面完全一致：白底圆角矩形 + 淡阴影，把回答和白色对话区分开 */
-.lmCourseChat .chatPaneScroll .chatAssistant{background:#fff;border:1px solid #eef2f8;border-radius:4px 12px 12px 12px;padding:12px 14px;box-shadow:0 1px 2px rgba(16,32,64,.05),0 8px 20px rgba(16,32,64,.05);font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+/* 回答卡片：主页面与子页面完全同一套 —— 白底圆角矩形 + 浅边框 + 淡阴影，
+   在白色对话区上要能看出边界（原来主页面是白底白影，等于没有卡片）。
+   用 .portal.lmStudentShell 前缀盖过 student-chat.css 里那条同特异性的旧样式。 */
+.portal.lmStudentShell .lmCourseChat .chatAssistant,
+.lmCourseChat .chatPaneScroll .chatAssistant{background:#fff;border:1px solid #e6ecf5;border-radius:4px 14px 14px 14px;padding:12px 16px;box-shadow:0 1px 2px rgba(16,32,64,.05),0 8px 20px rgba(16,32,64,.06);font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+/* 主页面课程名做成与子页面编号同款的胶囊 */
+.portal.lmStudentShell .lmCourseChat .chatCourseName{flex:0 0 auto;margin-right:auto;font:600 12.5px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);background:#eef2ff;border-radius:999px;padding:4px 12px;white-space:nowrap;}
 .lmCourseChat .chatPaneScroll .chatUser{background:#eef2ff;border:1px solid #dfe6fb;border-radius:12px 4px 12px 12px;padding:10px 13px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
 /* 对话区底色统一为白（跟随卡片），不再有灰底/渐变差异 */
 .lmCourseChat .chatPaneScroll,.lmCourseChat .chatMessages{background:transparent;}
@@ -176,6 +184,11 @@
 .lmCourseChat .chatHistoryKids:hover{background:#e0e7ff;}
 .lmCourseChat .chatHistoryKids[aria-expanded="true"]{background:var(--lm-primary-deep,#4f46e5);color:#fff;}
 .lmCourseChat .chatHistoryBadge{flex:none;background:#eef2ff;color:#4338ca;border-radius:999px;font-size:10px;font-weight:600;padding:1px 7px;}
+/* 未关联的追问（父会话不在列表里/来自其它设备）：单独折叠，不混进主对话列表 */
+.lmCourseChat .chatHistoryOrphans{margin-top:10px;border-top:1px dashed var(--lm-border,#e2e8f0);padding-top:8px;}
+.lmCourseChat .chatHistoryOrphanToggle{width:auto!important;display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--lm-border,#e2e8f0);background:transparent;color:var(--lm-muted,#64748b);font-size:11.5px;border-radius:999px;padding:4px 10px;cursor:pointer;margin:0 0 4px;}
+.lmCourseChat .chatHistoryOrphanToggle:hover{background:#f0f5ff;color:var(--lm-primary-deep,#4f46e5);}
+.lmCourseChat .chatHistoryOrphanNote{margin:0 0 6px;font-size:11px;color:#94a3b8;line-height:1.6;}
 
 /* 窄屏：并排改为整页横滑（每页 100% 宽，滚动吸附），剪刀交互保持可用 */
 @media(max-width:1023px){
