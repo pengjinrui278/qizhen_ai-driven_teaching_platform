@@ -160,9 +160,14 @@ const SUB_ANSWER = [
     assert.match(await child.textContent(), /追问/);
     assert.match(await child.textContent(), /为什么 N 不能依赖 n/);
     assert.equal(await page.locator('.chatHistoryBadge').count() >= 1, true, '追问行应带徽标');
-    // 没有本地链路的旧追问也要被认出来：按标题标记显示徽标，而不是混成普通会话
+    // 追问一律不得出现在「最近对话」顶层：无本地链路的旧追问要收进「未关联的追问」组
+    assert.equal(await page.locator('.chatHistoryRow', {hasText: '旧的追问'}).count(), 0, '追问不应混进主对话列表');
+    const orphanToggle = page.locator('.chatHistoryOrphanToggle');
+    await orphanToggle.waitFor();
+    await orphanToggle.click();
     const legacy = page.locator('.chatHistoryRow[data-depth="0"]', {hasText: '旧的追问'}).first();
-    assert.equal(await legacy.locator('.chatHistoryBadge').count(), 1, '仅凭标题标记也应识别为追问');
+    await legacy.waitFor();
+    assert.equal(await legacy.locator('.chatHistoryBadge').count(), 1, '未关联的追问展开后仍带追问徽标');
 
     // ---- 6. 子页面内再剪 → 子页面 2（嵌套）；顺便验证计数按面板隔离 ----
     await pane.getByRole('button', {name: /^剪刀/}).click();
