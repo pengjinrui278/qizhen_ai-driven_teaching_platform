@@ -7,6 +7,7 @@ const outcomes: Record<string,string> = {continued: "能够继续", solved: "自
 const kinds: Row = {...outcomes, student_question: "明确提出困惑", artifact_review: "作品判断", ta_review: "作品判断", independent_test: "独立任务记录"};
 const sources: Row = {interaction: "课程交互", self_report: "学生自述", artifact_review: "作品审阅", ta_review: "教学团队审阅"};
 const strengths: Row = {weak: "弱", medium: "中等", strong: "强"};
+const modes: Row = {chat: "自由提问", first_hint: "我卡住了", next_hint: "再深入一点", full_solution: "梳理解题框架", concept_explanation: "知识答疑", solution_review: "证明自查", artifact_review: "作品判断"};
 const statuses: Row = {worth_attention: "待核对", improving: "出现相反证据", emerging: "观察中", weakened: "原判断减弱"};
 function Icon({kind}: {kind: "pulse" | "chart" | "clock" | "file"}) {
  const paths = {pulse: "M22 12h-4l-3 9L9 3l-3 9H2", chart: "M3 3v18h18M7 16v-5m5 5V7m5 9v-3", clock: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M12 6v6l4 2", file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"};
@@ -39,6 +40,15 @@ export default function LearningFeedback({memory, courses, onCorrect, loadState=
    <label><span className="lf-sr">反馈时间</span><select aria-label="反馈时间" value={days} disabled={busy} onChange={e => setDays(e.target.value)}><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="all">全部时间</option></select></label>
   </div></header>
   <section className="lf-panel lf-progress-summary" aria-label="课程学习进展"><div className="lf-panel-head"><h2>课程学习进展</h2><a href={"/student/learn?mode=live"+(course!=="all"?"&course="+encodeURIComponent(course):"")}>查看会话历史</a></div><p>暂不足以判断课程进展。</p><p className="lf-note">需要明确的学习目标及可核验的前后表现。提问、获得回答或自报完成不计为掌握。</p></section>
+  <section className="lf-panel" aria-labelledby="lf-course-activity-title">
+   <div className="lf-panel-head"><h2 id="lf-course-activity-title"><Icon kind="clock"/>课程问答记录</h2><span className="lf-badge lf-info">{activities.length} 轮</span></div>
+   <p className="lf-note">来自你在「课程学习」里的提问与提示使用，是活动记录、不是能力判断；问过的问题与点过的提示都在这条管线上。</p>
+   {activities.length ? <ol className="lf-course-activity">{activities.slice(0, 30).map(a => <li key={a.request_id}>
+    <span className="lf-badge" data-kind={a.mode}>{modes[a.mode] || "课程问答"}</span>
+    <p className="lf-course-question">{a.question || "（未记录题目）"}</p>
+    <p className="lf-meta">{courseName(a.course_id)} · {a.created_at ? new Date(a.created_at).toLocaleString("zh-CN", {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false}) : "时间未记录"}{a.status === "unconfirmed" ? " · 结果未确认" : ""}</p>
+   </li>)}</ol> : <div className="lf-empty"><p>所选范围暂无课程问答记录</p><p>去「课程学习」里提问或点提示后，每一轮都会出现在这里。</p></div>}
+  </section>
   <section className="lf-panel" aria-labelledby="lf-observations-title">
    <div className="lf-panel-head"><h2 id="lf-observations-title"><Icon kind="pulse"/>持续学习观察</h2><span className="lf-badge lf-info">{hypotheses.length} 项候选观察</span></div>
    <p className="lf-note">不是能力评分或已确认诊断。以下依据所选课程的历史有效证据；时间筛选仅影响活动图表和记录。</p>

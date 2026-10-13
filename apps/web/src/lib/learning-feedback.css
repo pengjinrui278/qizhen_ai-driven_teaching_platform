@@ -85,3 +85,9 @@
 .learningFeedback .lf-session a {display:inline-block;margin-top:10px;color:#2464a0;}
 .learningFeedback .lf-feedback-details > summary {padding:16px 0;color:#42628c;cursor:pointer;font-size:14px;}
 .learningFeedback .lf-progress-summary a {color:#1d4ed8;font-size:13px;}
+
+/* 课程学习 → 学习反馈 的可见管线：每一轮课程问答的活动记录 */
+.learningFeedback .lf-course-activity {list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:10px;}
+.learningFeedback .lf-course-activity li {border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;background:#fff;padding:10px 12px;}
+.learningFeedback .lf-course-question {margin:6px 0 4px;font-size:13px;line-height:1.7;color:var(--lm-text,#0f172a);overflow-wrap:anywhere;}
+.learningFeedback .lf-course-activity .lf-meta {margin:0;}
