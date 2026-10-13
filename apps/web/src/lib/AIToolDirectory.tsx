@@ -2,20 +2,36 @@
 import {useState} from "react";
 import catalog from "./ai-tools.json";
 import "./ai-tools.css";
-const categories=["全部","对话","生图","视频","音乐","文案","办公","编程"];
+const categories=["全部","对话","生图","视频","音乐","文案","办公","编程","辅助"];
+
+// 每个工具一个字母/汉字标记作为图标：不用各家的品牌 logo（避免商标问题），
+// 但每个工具都有自己的字形与配色，扫一眼能区分。
+function mark(name:string){
+ const latin=name.replace(/[^A-Za-z]/g,"");
+ if(latin.length>=2)return latin.slice(0,2).toUpperCase();
+ const cn=name.replace(/[^一-龥]/g,"");
+ return (cn.slice(0,2)||name.slice(0,1)).toUpperCase();
+}
+function hue(id:string){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))%997;return h%6;}
+
 export default function AIToolDirectory(){
- const [category,setCategory]=useState("全部"),[query,setQuery]=useState(""),[notice,setNotice]=useState(""),[help,setHelp]=useState("");
+ const [category,setCategory]=useState("全部"),[query,setQuery]=useState(""),[notice,setNotice]=useState(""),[help,setHelp]=useState(""),[intro,setIntro]=useState("");
  const filtered=catalog.filter(t=>(category==="全部"||t.categories.includes(category))&&
    (t.name+" "+t.description+" "+t.categories.join(" ")).toLowerCase().includes(query.trim().toLowerCase()));
  async function copy(url:string){try{await navigator.clipboard.writeText(url);setNotice("已复制，可粘贴到系统浏览器打开");}catch{setNotice("无法自动复制，请长按或右键官网链接复制地址");}}
  return <section aria-label="AI 工具目录">
  <input aria-label="搜索工具" placeholder="搜索工具名称或用途" value={query} onChange={e=>setQuery(e.target.value)}/>
- <div className="aiFilters" style={{marginTop:16}}>{categories.map(c=><button key={c} aria-pressed={category===c} onClick={()=>{setCategory(c);setHelp("");}}>{c} · {c==="全部"?catalog.length:catalog.filter(t=>t.categories.includes(c)).length}</button>)}</div>
+ <div className="aiFilters" style={{marginTop:16}}>{categories.map(c=><button key={c} aria-pressed={category===c} onClick={()=>{setCategory(c);setHelp("");setIntro("");}}>{c} · {c==="全部"?catalog.length:catalog.filter(t=>t.categories.includes(c)).length}</button>)}</div>
  {notice&&<p role="status">{notice}</p>}
  <div className="aiGrid">{filtered.map(t=><article className="portalPanel aiToolCard" key={t.id} data-tool={t.id}>
- <div className="aiToolTags">{t.categories.map(c=><span key={c}>{c}</span>)}{t.international&&<span>国际服务</span>}</div>
- <h2>{t.name}</h2><p>{t.description}</p>
+ <div className="aiToolTop">
+  <span className={"aiToolMark h"+hue(t.id)} aria-hidden="true">{mark(t.name)}</span>
+  <div className="aiToolHead"><h2>{t.name}</h2><div className="aiToolTags">{t.categories.map(c=><span key={c}>{c}</span>)}{t.international&&<span>国际服务</span>}</div></div>
+ </div>
+ <p>{t.description}</p>
  <div className="aiActions"><a href={t.url} target="_blank" rel="noopener noreferrer" aria-label={"打开 "+t.name+" 官网"}>打开官网 ↗</a><button onClick={()=>copy(t.url)} aria-label={"复制 "+t.name+" 链接"}>复制链接</button><button onClick={()=>setHelp(help===t.id?"":t.id)} aria-expanded={help===t.id}>打不开？</button></div>
+ <button type="button" className="aiIntroToggle" aria-expanded={intro===t.id} onClick={()=>setIntro(intro===t.id?"":t.id)}>基本介绍 &gt;&gt;</button>
+ {intro===t.id&&<div className="aiIntro" role="region" aria-label={t.name+" 基本介绍"}><p>{t.intro||t.description}</p></div>}
  {help===t.id&&<div className="aiLinkHelp"><p>可复制链接，在系统浏览器中打开。若仍失败，请记录页面报错；网络、地区或账号限制需要按该服务的官方要求处理。</p>
  {["midjourney","canva","chatgpt","claude"].includes(t.id)&&<p>该官网可能要求浏览器验证，请在系统浏览器中按页面提示操作。</p>}
  <a href={t.url} target="_blank" rel="noopener noreferrer">{new URL(t.url).hostname}</a>

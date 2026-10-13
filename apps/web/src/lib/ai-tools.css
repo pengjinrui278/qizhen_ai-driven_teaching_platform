@@ -6,3 +6,22 @@
 .aiToolCard>.aiActions{margin-top:auto;padding-top:12px}
 .aiToolCard .aiLinkHelp{margin-top:8px;padding:14px;background:#f6f9fd;border-radius:8px;line-height:1.7}
 .aiLinkHelp p+p{margin-top:8px}
+
+/* 工具卡：字母/汉字标记作为图标（各家品牌 logo 有商标问题，改用标记 + 配色区分） */
+.aiToolCard .aiToolTop {display:flex;align-items:center;gap:12px;margin-bottom:2px;}
+.aiToolMark {flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:13px;font:700 15px/1 var(--lm-font,system-ui,sans-serif);letter-spacing:.5px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
+.aiToolMark.h0 {background:#e0e7ff;color:#4338ca;}
+.aiToolMark.h1 {background:#cffafe;color:#0e7490;}
+.aiToolMark.h2 {background:#dcfce7;color:#15803d;}
+.aiToolMark.h3 {background:#fef3c7;color:#b45309;}
+.aiToolMark.h4 {background:#fce7f3;color:#be185d;}
+.aiToolMark.h5 {background:#e2e8f0;color:#334155;}
+.aiToolCard .aiToolHead {min-width:0;flex:1;}
+.aiToolCard .aiToolHead h2 {margin:0 0 4px;}
+.aiToolCard .aiToolTags {flex-wrap:wrap;}
+
+/* 「基本介绍 >>」：纯文字按钮（不套用全局圆角按钮样式） */
+.aiToolCard .aiIntroToggle {border:0;background:none;padding:0;min-height:0;width:auto;color:var(--lm-primary-deep,#4f46e5);font:600 12.5px/1.6 var(--lm-font,system-ui,sans-serif);cursor:pointer;text-align:left;box-shadow:none;border-radius:0;}
+.aiToolCard .aiIntroToggle:hover {color:#3730a3;text-decoration:underline;background:none;transform:none;}
+.aiToolCard .aiIntro {margin-top:8px;padding:10px 12px;border-left:3px solid var(--lm-border-hover,#a5b4fc);background:#f8faff;border-radius:0 10px 10px 0;}
+.aiToolCard .aiIntro p {margin:0;font-size:12.5px;line-height:1.7;color:var(--lm-text,#0f172a);}
