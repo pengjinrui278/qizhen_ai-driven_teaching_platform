@@ -5,7 +5,7 @@ import StudentIcon from "./StudentIcon";
 import {formatSize,kindLabel,type MaterialPane} from "./material-store";
 import "./material-board.css";
 
-// 单个素材瓷砖：只有“看”的功能，不含 agent 对话
+// 单个参阅瓷砖：只有“看”的功能，不含 agent 对话
 function MaterialTile({pane,index,onClose,onHeight,onMove}:{pane:MaterialPane;index:number;onClose:(id:string)=>void;onHeight:(id:string,h:number)=>void;onMove:(id:string,delta:number)=>void}){
  const [expanded,setExpanded]=useState(false);
  const drag=useRef<{y:number;h:number}|null>(null);
@@ -36,17 +36,17 @@ function MaterialTile({pane,index,onClose,onHeight,onMove}:{pane:MaterialPane;in
  </section>;
 }
 
-// 素材工具（放主面板页头）：选择文件 / 粘贴网址
+// 参阅工具（放主面板页头）：选择文件 / 粘贴网址
 export function MaterialToolbar({count,onPick,onUrl,disabled}:{count:number;onPick:(files:FileList)=>void;onUrl:(value:string)=>void;disabled:boolean}){
  const [open,setOpen]=useState(false),[value,setValue]=useState("");
  const file=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(!open)return;const esc=(e:KeyboardEvent)=>{if(e.key==="Escape")setOpen(false);};document.addEventListener("keydown",esc);return()=>document.removeEventListener("keydown",esc);},[open]);
  return <div className="materialToolbar">
   <button type="button" className={"quoteTool"+(open?" isActive":"")} aria-expanded={open} aria-describedby="materialToolHint" title="把本地文件拖进页面，或在这里选择文件/粘贴网址" disabled={disabled} onClick={()=>setOpen(v=>!v)}>
-   <StudentIcon name="library"/>素材{count>0&&<span className="quoteToolCount">{count}</span>}
+   <StudentIcon name="library"/>参阅{count>0&&<span className="quoteToolCount">{count}</span>}
   </button>
-  <span id="materialToolHint" className="quoteToolHint">素材页只在本地打开文件，不上传服务器；刷新后清空</span>
-  {open&&<div className="materialPopup" role="dialog" aria-label="添加素材">
+  <span id="materialToolHint" className="quoteToolHint">参阅页只在本地打开文件，不上传服务器；刷新后清空</span>
+  {open&&<div className="materialPopup" role="dialog" aria-label="加入参阅">
    <p className="materialPopupNote">文件只在本地浏览器打开，不上传服务器。</p>
    <button type="button" className="materialPopupPick" onClick={()=>file.current?.click()}>选择本地文件…</button>
    <input ref={file} type="file" multiple hidden aria-label="选择本地文件" onChange={e=>{if(e.target.files?.length)onPick(e.target.files);e.target.value="";setOpen(false);}}/>
@@ -62,12 +62,12 @@ export function MaterialToolbar({count,onPick,onUrl,disabled}:{count:number;onPi
 // 拼图区：停靠在对话卡片右侧的并列阅读空间
 export default function MaterialBoard({panes,onClose,onHeight,onMove,onClear}:{panes:MaterialPane[];onClose:(id:string)=>void;onHeight:(id:string,h:number)=>void;onMove:(id:string,delta:number)=>void;onClear:()=>void}){
  if(!panes.length)return null;
- return <aside className="materialBoard" aria-label="素材拼图区">
+ return <aside className="materialBoard" aria-label="参阅区">
   <header className="materialBoardHead">
    <StudentIcon name="library"/>
-   <strong>素材 {panes.length}</strong>
+   <strong>参阅 {panes.length}</strong>
    <span className="materialBoardHint">仅本地打开 · 刷新清空</span>
-   <button type="button" className="materialAct" aria-label="关闭全部素材" title="关闭全部" onClick={onClear}><StudentIcon name="close"/></button>
+   <button type="button" className="materialAct" aria-label="关闭全部参阅" title="关闭全部" onClick={onClear}><StudentIcon name="close"/></button>
   </header>
   <div className="materialBoardList">{panes.map((pane,index)=><MaterialTile key={pane.id} pane={pane} index={index} onClose={onClose} onHeight={onHeight} onMove={onMove}/>)}</div>
  </aside>;

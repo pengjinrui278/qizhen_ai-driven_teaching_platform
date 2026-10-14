@@ -45,7 +45,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  function leaveRequest(){epoch.current++;streamAbort.current?.abort();streamAbort.current=null;lock.current=false;setBusy(false);setStage("" );}
  const [historyEnd,setHistoryEnd]=useState(false);
  const [historyCollapsed,setHistoryCollapsed]=useState(false);
- // 剪刀：引用片段 → 拼接 → 并行子页面。状态与持久化都集中在这里，不改既有会话逻辑。
+ // 摘录：引用片段 → 拼接 → 并行子页面。状态与持久化都集中在这里，不改既有会话逻辑。
  const [quotingPaneId,setQuotingPaneId]=useState<string|null>(null);
  // 剪贴托盘按面板隔离：trays["main"] 是主页面的，trays[paneId] 是各子页面的
  const [trays,setTrays]=useState<Record<string,QuotePiece[]>>({});
@@ -115,7 +115,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const pieces=piecesOf(parentPaneId);
   if(!pieces.length)return;
   if(!canAddPane(panes)){setQuoteError(`同时最多保留 ${paneLimit} 个子页面，请先关闭一些。`);return;}
-  if(pieces.reduce((n,p)=>n+p.source.length,0)>9000){setQuoteError("剪下的片段过长，请减少或缩短后再拼接。");return;}
+  if(pieces.reduce((n,p)=>n+p.source.length,0)>9000){setQuoteError("摘下的片段过长，请减少或缩短后再拼接。");return;}
   const parent=panes.some(p=>p.id===parentPaneId)?parentPaneId:"main";
   const pane:PaneState={id:newPaneId(),parentId:parent,attemptId:null,quotes:pieces.slice(),question:"",weight:1,state:"open",pinned:false,createdAt:Date.now()};
   setPanes(prev=>{const next=[...prev];next.splice(subtreeEnd(prev,parent),0,pane);return next;});
@@ -151,7 +151,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const found=collectUnitsWithin(host,mainSourcesRef.current).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
   if(found.length)addPieces("main",found as QuotePiece[]);
  }
- // 素材拼图区：拖入本地文件或网址 → 停靠在对话卡片右侧，只作阅读用，不含 agent 对话
+ // 参阅区：拖入本地文件或网址 → 停靠在对话卡片右侧，只作阅读用，不含 agent 对话
  const [materials,setMaterials]=useState<MaterialPane[]>([]);
  const [dropping,setDropping]=useState(false);
  const [dropZone,setDropZone]=useState<"ask"|"board"|null>(null);
@@ -160,7 +160,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  useEffect(()=>()=>{materialsRef.current.forEach(releaseMaterial);},[]);
  async function addFiles(files:FileList|File[]){
   const room=materialLimit()-materials.length;
-  if(room<=0){setError(`素材区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
+  if(room<=0){setError(`参阅区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
   const list=Array.from(files).slice(0,room);
   const paneList:MaterialPane[]=[];
   for(const file of list){
@@ -169,18 +169,18 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
    paneList.push(newMaterialPane(input,materials.length+paneList.length));
   }
   setMaterials(cur=>[...cur,...paneList]);
-  if(Array.from(files).length>room)setError(`素材区最多停靠 ${materialLimit()} 个页面，多余的未加入。`);
+  if(Array.from(files).length>room)setError(`参阅区最多停靠 ${materialLimit()} 个页面，多余的未加入。`);
  }
  function addUrl(value:string){
   const url=urlOf(value);
   if(!url){setError("请粘贴以 http:// 或 https:// 开头的网址。");return;}
-  if(materials.length>=materialLimit()){setError(`素材区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
+  if(materials.length>=materialLimit()){setError(`参阅区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
   setMaterials(cur=>[...cur,newMaterialPane({kind:"url",title:url.replace(/^https?:\/\//,"").replace(/\/$/,""),source:url},cur.length)]);
  }
  function closeMaterial(id:string){setMaterials(cur=>{const pane=cur.find(p=>p.id===id);if(pane)releaseMaterial(pane);return cur.filter(p=>p.id!==id);});}
  function moveMaterial(id:string,delta:number){setMaterials(cur=>{const i=cur.findIndex(p=>p.id===id),j=i+delta;if(i<0||j<0||j>=cur.length)return cur;const next=[...cur];[next[i],next[j]]=[next[j],next[i]];return next;});}
  function clearMaterials(){setMaterials(cur=>{cur.forEach(releaseMaterial);return [];});}
- // 拖入分区：右侧 1/3 = 并排查看（素材页），其余 = 上传文件向 AI 提问
+ // 拖入分区：右侧 1/3 = 并排查看（参阅页），其余 = 上传文件向 AI 提问
  function zoneOf(clientX:number){return clientX>=window.innerWidth*2/3?"board":"ask";}
  function onDragOver(e:React.DragEvent){
   const types=e.dataTransfer?.types||[];
@@ -198,7 +198,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const zone=zoneOf(e.clientX);
   setDropping(false);setDropZone(null);
   const files=e.dataTransfer?.files;
-  // 网址只能并排查看（浏览器无法抓取外部网页正文），不论落在哪边都进素材区
+  // 网址只能并排查看（浏览器无法抓取外部网页正文），不论落在哪边都进参阅区
   if(!files?.length){
    const url=e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain");
    if(url)addUrl(url);
@@ -317,13 +317,13 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   <div className="dropZone dropZoneBoard">
    <StudentIcon name="library"/>
    <strong>并排查看 · 不参与提问</strong>
-   <span>作为素材页停在右侧，只看不聊（文件不出本机）</span>
+   <span>作为参阅页停在右侧，只看不聊（文件不出本机）</span>
   </div>
  </div>}
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
  <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
  <QuotePanes panes={panes} quote={quoteUi()} board={materials.length>0?<>
-   <div className="paneResizer" role="separator" aria-orientation="vertical" aria-label="调整素材区宽度" onPointerDown={startBoardResize}/>
+   <div className="paneResizer" role="separator" aria-orientation="vertical" aria-label="调整参阅区宽度" onPointerDown={startBoardResize}/>
    <div className="materialSlot" style={{flexBasis:boardWidth}}>
     <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(p=>p.id===id?{...p,height:h}:p))} onMove={moveMaterial} onClear={clearMaterials}/>
    </div>

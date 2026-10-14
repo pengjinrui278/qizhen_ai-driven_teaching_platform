@@ -22,7 +22,7 @@ function pieceOf(el:HTMLElement,sources:Sources):QuotePiece|null{
  return unit?holdPiece({id:crypto.randomUUID(),...unit}):null;
 }
 
-// 剪刀选择层：只做逻辑，不产出可见 DOM。方案：点选整块（公式为原子）、拖拽跨块连选、段内拖选文字；
+// 摘录选择层：只做逻辑，不产出可见 DOM。方案：点选整块（公式为原子）、拖拽跨块连选、段内拖选文字；
 // 选中态靠 data-quote-* 契约回贴类名，源文本在 pointerup 时从 pane 的 sources 现场解析。
 export default function QuoteSurface({paneId,active,containerRef,sourcesRef,pieces,onChange,onExit}:{
  paneId:string;

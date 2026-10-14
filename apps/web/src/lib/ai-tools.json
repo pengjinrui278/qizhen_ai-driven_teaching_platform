@@ -228,15 +228,15 @@
   },
   {
     "id": "muse",
-    "name": "Muse AI",
+    "name": "Muse.ai",
     "categories": [
-      "生图",
-      "视频"
+      "视频",
+      "办公"
     ],
-    "url": "https://muse-ai.art/",
-    "description": "AI 绘画与短视频素材",
+    "url": "https://muse.ai/",
+    "description": "AI 视频检索与摘要",
     "international": false,
-    "intro": "面向创作的 AI 生成平台，可产出插画与短视频素材，中文界面。"
+    "intro": "面向视频的 AI 平台：上传课程录像后可按内容语义检索片段、生成摘要与章节，找「讲过哪一段」比拖进度条快得多。"
   },
   {
     "id": "wps",
@@ -475,5 +475,17 @@
     "description": "可视化无代码开发平台",
     "international": false,
     "intro": "国产无代码开发平台，用可视化方式搭建网站与小程序，并可接入 AI 能力做原型。"
+  },
+  {
+    "id": "deepl",
+    "name": "DeepL",
+    "categories": [
+      "辅助",
+      "文案"
+    ],
+    "url": "https://www.deepl.com/translator",
+    "description": "以准确著称的 AI 翻译",
+    "international": true,
+    "intro": "以译文准确、语气自然著称的 AI 翻译服务，支持文档整篇翻译；国内可直连网页版，专业术语表对读教材很有用。"
   }
 ]

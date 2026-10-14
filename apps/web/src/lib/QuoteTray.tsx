@@ -40,16 +40,16 @@ export function FollowUpMessage({text}:{text:string}){
 
 export function QuoteToolbar({quoting,count,disabled,onToggle}:{quoting:boolean;count:number;disabled:boolean;onToggle:()=>void}){
  return <div className="quoteToolbar" role="group" aria-label="对话工具">
-  <button type="button" className={"quoteTool"+(quoting?" isActive":"")} aria-pressed={quoting} aria-describedby="quoteToolHint" title={quoting?"退出剪刀模式（Esc）":"框选本页回答片段，并排追问"} disabled={disabled} onClick={onToggle}>
-   <StudentIcon name="scissors"/>剪刀{count>0&&<span className="quoteToolCount">{count}</span>}
+  <button type="button" className={"quoteTool"+(quoting?" isActive":"")} aria-pressed={quoting} aria-describedby="quoteToolHint" title={quoting?"退出摘录模式（Esc）":"框选本页回答片段，并排追问"} disabled={disabled} onClick={onToggle}>
+   <StudentIcon name="scissors"/>摘录{count>0&&<span className="quoteToolCount">{count}</span>}
   </button>
   <span id="quoteToolHint" className="quoteToolHint">{quoting?(count>0?`本页已选 ${count} 处`:"点选整段，拖动可精确到字"):"框选本页回答片段，并排追问"}</span>
  </div>;
 }
 
-// 剪刀模式的浮动操作条（贴在消息区底部）
+// 摘录模式的浮动操作条（贴在消息区底部）
 export function QuoteHud({count,limit,error,canAssemble,onAssemble,onCopy,onClear,onExit}:{count:number;limit:number;error:string;canAssemble:boolean;onAssemble:()=>void;onCopy:()=>void;onClear:()=>void;onExit:()=>void}){
- return <div className="quoteHud" role="toolbar" aria-label="剪刀操作">
+ return <div className="quoteHud" role="toolbar" aria-label="摘录操作">
   <span className="quoteHudCount" role="status" aria-live="polite">{count>0?`已选 ${count} / ${limit} 处`:"点选整段；按住拖动可精确到字，公式始终整块"}</span>
   {error&&<span className="quoteHudError" role="alert">{error}</span>}
   <button type="button" disabled={!count} onClick={onCopy}>复制</button>
@@ -59,11 +59,11 @@ export function QuoteHud({count,limit,error,canAssemble,onAssemble,onCopy,onClea
  </div>;
 }
 
-// 已剪片段托盘：位于输入框上方，按剪取顺序从上到下排列
+// 已摘片段托盘：位于输入框上方，按剪取顺序从上到下排列
 export default function QuoteTray({pieces,onRemove,onLocate,onAssemble,busy}:{pieces:QuotePiece[];onRemove:(id:string)=>void;onLocate?:(piece:QuotePiece)=>void;onAssemble:()=>void;busy:boolean}){
  if(!pieces.length)return null;
- return <section className="quoteTray" aria-label="已剪下的引用片段">
-  <div className="quoteTrayHead"><strong>已剪 {pieces.length} / {pieceLimit} 处</strong><button type="button" className="primary" disabled={busy} onClick={onAssemble}>拼接成子页面</button></div>
+ return <section className="quoteTray" aria-label="已摘下的引用片段">
+  <div className="quoteTrayHead"><strong>已摘 {pieces.length} / {pieceLimit} 处</strong><button type="button" className="primary" disabled={busy} onClick={onAssemble}>拼接成子页面</button></div>
   <div className="quoteTrayList">{pieces.map((p,i)=><QuoteCard key={p.id} piece={p} index={i+1} onRemove={onRemove} onLocate={onLocate}/>)}</div>
  </section>;
 }

@@ -95,7 +95,7 @@ const SUB_ANSWER = [
     const orderIds = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.paneId));
 
     // ---- 1. 打开剪刀，块级标记生效 ----
-    const scissors = page.getByRole('button', {name: /^剪刀/});
+    const scissors = page.getByRole('button', {name: /^摘录/});
     await scissors.click();
     assert.equal(await scissors.getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('[data-quoting]').count(), 1, '主面板应进入剪刀模式');
@@ -165,7 +165,7 @@ const SUB_ANSWER = [
     assert.equal(await page.locator('.chatHistoryOrphanToggle').count(), 0, '游离追问不应有独立分组入口');
 
     // ---- 6. 子页面内再剪 → 子页面 2（嵌套）；顺便验证计数按面板隔离 ----
-    await pane.getByRole('button', {name: /^剪刀/}).click();
+    await pane.getByRole('button', {name: /^摘录/}).click();
     const subPara = pane.locator('[data-quote-src$=":ai"] p[data-quote-unit="text"]').first();
     await subPara.click({position: {x: 8, y: 8}});
     await pane.locator('.quoteHud').getByText(/已选 1 \/ \d+ 处/).waitFor();
@@ -179,7 +179,7 @@ const SUB_ANSWER = [
     await page.screenshot({path: 'data/preview/quote-nested-desktop.png', fullPage: true});
 
     // ---- 7. M2：第三个面板自动收纳为抽页 ----
-    const mainScissors = page.locator('.chatWorkspace').getByRole('button', {name: /^剪刀/});
+    const mainScissors = page.locator('.chatWorkspace').getByRole('button', {name: /^摘录/});
     await mainScissors.click();
     await page.locator('.chatWorkspace [data-quote-src$=":ai"] li[data-quote-unit="text"]').first().click();
     await page.locator('.chatWorkspace .quoteHud').getByRole('button', {name: '拼接成子页面'}).click();
@@ -304,7 +304,7 @@ const SUB_ANSWER = [
     const docx = page.locator('.materialTile', {hasText: '讲义.docx'});
     assert.match(await docx.innerText(), /无法在线渲染|暂不支持在线预览/, 'Word 应给占位说明而不是假装能预览');
     // 粘贴网址
-    await page.getByRole('button', {name: /^素材/}).click();
+    await page.getByRole('button', {name: /^参阅/}).click();
     await page.getByRole('textbox', {name: '粘贴网址'}).fill('https://example.com/slide');
     await page.getByRole('button', {name: '加入'}).click();
     await page.locator('.materialTile', {hasText: 'example.com/slide'}).waitFor();
@@ -339,7 +339,7 @@ const SUB_ANSWER = [
     }
     assert.equal(await page.locator('.chatPane').count(), 0, '子页面应全部关闭');
     // 素材区也要让出宽度，对话卡才能回到全宽
-    await page.getByRole('button', {name: '关闭全部素材'}).click();
+    await page.getByRole('button', {name: '关闭全部参阅'}).click();
     await page.waitForTimeout(200);
     assert.equal(await page.locator('.materialBoard').count(), 0, '素材区应可整体关闭');
     const width = await page.locator('.chatWorkspace').evaluate(el => el.getBoundingClientRect().width);

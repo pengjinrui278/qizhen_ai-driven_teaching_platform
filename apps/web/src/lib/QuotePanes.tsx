@@ -21,7 +21,7 @@ const MIN_PANE=340;      // 面板最小宽度（px），自动收纳的判据
 const STRIP_GAP=14;
 const RESIZER=8;
 
-// 剪贴托盘按面板隔离：每个面板只看到、只拼接自己剪下的片段
+// 摘录托盘按面板隔离：每个面板只看到、只拼接自己剪下的片段
 export type QuoteUi={
  piecesOf:(paneId:string)=>QuotePiece[];
  setPieces:(paneId:string,next:QuotePiece[])=>void;
@@ -61,7 +61,7 @@ function paneSources(pane:PaneState,title:string,events:Row[]):Sources{
  return map;
 }
 
-// 子页面：一条独立会话（引用卡片 + 针对性追问），自身管理 attempt/流式/重试，回答可再被剪刀引用
+// 子页面：一条独立会话（引用卡片 + 针对性追问），自身管理 attempt/流式/重试，回答可再被摘录引用
 function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
  pane:PaneState;index:number;title:string;course:string;api:Api;user:Row;streaming:boolean;quote:QuoteUi;
  sourcesRef:React.RefObject<Sources>;layout:PaneLayout;dropSide?:"before"|"after";
@@ -171,7 +171,7 @@ export default function QuotePanes({panes,quote,children,board,dropping,api,user
  panes:PaneState[];
  quote:QuoteUi;
  children:ReactNode;
- board?:ReactNode;        // 素材拼图区（含它的分隔条），与剪刀面板并列但互不干扰
+ board?:ReactNode;        // 参阅区（含它的分隔条），与摘录面板并列但互不干扰
  dropping?:boolean;       // 正把文件拖到页面上
  api:Api;user:Row;streaming:boolean;course:string;
  sourcesRef:React.RefObject<Sources>;
