@@ -4,44 +4,44 @@
    ============================================================ */
 
 /* 宽度由外层 .materialSlot 控制（分隔条可拖），这里只负责卡片本身 */
-.lmCourseChat .materialBoard{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;
+.materialBoard{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;
  background:var(--lm-card,#fff);border:1px solid #e6ecf5;border-radius:16px;
  box-shadow:0 1px 2px rgba(16,32,64,.04),0 10px 26px rgba(16,32,64,.06);padding:0 12px;}
-.lmCourseChat .materialBoardHead{display:flex;align-items:center;gap:8px;padding:12px 0 10px;border-bottom:1px solid #eef2f8;flex:none;}
-.lmCourseChat .materialBoardHead .lmIcon{width:16px;height:16px;color:var(--lm-primary-deep,#4f46e5);}
-.lmCourseChat .materialBoardHead strong{font:600 12.5px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);background:#eef2ff;border-radius:999px;padding:3px 11px;}
-.lmCourseChat .materialBoardHint{font-size:11px;color:var(--lm-muted,#94a3b8);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.materialBoardHead{display:flex;align-items:center;gap:8px;padding:12px 0 10px;border-bottom:1px solid #eef2f8;flex:none;}
+.materialBoardHead .lmIcon{width:16px;height:16px;color:var(--lm-primary-deep,#4f46e5);}
+.materialBoardHead strong{font:600 12.5px/1.6 system-ui,sans-serif;color:var(--lm-primary-deep,#4f46e5);background:#eef2ff;border-radius:999px;padding:3px 11px;}
+.materialBoardHint{font-size:11px;color:var(--lm-muted,#94a3b8);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 列表左右留出 10px 余量：鼠标停在这条空隙上时滚轮滚的是素材列表（方便在多份材料间切换），
    停在文件内部（PDF/文本自身可滚动）时滚的是文件本身。 */
-.lmCourseChat .materialBoardList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 10px;scrollbar-gutter:stable;}
+.materialBoardList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 10px;scrollbar-gutter:stable;}
 
 /* 瓷砖 */
-.lmCourseChat .materialTile{position:relative;display:flex;flex-direction:column;min-height:160px;border:1px solid #e6ecf5;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(16,32,64,.04);overflow:hidden;flex:none;}
-.lmCourseChat .materialTileHead{display:flex;align-items:center;gap:6px;padding:8px 8px 8px 6px;border-bottom:1px solid #eef2f8;background:linear-gradient(180deg,#fbfcff,#f6f9ff);flex:none;}
-.lmCourseChat .materialGrip{border:0;background:transparent;color:#b6c2d6;cursor:grab;padding:4px;border-radius:8px;display:inline-flex;min-height:28px;min-width:26px;align-items:center;justify-content:center;touch-action:none;flex:none;}
-.lmCourseChat .materialGrip:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
-.lmCourseChat .materialGrip .lmIcon{width:14px;height:14px;}
-.lmCourseChat .materialKind{flex:none;font:600 10.5px/1.6 system-ui,sans-serif;color:#4338ca;background:#eef2ff;border-radius:999px;padding:1px 8px;}
-.lmCourseChat .materialTitle{flex:1;min-width:0;font-size:12px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lmCourseChat .materialTitle em{color:#94a3b8;font-style:normal;}
-.lmCourseChat .materialAct{border:0;background:transparent;color:#93a2b8;cursor:pointer;padding:5px;border-radius:8px;display:inline-flex;min-height:30px;min-width:30px;align-items:center;justify-content:center;transition:background .15s,color .15s;flex:none;}
-.lmCourseChat .materialAct:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
-.lmCourseChat .materialAct .lmIcon{width:14px;height:14px;}
-.lmCourseChat .materialTile .materialAct:last-child:hover{background:#fee2e2;color:#be123c;}
-.lmCourseChat .materialTile .materialAct .lmIcon{transform:none;}
-.lmCourseChat .materialBody{flex:1;min-height:0;display:flex;flex-direction:column;background:#f8fafc;}
-.lmCourseChat .materialFrame{flex:1;min-height:0;width:100%;border:0;background:#fff;}
-.lmCourseChat .materialImageWrap{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:10px;background:#fff;}
-.lmCourseChat .materialImageWrap img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 2px 10px rgba(16,32,64,.1);}
-.lmCourseChat .materialText{flex:1;min-height:0;overflow:auto;padding:12px 14px;background:#fff;font-size:13px;line-height:1.75;}
-.lmCourseChat .materialUnsupported{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;text-align:center;background:#fff;}
-.lmCourseChat .materialUnsupported .lmIcon{width:30px;height:30px;color:#c7d2fe;}
-.lmCourseChat .materialUnsupported p{margin:0;font-size:12.5px;color:var(--lm-muted,#64748b);max-width:260px;}
-.lmCourseChat .materialUnsupported a{font-size:12.5px;color:var(--lm-primary-deep,#4f46e5);border:1px solid var(--lm-border-hover,#a5b4fc);border-radius:10px;padding:7px 14px;text-decoration:none;background:#fff;}
-.lmCourseChat .materialUnsupported a:hover{background:#eef2ff;}
-.lmCourseChat .materialResize{position:absolute;left:0;right:0;bottom:0;height:10px;cursor:row-resize;touch-action:none;}
-.lmCourseChat .materialResize::after{content:"";position:absolute;left:50%;bottom:3px;width:44px;height:3px;margin-left:-22px;border-radius:3px;background:#e2e8f0;transition:background .15s;}
-.lmCourseChat .materialResize:hover::after{background:var(--lm-border-hover,#a5b4fc);}
+.materialTile{position:relative;display:flex;flex-direction:column;min-height:160px;border:1px solid #e6ecf5;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(16,32,64,.04);overflow:hidden;flex:none;}
+.materialTileHead{display:flex;align-items:center;gap:6px;padding:8px 8px 8px 6px;border-bottom:1px solid #eef2f8;background:linear-gradient(180deg,#fbfcff,#f6f9ff);flex:none;}
+.materialGrip{border:0;background:transparent;color:#b6c2d6;cursor:grab;padding:4px;border-radius:8px;display:inline-flex;min-height:28px;min-width:26px;align-items:center;justify-content:center;touch-action:none;flex:none;}
+.materialGrip:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
+.materialGrip .lmIcon{width:14px;height:14px;}
+.materialKind{flex:none;font:600 10.5px/1.6 system-ui,sans-serif;color:#4338ca;background:#eef2ff;border-radius:999px;padding:1px 8px;}
+.materialTitle{flex:1;min-width:0;font-size:12px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.materialTitle em{color:#94a3b8;font-style:normal;}
+.materialAct{border:0;background:transparent;color:#93a2b8;cursor:pointer;padding:5px;border-radius:8px;display:inline-flex;min-height:30px;min-width:30px;align-items:center;justify-content:center;transition:background .15s,color .15s;flex:none;}
+.materialAct:hover{background:#eef2ff;color:var(--lm-primary-deep,#4f46e5);}
+.materialAct .lmIcon{width:14px;height:14px;}
+.materialTile .materialAct:last-child:hover{background:#fee2e2;color:#be123c;}
+.materialTile .materialAct .lmIcon{transform:none;}
+.materialBody{flex:1;min-height:0;display:flex;flex-direction:column;background:#f8fafc;}
+.materialFrame{flex:1;min-height:0;width:100%;border:0;background:#fff;}
+.materialImageWrap{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:10px;background:#fff;}
+.materialImageWrap img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 2px 10px rgba(16,32,64,.1);}
+.materialText{flex:1;min-height:0;overflow:auto;padding:12px 14px;background:#fff;font-size:13px;line-height:1.75;}
+.materialUnsupported{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;text-align:center;background:#fff;}
+.materialUnsupported .lmIcon{width:30px;height:30px;color:#c7d2fe;}
+.materialUnsupported p{margin:0;font-size:12.5px;color:var(--lm-muted,#64748b);max-width:260px;}
+.materialUnsupported a{font-size:12.5px;color:var(--lm-primary-deep,#4f46e5);border:1px solid var(--lm-border-hover,#a5b4fc);border-radius:10px;padding:7px 14px;text-decoration:none;background:#fff;}
+.materialUnsupported a:hover{background:#eef2ff;}
+.materialResize{position:absolute;left:0;right:0;bottom:0;height:10px;cursor:row-resize;touch-action:none;}
+.materialResize::after{content:"";position:absolute;left:50%;bottom:3px;width:44px;height:3px;margin-left:-22px;border-radius:3px;background:#e2e8f0;transition:background .15s;}
+.materialResize:hover::after{background:var(--lm-border-hover,#a5b4fc);}
 
 /* 拖入分区图层：覆盖整页的半透明层，右侧 1/3 为「并排查看」，其余为「上传提问」 */
 .dropOverlay{position:fixed;inset:0;z-index:60;display:flex;pointer-events:none;background:rgba(15,23,42,.26);backdrop-filter:blur(1.5px);animation:dropIn .14s ease;}
@@ -59,29 +59,29 @@
 .dropOverlay .dropZoneBoard{border:2px dashed transparent;border-left:0;border-radius:0 18px 18px 0;margin:14px 14px 14px 0;}
 .dropOverlay.isask .dropZoneAsk{background:rgba(99,102,241,.34);border-color:rgba(199,210,254,.9);}
 .dropOverlay.isboard .dropZoneBoard{background:rgba(6,182,212,.32);border-color:rgba(165,243,252,.9);}
-.lmCourseChat .chatPanes.isDropping{outline:2px dashed var(--lm-primary-deep,#4f46e5);outline-offset:-6px;border-radius:18px;}
+.chatPanes.isDropping{outline:2px dashed var(--lm-primary-deep,#4f46e5);outline-offset:-6px;border-radius:18px;}
 
 /* 素材工具（页头） */
-.lmCourseChat .materialToolbar{position:relative;display:inline-flex;align-items:center;}
-.lmCourseChat .materialPopup{position:absolute;top:calc(100% + 8px);right:0;z-index:12;width:300px;display:flex;flex-direction:column;gap:8px;padding:12px;background:#fff;border:1px solid #e6ecf5;border-radius:14px;box-shadow:0 14px 34px rgba(16,32,64,.16);}
-.lmCourseChat .materialPopupNote{margin:0;font-size:11.5px;color:var(--lm-muted,#94a3b8);line-height:1.6;}
-.lmCourseChat .materialPopupPick{border:1px solid var(--lm-border,#e2e8f0);background:#fff;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#334155;cursor:pointer;text-align:left;min-height:38px;}
-.lmCourseChat .materialPopupPick:hover{border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);}
-.lmCourseChat .materialPopupUrl{display:flex;gap:6px;}
-.lmCourseChat .materialPopupUrl input{flex:1;min-width:0;border:1px solid var(--lm-border,#e2e8f0);border-radius:10px;padding:8px 10px;font-size:12.5px;}
-.lmCourseChat .materialPopupUrl button{border:1px solid transparent;background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;}
-.lmCourseChat .materialPopupUrl button:disabled{opacity:.5;cursor:not-allowed;}
+.materialToolbar{position:relative;display:inline-flex;align-items:center;}
+.materialPopup{position:absolute;top:calc(100% + 8px);right:0;z-index:12;width:300px;display:flex;flex-direction:column;gap:8px;padding:12px;background:#fff;border:1px solid #e6ecf5;border-radius:14px;box-shadow:0 14px 34px rgba(16,32,64,.16);}
+.materialPopupNote{margin:0;font-size:11.5px;color:var(--lm-muted,#94a3b8);line-height:1.6;}
+.materialPopupPick{border:1px solid var(--lm-border,#e2e8f0);background:#fff;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#334155;cursor:pointer;text-align:left;min-height:38px;}
+.materialPopupPick:hover{border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);}
+.materialPopupUrl{display:flex;gap:6px;}
+.materialPopupUrl input{flex:1;min-width:0;border:1px solid var(--lm-border,#e2e8f0);border-radius:10px;padding:8px 10px;font-size:12.5px;}
+.materialPopupUrl button{border:1px solid transparent;background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));color:#fff;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;}
+.materialPopupUrl button:disabled{opacity:.5;cursor:not-allowed;}
 
 /* 窄屏：对话卡片条与素材区各占一整页，左右横滑切换 */
 @media(max-width:1023px){
- .lmCourseChat .chatSplit{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;}
- .lmCourseChat .chatPanes{flex:0 0 100%;scroll-snap-align:start;}
- .lmCourseChat .chatSplit > .paneResizer{display:none;}
- .lmCourseChat .materialSlot{flex:0 0 100%;min-width:0;max-width:none;scroll-snap-align:start;}
- .lmCourseChat .materialBoard{border-radius:14px;}
- .lmCourseChat .materialBoardList{padding:10px 0;}
- .lmCourseChat .materialPopup{width:min(300px,86vw);}
+ .chatSplit{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;}
+ .chatPanes{flex:0 0 100%;scroll-snap-align:start;}
+ .chatSplit > .paneResizer{display:none;}
+ .materialSlot{flex:0 0 100%;min-width:0;max-width:none;scroll-snap-align:start;}
+ .materialBoard{border-radius:14px;}
+ .materialBoardList{padding:10px 0;}
+ .materialPopup{width:min(300px,86vw);}
 }
 @media(prefers-reduced-motion:reduce){
- .lmCourseChat .materialResize::after{transition:none;}
+ .materialResize::after{transition:none;}
 }

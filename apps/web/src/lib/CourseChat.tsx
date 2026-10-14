@@ -14,7 +14,7 @@ import FormulaComposer from "./FormulaComposer";
 import ChatMarkdown,{messageSource} from "./ChatMarkdown";
 import QuoteSurface from "./QuoteSurface";
 import QuotePanes from "./QuotePanes";
-import type {QuoteUi} from "./QuotePanes";
+import type {QuoteUi,PaneTransport} from "./QuotePanes";
 import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,isFollowUpText,quoteKeyOf} from "./chat-quote.mjs";
 import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
@@ -242,6 +242,12 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
   window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
  }
+ // 课程对话的传输层：创建 attempt + SSE 流式 + 读取 events
+ const paneTransport:PaneTransport=useMemo(()=>({
+  create:async(text:string)=>{const a=await api("/attempts","POST",{course_id:course,text,sandbox_id:null});return {id:String(a.id)};},
+  send:async(id,request,onStage,signal)=>{if(streaming)await streamCourseMessage(id,request,onStage,signal);else await api("/attempts/"+id+"/messages","POST",request);},
+  load:async(id:string)=>{const d=await api("/attempts/"+id);return d.events||[];},
+ }),[api,course,streaming]);
  function quoteUi():QuoteUi{
   return {piecesOf,setPieces:setPiecesOf,quotingPaneId,error:quoteError,busy:busy||loading,onToggle:toggleScissors,onAssemble:assemble,onCopy:paneId=>void copyPieces(paneId),onClear:paneId=>setPiecesOf(paneId,[]),onExit:exitScissors,onAddPieces:addPieces,onSent:()=>void loadHistory(),onRemoveQuote:removePaneQuote,onLocate:locatePiece};
  }
@@ -327,7 +333,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
    <div className="materialSlot" style={{flexBasis:boardWidth}}>
     <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(p=>p.id===id?{...p,height:h}:p))} onMove={moveMaterial} onClear={clearMaterials}/>
    </div>
- </>:null} dropping={dropping} api={api} user={user} streaming={streaming} course={course} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
+ </>:null} dropping={dropping} transport={paneTransport} user={user} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
  <section className="chatWorkspace" ref={workspace} data-quoting={quotingPaneId==="main"?"":undefined} onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
  {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>{courseIntro(course)}</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}

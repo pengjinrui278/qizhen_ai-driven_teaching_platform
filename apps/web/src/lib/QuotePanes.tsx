@@ -51,6 +51,14 @@ export type PaneLayout={
 // 子页面编号永远等于它在条带里的位置（主页面之后第 1 个就是「子页面 1」）
 export const paneTitle=(index:number)=>"子页面 "+index;
 
+// 面板的传输层：课程对话走 /attempts + SSE 流式，AI 学习走 /ai/sessions（无流式）。
+// 抽成适配器后，摘录、引用子页面、参阅区两边完全共用。
+export type PaneTransport={
+ create:(text:string)=>Promise<{id:string}>;
+ send:(id:string,request:{request_id:string;message:string},onStage:(stage:string)=>void,signal:AbortSignal)=>Promise<void>;
+ load:(id:string)=>Promise<Row[]>;
+};
+
 function paneSources(pane:PaneState,title:string,events:Row[]):Sources{
  const map:Sources={};
  events.forEach((e:Row,i:number)=>{
@@ -62,8 +70,8 @@ function paneSources(pane:PaneState,title:string,events:Row[]):Sources{
 }
 
 // 子页面：一条独立会话（引用卡片 + 针对性追问），自身管理 attempt/流式/重试，回答可再被摘录引用
-function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
- pane:PaneState;index:number;title:string;course:string;api:Api;user:Row;streaming:boolean;quote:QuoteUi;
+function SubChatPane({pane,index,title,transport,user,quote,sourcesRef,layout,dropSide,onClose,onBindAttempt,onSources,onDragStart,onSiblingMove}:{
+ pane:PaneState;index:number;title:string;transport:PaneTransport;user:Row;quote:QuoteUi;
  sourcesRef:React.RefObject<Sources>;layout:PaneLayout;dropSide?:"before"|"after";
  onClose:(id:string)=>void;onBindAttempt:(paneId:string,attemptId:string,question:string)=>void;onSources:(paneId:string,sources:Sources|null)=>void;
  onDragStart:(e:React.PointerEvent,id:string)=>void;
@@ -81,11 +89,11 @@ function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRe
  useEffect(()=>{
   if(!pane.attemptId||loaded.current===pane.attemptId)return;
   loaded.current=pane.attemptId;let live=true;
-  api("/attempts/"+pane.attemptId).then(d=>{if(live)setEvents(d.events||[]);})
+  transport.load(pane.attemptId).then(d=>{if(live)setEvents(d||[]);})
    .catch(()=>{if(live)setMissing(true);})
    .finally(()=>{if(live)setLoading(false);});
   return ()=>{live=false;};
- },[pane.attemptId,api]);
+ },[pane.attemptId,transport]);
  useEffect(()=>{
   onSources(pane.id,paneSources(pane,title,events));
   return ()=>onSources(pane.id,null);
@@ -103,16 +111,16 @@ function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRe
   try{
    let aid=pane.attemptId;
    if(!aid){
-    const created=await api("/attempts","POST",{course_id:course,text:request.message,sandbox_id:null});
+    const created=await transport.create(request.message);
     if(token!==epoch.current)return;
     aid=String(created.id);loaded.current=aid;onBindAttempt(pane.id,aid,question);
    }
    setStage("queued");
-   if(streaming){abort.current=new AbortController();await streamCourseMessage(aid!,request,v=>{if(token===epoch.current)setStage(v);},abort.current.signal);}
-   else await api("/attempts/"+aid+"/messages","POST",request);
-   const detail=await api("/attempts/"+aid);
+   abort.current=new AbortController();
+   await transport.send(aid!,request as {request_id:string;message:string},v=>{if(token===epoch.current)setStage(v);},abort.current.signal);
+   const next=await transport.load(aid!);
    if(token!==epoch.current)return;
-   setEvents(detail.events||[]);pending.current=null;quote.onSent();
+   setEvents(next||[]);pending.current=null;quote.onSent();
   }catch(e){if(token===epoch.current)setError((e as Error).message);}
   finally{if(token===epoch.current){lock.current=false;setBusy(false);setStage("");}}
  }
@@ -167,13 +175,13 @@ function SubChatPane({pane,index,title,course,api,user,streaming,quote,sourcesRe
  }
 }
 
-export default function QuotePanes({panes,quote,children,board,dropping,api,user,streaming,course,sourcesRef,mainWeight=1,layout,onClose,onBindAttempt,onSources}:{
+export default function QuotePanes({panes,quote,children,board,dropping,transport,user,sourcesRef,mainWeight=1,layout,onClose,onBindAttempt,onSources}:{
  panes:PaneState[];
  quote:QuoteUi;
  children:ReactNode;
  board?:ReactNode;        // 参阅区（含它的分隔条），与摘录面板并列但互不干扰
  dropping?:boolean;       // 正把文件拖到页面上
- api:Api;user:Row;streaming:boolean;course:string;
+ transport:PaneTransport;user:Row;
  sourcesRef:React.RefObject<Sources>;
  mainWeight?:number;
  layout:PaneLayout;
@@ -305,7 +313,7 @@ export default function QuotePanes({panes,quote,children,board,dropping,api,user
   <div className={"chatPanes"+(panes.length?" hasPanes":"")+(resizing?" isResizing":"")} ref={strip}>
   {styled}
   {panes.flatMap((pane,i)=>{
-   const node=<SubChatPane key={pane.id} pane={pane} index={i+1} title={paneTitle(i+1)} course={course} api={api} user={user} streaming={streaming} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
+   const node=<SubChatPane key={pane.id} pane={pane} index={i+1} title={paneTitle(i+1)} transport={transport} user={user} quote={quote} sourcesRef={sourcesRef} layout={layout} dropSide={drop?.id===pane.id?(drop.after?"after":"before"):undefined} onClose={onClose} onBindAttempt={onBindAttempt} onSources={onSources} onDragStart={startDrag} onSiblingMove={siblingMove}/>;
    if(visible(pane)){
     const leftId=prevVisible; // 必须快照：回调在触发时才读，闭包里的 let 已经是终值
     const resizer=<div key={pane.id+"-r"} className="paneResizer" role="separator" aria-orientation="vertical" aria-label={"调整 "+paneTitle(i+1)+" 宽度"} onPointerDown={e=>startResize(e,leftId,pane.id)} onDoubleClick={()=>resetResize(leftId,pane.id)}/>;
