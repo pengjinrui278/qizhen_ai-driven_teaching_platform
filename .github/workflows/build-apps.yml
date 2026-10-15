@@ -12,10 +12,14 @@ jobs:
   windows:
     runs-on: windows-latest
     strategy:
+      # 一个架构挂了不要把另一个也取消掉——两个 .exe 是分开要的
+      fail-fast: false
       matrix:
         arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v4
+      # pnpm 必须先装：下面 setup-node 的 cache: pnpm 要跑 `pnpm store path` 算缓存键，
+      # 装晚了它找不到可执行文件，整个 job 直接死在这一步（版本读根 package.json 的 packageManager）
       - uses: pnpm/action-setup@v4
         with:
           version: 10.0.0
@@ -38,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 同上：pnpm 先装，setup-node 的 cache: pnpm 才能算出缓存键
       - uses: pnpm/action-setup@v4
         with:
           version: 10.0.0
@@ -51,6 +56,19 @@ jobs:
           java-version: "21"
           cache: gradle
       - uses: android-actions/setup-android@v3
+        with:
+          # 这个 action 默认要装 SDK 包 "tools"，而 Google 已经把它从仓库里删了，
+          # sdkmanager 会以 "Failed to find package 'tools'" 退出、整个 job 挂掉。
+          # 传空串就不装额外包；AGP 会自己下它需要的 platform 与 build-tools
+          # （licenses 仍由这个 action 接受）。
+          packages: ""
+      - name: 准备 Android SDK
+        run: |
+          # 本项目 compileSdk = 36。镜像自带的 SDK 里未必有这个 platform，
+          # 缺了就补一下；补不上也别在这里中断，让 gradle 自己按需下载。
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" || true
+          sdkmanager --list_installed 2>/dev/null | head -20 || true
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mirror/android sync
       - run: chmod +x apps/android/android/gradlew && cd apps/android/android && ./gradlew assembleDebug
