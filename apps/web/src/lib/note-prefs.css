@@ -90,9 +90,21 @@
 .noteModeToggle.isOn{background:#eef2ff;border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);font-weight:600;}
 
 /* 笔记模式下：回答可点选，悬停高亮 */
-.chatAssistant.isPickable{cursor:pointer;border-radius:12px;transition:box-shadow .15s,background .15s;}
-.chatAssistant.isPickable:hover{box-shadow:inset 0 0 0 2px #c7d2fe;background:#f8faff;}
-.chatAssistant.isPicked{box-shadow:inset 0 0 0 2px #6366f1;background:#eef2ff;}
+/* 悬停整框亮、选中后持续亮。
+   权重必须压过 chat-tool-menu.css 里 [data-note-mode] .chatAssistant 那条卡片样式：
+   它同样写 box-shadow（卡片投影）且权重更高，"整个外框高亮"原来根本没显示出来过。
+   用外环而不是 inset：卡片本身是白底，外环才读得出是「这一整块被框住了」。 */
+.chatAssistant.isPickable{cursor:pointer;}
+.portal .chatWorkspace[data-note-mode] .chatAssistant.isPickable{transition:background .15s,box-shadow .15s;}
+.portal .chatWorkspace[data-note-mode] .chatAssistant.isPickable:hover{
+  background:#f8faff!important;
+  box-shadow:0 1px 3px rgba(15,23,42,.09),0 0 0 2px #a5b4fc!important;
+}
+.portal .chatWorkspace[data-note-mode] .chatAssistant.isPicked,
+.portal .chatWorkspace[data-note-mode] .chatAssistant.isPicked:hover{
+  background:#eef2ff!important;
+  box-shadow:0 1px 3px rgba(15,23,42,.09),0 0 0 2px #6366f1!important;
+}
 .chatAssistant .pickMark{display:none;float:right;font-size:11px;color:#4f46e5;background:#eef2ff;border-radius:99px;padding:2px 9px;}
 .chatAssistant.isPickable .pickMark{display:inline-block;}
 .chatAssistant.isPicked .pickMark{background:#6366f1;color:#fff;}
@@ -105,6 +117,12 @@
 /* 自动存库后的通知：说明存到哪了，并给一条撤回的路 */
 .noteSavedNotice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;padding:8px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-size:12px;overflow-wrap:anywhere;}
 .noteSavedNotice a{color:#047857;font-weight:600;}
+
+/* agent 直接管理笔记库之后的回执：逐条列出做了什么、哪几项没做成 */
+.noteOpsNotice{display:block;}
+.noteOpsNotice ul{margin:2px 0 0;padding-left:18px;display:grid;gap:2px;}
+.noteOpsNotice li{font-size:12px;color:#065f46;overflow-wrap:anywhere;}
+.noteOpsNotice li.isFailed{color:#9a3412;}
 
 /* 文档上传入口：与「图片」并排 */
 .chatDocUpload{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;border:1px solid var(--lm-border,#e2e8f0);border-radius:9px;padding:6px 11px;background:#fff;color:var(--lm-text,#0f172a);}

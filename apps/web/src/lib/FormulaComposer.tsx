@@ -110,7 +110,9 @@ function read(node:Node):string {
   if(node.dataset.prompt!==undefined)return node.dataset.prompt;
   // 文件块：序列化成服务端能认的上传标记，不把文件名塞进正文
   if(node.dataset.upload!==undefined)return "[[MIRROR-UPLOAD1 "+node.dataset.upload+"]]";
-  if(node.dataset.noteRef!==undefined)return `[[MIRROR-REF1 ${node.dataset.noteRef} ${btoa(unescape(encodeURIComponent(node.dataset.name||""))).replace(/=+$/,"")}]]`;
+  // 名字必须是 base64url：普通 btoa 会吐出 + 和 /，而两端解析标记的正则只收 base64url 字符集，
+  // 名字里一旦出现 + 整个标记就匹配不上——服务端取不到被引用的笔记，标记还会原样漏进消息里。
+  if(node.dataset.noteRef!==undefined)return `[[MIRROR-REF1 ${node.dataset.noteRef} ${b64url(node.dataset.name||"")}]]`;
   if(node.tagName==="BR")return "\n";
  }
  return Array.from(node.childNodes).map(n=>read(n)+(n instanceof HTMLElement&&/^(DIV|P)$/.test(n.tagName)?"\n":"")).join("");
@@ -123,11 +125,16 @@ export function fileChip(file:{id:string;name:string;kind:string}){const chip=do
 const UPLOAD_RE=/\[\[MIRROR-UPLOAD1 ([A-Za-z0-9_-]+)\]\]/g;
 /** 笔记引用块：显示笔记标题，序列化成引用标记让服务端把正文取来当依据。 */
 export function noteRefChip(note:{id:string;name:string}){const chip=document.createElement("span");chip.className="noteRefChip";chip.contentEditable="false";chip.dataset.noteRef=note.id;chip.dataset.name=note.name;chip.tabIndex=0;chip.setAttribute("role","button");chip.setAttribute("aria-label",`引用笔记：${note.name}`);chip.title=`引用笔记《${note.name}》，点击移除`;chip.textContent=`《${note.name}》`;return chip;}
-const NOTEREF_RE=/\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=-]*)\]\]/g;
-function render(root:HTMLElement,value:string){root.replaceChildren();const pattern=/\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$|\[\[MIRROR-UPLOAD1 [A-Za-z0-9_-]+\]\]|\[\[MIRROR-REF1 [A-Za-z0-9_-]+ [A-Za-z0-9_=-]*\]\]/g;let start=0;
+/** base64url：把 + / 换成 - _，去掉填充。标记里的名字一律用它。 */
+function b64url(text:string){
+ return btoa(unescape(encodeURIComponent(text))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+// 名字那一组故意收宽到含 + / =：旧草稿里存的是普通 base64，放宽了才认得出、剥得掉。
+const NOTEREF_RE=/\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=+/-]*)\]\]/g;
+function render(root:HTMLElement,value:string){root.replaceChildren();const pattern=/\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$|\[\[MIRROR-UPLOAD1 [A-Za-z0-9_-]+\]\]|\[\[MIRROR-REF1 [A-Za-z0-9_-]+ [A-Za-z0-9_=+/-]*\]\]/g;let start=0;
  for(const match of value.matchAll(pattern)){root.append(document.createTextNode(value.slice(start,match.index)));
   const upload=match[0].match(/^\[\[MIRROR-UPLOAD1 ([A-Za-z0-9_-]+)\]\]$/);
-  const noteref=match[0].match(/^\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=-]*)\]\]$/);
+  const noteref=match[0].match(/^\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=+/-]*)\]\]$/);
   if(upload){root.append(fileChip({id:upload[1],name:"附件",kind:"文件"}));}
   else if(noteref){
    let name=noteref[1];

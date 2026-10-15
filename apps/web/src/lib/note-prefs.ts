@@ -4,8 +4,11 @@ import type {Note} from "./note-store";
 // 与后端 note_prefs.MARKER_RE 对应：标记由前端在发送时追加，不在输入框里显示。
 const MARKER_RE=/\[\[MIRROR-NOTE1 ([A-Za-z0-9_\-]{16,2400})\]\]/g;
 
-export type NoteMarker={v:number;mode:"generate"|"find";src?:{k?:string;sid?:string|null;ch?:string|null};
-  p?:Record<string,string>;d?:{f?:string;t?:string;fm?:string;s?:boolean};free?:string;q?:string};
+export type NoteMarker={v:number;mode:"generate"|"find"|"compose"|"agent";src?:{k?:string;sid?:string|null;ch?:string|null;ids?:string[]};
+  p?:Record<string,string>;d?:{f?:string;t?:string;fm?:string;s?:boolean;mg?:string};free?:string;q?:string};
+
+/** agent 直接管理笔记库后回传的回执：做了什么、哪几项没做成 */
+export type NoteOpsReceipt={results:{op:string;ok:boolean;detail:string;id?:string;title?:string}[];done:number;failed:number};
 
 export function stripNoteMarker(text:string){return (text||"").replace(MARKER_RE,"").trim();}
 
@@ -38,8 +41,31 @@ export function encodeNoteMarker(payload:Record<string,unknown>){
 }
 
 /** 选中若干条回答 → 交给 agent 整理成一份笔记 */
-export function composeRepliesMarker(ids:string[]){
- return encodeNoteMarker({mode:"compose",src:{k:"replies",ids}});
+export function composeRepliesMarker(ids:string[],mergeId?:string){
+ return encodeNoteMarker({mode:"compose",src:{k:"replies",ids},d:dest(mergeId)});
+}
+
+/**
+ * 笔记模式下学生直接提要求、没走偏好面板也没选回答。
+ * 走 agent 模式：既能把这次的要求写成一份新笔记并自动存库（不用手动复制粘贴），
+ * 也能直接管理笔记库——整理、移动、改名、标星、删除、还原、并入某篇。
+ * 材料由服务端按这次的要求去教材里现找，笔记库索引也一并交给它。
+ */
+export function freeNoteMarker(mergeId?:string,folder?:string){
+ return encodeNoteMarker({mode:"agent",src:{k:"chat"},d:{...dest(mergeId),f:folder||""}});
+}
+
+function dest(mergeId?:string){return mergeId?{mg:mergeId}:{};}
+
+/** 从草稿里的笔记引用块取出被引用的笔记：既当依据，也可以当「并入」的目标 */
+export function noteRefsInDraft(draft:string){
+ const out:{id:string;name:string}[]=[];
+ for(const m of (draft||"").matchAll(/\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=+/-]*)\]\]/g)){
+  let name=m[1];
+  try{name=new TextDecoder().decode(Uint8Array.from(atob(m[2].replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-m[2].length%4)%4)),c=>c.charCodeAt(0)));}catch{/* 名字只是回显，解不开就用 id */}
+  out.push({id:m[1],name});
+ }
+ return out;
 }
 
 // 「记住以上默认」只存 科目/目录/格式/星标 —— 永不记「新建还是并入」，那一步每次都问。

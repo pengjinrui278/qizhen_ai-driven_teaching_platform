@@ -23,7 +23,7 @@ import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreference
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
 import ChatToolMenu from "./ChatToolMenu";
 import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
-import {composeRepliesMarker,decodeNoteMarker,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
+import {composeRepliesMarker,decodeNoteMarker,freeNoteMarker,noteRefsInDraft,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
 import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
 import "./note-prefs.css";
 import {fileToDataUrl,inputFromFile,isImageFile,isTextFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
@@ -47,7 +47,9 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [actionId,setActionId]=useState<string|null>(null);
  // 笔记：面板打开状态、本次待发送的标记、以及「存为笔记」确认卡指向哪一条回答
  const [notePanel,setNotePanel]=useState<{purpose?:string;source?:string}|null>(null);
- const noteComposed=useRef<{prompt:string;marker:string}|null>(null);
+ const noteComposed=useRef<{prompt:string;ids?:string[];marker?:string}|null>(null);
+ // 「并入哪一篇」：面板里显式选，没选就是新建（默认永远是新建）
+ const [mergeId,setMergeId]=useState("");
  const [noteTarget,setNoteTarget]=useState<{requestId:string;target:SaveTarget}|null>(null);
  const [organizing,setOrganizing]=useState(false);
  // 笔记模式：关着的时候笔记相关交互一概不出现（人为调用，不做常驻引导）
@@ -56,6 +58,10 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [undoneNotes,setUndoneNotes]=useState<string[]>([]);   // 已撤回的自动存笔记
  // 输入 @ 时的笔记目录：拉本人的笔记，按关键词过滤后供选择
  const [edgeOpen,setEdgeOpen]=useState(false);
+ // 草稿里引用到的笔记。引用既可以当依据，也可以当「并入」的目标，
+ // 所以目标撤掉之后要把 mergeId 一起清掉，免得并进一篇已经不在草稿里的笔记。
+ const refNotes=useMemo(()=>noteRefsInDraft(draft),[draft]);
+ useEffect(()=>{if(mergeId&&!refNotes.some(n=>n.id===mergeId))setMergeId("");},[refNotes,mergeId]);
  const [mentionQuery,setMentionQuery]=useState<string|null>(null);
  const [mentionNotes,setMentionNotes]=useState<Row[]>([]);
  useEffect(()=>{
@@ -313,12 +319,10 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  // 选中的回答 → 交给 agent 整理成「一份」笔记（不是按顺序照抄），发送后由服务端自动存库
  function composeFromPicked(){
   if(!pickedReplies.length)return;
-  const seeds=pickedReplies.map((id,index)=>{
-   const row=events.find(x=>x.request_id===id);
-   return `【第 ${index+1} 处】${(row?.response?.answer||"").slice(0,300)}`;
-  }).join("\n");
-  const prompt=`请把下面这 ${pickedReplies.length} 处回答整理成一份笔记：去掉重复、按主题重新组织、补上必要的结构，不要按原顺序照抄。\n\n${seeds}`;
-  noteComposed.current={prompt,marker:composeRepliesMarker(pickedReplies)};
+  // 输入框里只放指令，不放回答正文：正文由服务端按 request_id 取回完整原文当素材。
+  // 早先这里贴了每处 300 字的预览，模型会照着那份残缺清单写，笔记覆盖范围就错了。
+  const prompt=`请把选中的 ${pickedReplies.length} 处回答整理成一份笔记：去掉重复、按主题重新组织、补上必要的结构，不要按原顺序照抄。`;
+  noteComposed.current={prompt,ids:[...pickedReplies]};
   setDraft(prompt);
   setPickedReplies([]);
   input.current?.focus();
@@ -328,9 +332,20 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"请梳理大致解题流程、主要步骤、条件检查和验证方法，保留核心计算或论证让我完成":draft.trim());
   // 笔记偏好面板拼好的提示词：发送时把来源标记追加到末尾（输入框里不显示），
   // 用户改过内容就不再加标记，退化成一次普通提问。
-  const composed=!retry&&noteComposed.current&&noteComposed.current.prompt.trim()===msg?noteComposed.current:null;
-  const wire=composed?withNoteMarker(msg,composed.marker):msg;
-  if(composed)noteComposed.current=null;
+  // 笔记模式下的标记只有三种来路：面板拼好的、选中回答整理的、以及这里现补的自由请求。
+  // 没有第三种的话，学生在笔记模式下直接提要求只会得到一条普通回答，还得自己复制粘贴。
+  const pendingMarker=(()=>{
+   if(retry)return "";
+   const note=noteComposed.current;
+   if(note&&note.prompt.trim()===msg){
+    if(note.ids)return composeRepliesMarker(note.ids,mergeId||undefined);
+    return note.marker||"";
+   }
+   if(noteMode&&mode==="chat"&&msg)return freeNoteMarker(mergeId||undefined);
+   return "";
+  })();
+  const wire=pendingMarker?withNoteMarker(msg,pendingMarker):msg;
+  noteComposed.current=null;
   const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:wire};
   if(!request?.message)return;
   cancelActions();lock.current=true;setDraft("");setBusy(true);setError("");setFeedback("");setPending(request);pendingRef.current=request;
@@ -414,12 +429,21 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
     {undoneNotes.includes(e.response.decision.note_saved.id)
      ? <span>已撤回，这份笔记已移入回收站。</span>
      : <>
-       <span>已存到 我的笔记 › {courses.find(c=>c.course_id===e.response.decision.note_saved.course_id)?.display_name||e.response.decision.note_saved.course_id}
+       <span>{e.response.decision.note_saved.merged?"已并入":"已存到"} 我的笔记 › {courses.find(c=>c.course_id===e.response.decision.note_saved.course_id)?.display_name||e.response.decision.note_saved.course_id}
         {e.response.decision.note_saved.folder_path?` › ${e.response.decision.note_saved.folder_path}`:""} › 《{e.response.decision.note_saved.title}》</span>
+       {e.response.decision.note_saved.merge_overflow&&<span>目标笔记已经写满，这次另存成了一份新的。</span>}
        <a href={"/student/notes?note="+encodeURIComponent(e.response.decision.note_saved.id)}>查看</a>
        <button type="button" onClick={()=>{const id=e.response.decision.note_saved.id;
          void api("/notes/"+id,"DELETE").then(()=>setUndoneNotes(cur=>[...cur,id])).catch(()=>setError("撤回失败，请到「我的笔记」里手动删除。"));}}>撤回</button>
       </>}
+   </div>}
+   {/* agent 直接动过笔记库：逐条说清做了什么、哪几项没做成，并给一条去笔记库的路 */}
+   {e.response?.decision?.note_ops&&<div className="noteSavedNotice noteOpsNotice" role="status">
+    <span>助手改动了你的笔记：完成 {e.response.decision.note_ops.done} 项
+     {e.response.decision.note_ops.failed>0?`，${e.response.decision.note_ops.failed} 项没做成`:""}</span>
+    <ul>{e.response.decision.note_ops.results.map((r:Row,i:number)=>
+     <li key={i} className={r.ok?"":"isFailed"}>{r.detail}</li>)}</ul>
+    <a href="/student/notes">去我的笔记</a>
    </div>}
    {e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button><button onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
  {pending&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={pending.message}/></article></div></div>}
@@ -431,6 +455,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  <div className="chatDock">
  {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
  {(noteMode||/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft))&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
+  targets={refNotes} mergeId={mergeId} onMerge={id=>setMergeId(id)}
   onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
  {mentionQuery!==null&&<div className="noteMention" role="listbox" aria-label="引用我的笔记">
   {(()=>{
@@ -452,7 +477,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  </div>}
  <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
  <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}
-  placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}
+  placeholder={noteMode?"笔记模式：说明你要什么笔记，生成后自动存进「我的笔记」；也可以拖入文件、用 @ 引用笔记，或选中上面的回答再点「存为笔记」":undefined}
   onMention={query=>setMentionQuery(query)}/>
  <div className="chatComposerActions">
   <ChatToolMenu label="工具库" disabled={busy||loading||user.status!=="active"}>
