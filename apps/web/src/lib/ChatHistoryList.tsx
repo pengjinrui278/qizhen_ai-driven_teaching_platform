@@ -51,7 +51,7 @@ export default function ChatHistoryList({sessions,activeId,onOpen,followUpOf,onR
      <button type="submit" disabled={busy}>保存</button>
      <button type="button" disabled={busy} onClick={()=>setEditing(null)}>取消</button>
     </form>:<>
-     <button title={stamp} aria-description={stamp} aria-current={activeId===item.id?"true":undefined} onClick={()=>onOpen(item)}>
+     <button className="chatHistoryOpen" title={stamp} aria-description={stamp} aria-current={activeId===item.id?"true":undefined} onClick={()=>onOpen(item)}>
       {isFollowUp(item)&&<span className="chatHistoryBadge">追问</span>}
       <span className="chatHistoryTitle" style={{display:"block",width:"100%",color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",boxSizing:"border-box"}}>{displayTitle(item)}</span>
      </button>

@@ -76,6 +76,12 @@ const attempt = (id, title, created, extra = {}) => ({
     assert.ok(titles.includes('连续 · 概念讨论'), `主对话要在：${titles}`);
     assert.ok(!titles.some(t => t.includes('epsilon')),
       `带【引用追问】标记的游离追问不该出现在顶层：${titles}`);
+    const titleBox = await page.locator('.chatHistoryTitle', {hasText: '连续 · 概念讨论'}).boundingBox();
+    assert.ok(titleBox && titleBox.width >= 60,
+      `历史对话标题必须真正可见，不能只存在于 DOM 中：${JSON.stringify(titleBox)}`);
+    const moreBox = await page.locator('.chatHistoryMore').first().boundingBox();
+    assert.ok(moreBox && moreBox.width <= 40,
+      `历史对话操作按钮不能挤占整行：${JSON.stringify(moreBox)}`);
 
     // ---- 2. 重命名 ----
     const row = page.locator('.chatHistoryRow', {hasText: '连续 · 概念讨论'}).first();

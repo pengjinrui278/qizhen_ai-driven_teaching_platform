@@ -16,6 +16,8 @@
 .portal.lmStudentShell .lmCourseChat .chatHistory h2 {margin:20px 0 10px;color:var(--lm-muted);}
 .portal.lmStudentShell .lmCourseChat .chatSessionList {gap:4px;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button {display:flex;align-items:center;gap:6px;width:100%;min-height:36px;padding:8px 10px;border:0;box-shadow:none;background:transparent;border-radius:6px;text-align:left;font:400 13px/1.45 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--lm-text);}
+.portal.lmStudentShell .lmCourseChat .chatSessionList .chatHistoryOpen {flex:1 1 auto;width:auto;min-width:0;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList .chatHistoryMore {flex:0 0 28px;width:28px;min-width:28px;padding:0;justify-content:center;overflow:visible;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button:hover,.portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {background:#f0f5ff;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button[aria-current=true] {background:#e6eeff;color:#1d4ed8;font-weight:500;border:0;}
 .portal.lmStudentShell .lmCourseChat .chatCourseName {font:500 14px/1.5 system-ui,sans-serif;flex:1;}
