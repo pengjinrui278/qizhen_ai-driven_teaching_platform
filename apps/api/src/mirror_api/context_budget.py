@@ -3,6 +3,10 @@ from dataclasses import replace
 import json
 
 MAX_USER_BYTES = 48000
+# 笔记任务（整理选中的回答 / 按章生成）时放宽：学生明确选中的回答必须**整段**进上下文，
+# 截断了笔记的覆盖范围就是错的。DeepSeek 128K 上下文，十几万字节中文也放得下。
+NOTE_USER_BYTES = 220000
+NOTE_SECTION_BYTES = 200000
 OMITTED = "\n[上下文已截短；缺失内容不可作为推断依据]"
 
 
@@ -43,7 +47,8 @@ def bounded_context(context):
                    problem_statement=clip(context.problem_statement, 9000) if context.problem_statement else None)
 
 
-def fit_user_sections(sections: list[str]) -> str:
+def fit_user_sections(sections: list[str], max_bytes: int = MAX_USER_BYTES,
+                      section_bytes: int = 18000) -> str:
     # Preserve the latest question before large material and history sections.
     questions = [s for s in sections if s.startswith("学生本次补充/证明草稿：")]
     others = [s for s in sections if not s.startswith("学生本次补充/证明草稿：")]
@@ -53,9 +58,9 @@ def fit_user_sections(sections: list[str]) -> str:
                 "待整理的回答", "要并入的笔记", "学生本次上传的资料", "可用课程知识：")
     others.sort(key=lambda s: next((i for i, prefix in enumerate(priority) if s.startswith(prefix)), len(priority)))
     result = []
-    remaining = MAX_USER_BYTES
+    remaining = max_bytes
     for section in questions + others:
-        part = clip(section, min(remaining, 18000))
+        part = clip(section, min(remaining, section_bytes))
         if not part:
             break
         result.append(part)

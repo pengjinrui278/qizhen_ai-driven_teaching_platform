@@ -17,7 +17,8 @@ from typing import Protocol
 
 from .agent_policy import teaching_policy
 from .config import Settings
-from .context_budget import bounded_context, fit_user_sections
+from .context_budget import (MAX_USER_BYTES, NOTE_SECTION_BYTES, NOTE_USER_BYTES,
+                             bounded_context, fit_user_sections)
 from .model_transport import complete
 from .teaching_scaffold import (
     COURSE_HINT_SCAFFOLDS,
@@ -314,7 +315,11 @@ class OpenAICompatibleModel:
                 "max_tokens": self.deep_max_tokens if deep else self.max_tokens,
                 "messages": [
                     {"role": "system", "content": system},
-                    {"role": "user", "content": fit_user_sections(user_lines)},
+                    {"role": "user", "content": fit_user_sections(
+                        user_lines,
+                        # 笔记任务放宽：学生选中的回答要整段进去（截断了笔记范围就是错的）
+                        max_bytes=NOTE_USER_BYTES if context.note_material else MAX_USER_BYTES,
+                        section_bytes=NOTE_SECTION_BYTES if context.note_material else 18000)},
                 ],
             }
         if self.base_url in ("https://api.deepseek.com", "https://api.deepseek.com/v1") and context.course_id!="ai_literacy":

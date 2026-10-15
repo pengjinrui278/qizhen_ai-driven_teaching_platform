@@ -15,11 +15,10 @@ import re
 VERSION = 1
 # 单条消息上限 6000（platform_api.Message）；提示词 + 标记必须留出余量。
 MAX_TOTAL_CHARS = 5200
-# 「整理选中的回答」的材料额度。单处 8000 / 总计 17000 字节：一整篇回答要能整段进来
-# （早先单处只给 6000，长回答会被拦腰截断），同时仍压在 context_budget.fit_user_sections
-# 的单段上限 18000 字节之下——超了就会被静默裁掉，白给。
-REPLY_ANSWER_BYTES = 8000
-REPLIES_BUDGET_BYTES = 17000
+# 「整理选中的回答」的材料额度。学生选中的回答**整段**进来，一个字都不截——
+# 截断了笔记的覆盖范围就是错的（早先单处只留 6000 字节，长回答被拦腰砍掉）。
+# 总额度与 context_budget 的笔记任务上限对齐；真到放不下时如实说明还差几处，不假装完整。
+REPLIES_BUDGET_BYTES = 180000
 
 # 每组：id / label / hint / 选项 (id, label, hint, 提示词片段)
 GROUPS = [
@@ -456,13 +455,17 @@ def build_replies_material(replies, budget_bytes=REPLIES_BUDGET_BYTES):
         return ("待整理的回答（本次笔记任务的依据）\n这一批回答没有取到，"
                 "请直接告诉学生没读到，不要凭印象编。")
     parts = ["待整理的回答（本次笔记任务的依据；只可使用这里出现的内容）",
-             f"共 {len(replies)} 处，请去重、按主题重组，不要按原顺序照抄。"]
+             f"共 {len(replies)} 处，请去重、按主题重组，不要按原顺序照抄。",
+             "这 N 处回答是学生逐条挑出来的，下面的正文是完整的，不要只整理开头几段。"]
     budget = budget_bytes
     for index, (question, answer) in enumerate(replies, 1):
-        block = f"## 第 {index} 处\n问：{_clip(question, 600)}\n答：{_clip(answer, REPLY_ANSWER_BYTES)}"
+        # 回答正文整段照录，不裁剪：被截断的素材会让笔记的覆盖范围出错。
+        block = f"## 第 {index} 处\n问：{_clip(question, 600)}\n答：{(answer or '').strip()}"
         cost = len(block.encode("utf-8"))
         if cost > budget:
-            parts.append(f"（后面还有 {len(replies) - index + 1} 处未列出，受长度限制）")
+            parts.append(f"（这次只装得下前 {index - 1} 处，后面还有 "
+                         f"{len(replies) - index + 1} 处没放进来；请在回答里如实说明，"
+                         "不要让笔记显得覆盖了全部选中的内容。）")
             break
         budget -= cost
         parts.append(block)
