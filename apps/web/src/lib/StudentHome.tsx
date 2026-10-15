@@ -3,19 +3,28 @@ import {useEffect,useState} from "react";
 import Link from "next/link";
 import ZjuSchedule from "./ZjuSchedule";
 import StudentIcon from "./StudentIcon";
+import {AvatarButton} from "./AvatarPicker";
+import "./avatar.css";
 import {courseIntro} from "./course-intro";
 type Row=Record<string,any>;
 // Presentation only. The API, not this map, determines which courses exist.
 const covers:Record<string,[string,string]>={mathematical_analysis:['math','Σ'],linear_algebra_analytic_geometry:['algebra','A'],university_physics:['physics','Φ'],point_set_topology:['topology','τ'],ordinary_differential_equations:['ode','∫'],python_programming:['python','</>'],electronic_circuits:['circuits','⊥'],psychology_applications:['psychology','Ψ'],college_english:['english','Aa']};
 function due(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?'截止时间待确认':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
-export default function StudentHome({user,courses,ongoing,attempts,href}:{user:Row;courses:Row[];ongoing:Row[];attempts:Row[];href:(section?:string)=>string}){
+export default function StudentHome({user,courses,ongoing,attempts,href,api}:{
+ user:Row;courses:Row[];ongoing:Row[];attempts:Row[];href:(section?:string)=>string;
+ api:(path:string,method?:string,body?:unknown)=>Promise<any>;}){
  const [today,setToday]=useState<Date|null>(null);
+ // 头像是学生自己的东西，存在账号上：换设备也在
+ const [avatar,setAvatar]=useState<string>(user.avatar||"");
  useEffect(()=>{setToday(new Date());const timer=setInterval(()=>setToday(new Date()),60000);return()=>clearInterval(timer);},[]);
  const hour=today?.getHours();const greeting=hour===undefined?'你好':hour<6?'夜深了':hour<12?'上午好':hour<18?'下午好':'晚上好';
  return <div className="lmStudentHome">
   <section className="lmWelcome" aria-labelledby="lm-welcome-title">
-   <h1 id="lm-welcome-title">{greeting}，{user.nickname||'同学'}</h1>
-   <p>{today&&<time dateTime={today.toISOString()}>{today.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})} · </time>}从今天的课程开始，继续你的学习。</p>
+   <AvatarButton src={avatar} nickname={user.nickname||'同学'} api={api} onSaved={setAvatar}/>
+   <div className="lmWelcomeText">
+    <h1 id="lm-welcome-title">{greeting}，{user.nickname||'同学'}</h1>
+    <p>{today&&<time dateTime={today.toISOString()}>{today.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})} · </time>}从今天的课程开始，继续你的学习。</p>
+   </div>
    <div className="lmWelcomeStats"><span><strong>{courses.length}</strong>可选课程</span><span><strong>{ongoing.length}</strong>进行中作业</span></div>
   </section>
   <div className="lmHomeSchedule" id="schedule"><ZjuSchedule/></div>

@@ -58,6 +58,8 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  }
  load().catch(e=>{if(!live)return;if(e instanceof ApiError&&e.status===401){setData({signedOut:true});router.replace("/login");}else setError(e instanceof Error?e.message:String(e));});return()=>{live=false;};},[demo,role,reload,section]);
  const href=(s="")=>base+(s?"/"+s:"")+(demo?"?mode=demo":"?mode=live");
+ // 渲染期要用的 api（useEffect 里那个是局部的）。演示模式走 demoApi。
+ const callApi=(p:string,m="GET",b?:unknown)=>demo?demoApi(role,p,m,b):liveApi(p,m,b);
  const title=section.startsWith("ai")?"AI 学习":nav.find(n=>n[0]===section)?.[1]||"首页";
  const initial=teacher?section==="course"?"builder":section==="settings"?"account":"sandboxes":section==="observations"?"memory":section==="privacy"?"account":section==="assignments"?"sandboxes":section==="resources"?"resources":"learn";
  const works=data?.details?.flatMap((d:Row)=>d.submissions.map((s:Row)=>({...s,title:d.box.title})))||[];
@@ -98,7 +100,7 @@ export default function Portal({role,section=""}:{role:PortalRole;section?:strin
  {!pending.length&&<p>暂无待批改作品</p>}</section>
  <section className="portalPanel"><div className="panelHeading"><h2>进行中作业</h2><Link href={href("assignments")}>全部</Link></div>{ongoing.slice(0,4).map((b:Row)=><Link className="assignmentPreview" href={href("assignments")} key={b.id}><h3>{b.title}</h3><p>截止：{new Date(b.expires_at).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</p></Link>)}{!ongoing.length&&<p>暂无进行中作业</p>}</section>
  </div></>
- :<StudentHome user={data.user} courses={data.courses} ongoing={ongoing} attempts={data.attempts||[]} href={href}/>}
+ :<StudentHome user={data.user} courses={data.courses} ongoing={ongoing} attempts={data.attempts||[]} href={href} api={callApi}/>}
  </>}
  </main></div></div>;
 }

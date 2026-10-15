@@ -1,0 +1,76 @@
+/* 学镜 — 头像：首页欢迎卡最左边那块，点开可以换图 / 拖动缩放 / 清除。
+   注意：portal.css 里有一条 `.portal button`（权重 0,1,1），会盖掉单类选择器写的
+   border-radius / padding / background。这里的每条都要带 .portal 前缀才压得住。 */
+.portal .lmStudentHome .lmWelcome{display:flex;align-items:flex-start;gap:18px;}
+.portal .lmStudentHome .lmWelcomeText{min-width:0;flex:1;}
+
+.portal .lmAvatarButton{
+  position:relative;flex:none;width:72px;height:72px;border-radius:50%;
+  border:1px solid var(--lm-border,#e2e8f0);
+  background:linear-gradient(135deg,#e0e7ff,#cffafe);
+  color:var(--lm-primary-deep,#4f46e5);font:700 26px/1 var(--lm-serif),serif;
+  cursor:pointer;display:grid;place-items:center;overflow:hidden;padding:0;min-height:0;
+  box-shadow:var(--lm-shadow);transition:border-color .15s,box-shadow .15s;
+}
+.portal .lmAvatarButton:hover:not(:disabled){
+  background:linear-gradient(135deg,#e0e7ff,#cffafe);
+  border-color:var(--lm-border-hover,#a5b4fc);transform:none;
+  box-shadow:0 0 0 3px rgba(99,102,241,.14);
+}
+.portal .lmAvatarButton:active:not(:disabled){transform:none;}
+.portal .lmAvatarButton img{width:100%;height:100%;object-fit:cover;display:block;}
+.portal .lmAvatarButton .lmAvatarHint{
+  position:absolute;inset:auto 0 0 0;height:26px;display:grid;place-items:center;
+  background:rgba(15,23,42,.55);color:#fff;opacity:0;transition:opacity .15s;
+}
+.portal .lmAvatarButton:hover .lmAvatarHint,
+.portal .lmAvatarButton:focus-visible .lmAvatarHint{opacity:1;}
+.portal .lmAvatarButton .lmIcon{width:14px;height:14px;}
+
+.portal .lmAvatarBackdrop{
+  position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(15,23,42,.32);
+}
+.portal .lmAvatarDialog{
+  width:min(340px,100%);background:#fff;border-radius:16px;padding:20px;text-align:left;
+  box-shadow:0 20px 50px rgba(15,23,42,.24);
+}
+.portal .lmAvatarDialog h3{margin:0 0 14px;font-size:15px;color:#0f172a;}
+
+.portal .lmAvatarStage{display:flex;justify-content:center;}
+.portal .lmAvatarFrame{
+  position:relative;width:208px;height:208px;border-radius:50%;overflow:hidden;
+  background:#f1f5f9;border:1px solid #e2e8f0;cursor:grab;touch-action:none;user-select:none;
+}
+.portal .lmAvatarFrame:active{cursor:grabbing;}
+/* 框里的图绝对定位摆放：拖动改 left/top，缩放改尺寸 */
+.portal .lmAvatarFrame img{position:absolute;max-width:none;pointer-events:none;}
+.portal .lmAvatarEmpty{
+  margin:0;position:absolute;inset:0;display:grid;place-items:center;
+  color:#94a3b8;font-size:12.5px;
+}
+
+.portal .lmAvatarZoom{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-size:12.5px;color:#64748b;}
+.portal .lmAvatarZoom input{flex:1;width:auto;accent-color:var(--lm-primary,#6366f1);}
+.portal .lmAvatarTip{margin:0 0 10px;font-size:12px;color:#94a3b8;}
+.portal .lmAvatarError{margin:0 0 10px;font-size:12.5px;color:#b91c1c;}
+
+.portal .lmAvatarActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.portal .lmAvatarActions button{
+  border:1px solid #e2e8f0;background:#fff;color:#475569;border-radius:9px;
+  padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;min-height:34px;
+}
+.portal .lmAvatarActions button:hover:not(:disabled){background:#f8fafc;transform:none;}
+.portal .lmAvatarActions button:disabled{opacity:.5;cursor:not-allowed;}
+.portal .lmAvatarActions .lmAvatarSave{
+  background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));
+  border-color:transparent;color:#fff;font-weight:600;
+}
+.portal .lmAvatarActions .lmAvatarSave:hover:not(:disabled){
+  background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));
+}
+
+@media(max-width:680px){
+ .portal .lmStudentHome .lmWelcome{flex-direction:column;align-items:stretch;gap:14px;}
+ .portal .lmAvatarButton{width:60px;height:60px;font-size:22px;}
+}
