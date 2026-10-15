@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学镜 · 高保真概念设计稿（方向 B：现代灵动）</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@600;700;900&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eef2f7; --bg2:#f8fafc;
+  --glass:#ffffff;
+  --glass-hover:#fafbff;
+  --border:#e2e8f0;
+  --border-hover:#a5b4fc;
+  --primary:#6366f1; --cyan:#06b6d4;
+  --text:#0f172a; --muted:#64748b; --dim:#94a3b8;
+  --grad:linear-gradient(135deg,#6366f1,#06b6d4);
+  --glow:0 4px 16px rgba(99,102,241,.25);
+  --shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+  --shadow-hover:0 8px 24px rgba(15,23,42,.1);
+}
+body{font-family:"Noto Sans SC",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* 背景淡彩 */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(700px circle at 10% 5%,rgba(99,102,241,.07),transparent 50%),
+    radial-gradient(600px circle at 90% 90%,rgba(6,182,212,.06),transparent 50%);
+}
+
+/* 全局图标线条统一加粗 */
+svg{stroke-width:2}
+svg *{stroke-width:inherit}
+
+.app{position:relative;z-index:1;display:flex;min-height:100vh}
+
+/* ===== 侧边栏 ===== */
+.sidebar{width:240px;flex-shrink:0;padding:20px 14px;display:flex;flex-direction:column;
+  background:#ffffff;border-right:1px solid var(--border);
+  position:sticky;top:0;height:100vh;
+}
+.logo{display:flex;align-items:center;gap:10px;padding:8px 10px 20px}
+.logo-mark{width:36px;height:36px;border-radius:10px;background:var(--grad);display:grid;place-items:center;
+  font-family:"Noto Serif SC",serif;font-weight:900;font-size:18px;color:#fff;box-shadow:var(--glow)}
+.logo-text{font-size:15px;font-weight:700;line-height:1.2}
+.logo-en{font-size:10px;color:var(--dim);font-weight:400;letter-spacing:.05em}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;position:relative;
+  font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .18s;border:none;background:none;text-align:left;width:100%;font-family:inherit}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke-width:2.2}
+.nav-item:hover{background:var(--glass);color:var(--text)}
+.nav-item.active{background:rgba(99,102,241,.14);color:#4f46e5;font-weight:600}
+.nav-item.active svg{color:#4f46e5}
+.nav-badge{position:absolute;top:2px;left:9px;font-size:9px;background:#f43f5e;color:#fff;padding:0 5px;border-radius:99px;font-weight:600;line-height:1.5;box-shadow:0 1px 4px rgba(244,63,94,.4)}
+.sidebar-footer{padding-top:12px;border-top:1px solid var(--border)}
+
+/* ===== 主内容 ===== */
+.main{flex:1;padding:28px 32px;max-width:calc(100vw - 240px);min-width:0}
+.page{display:none}
+.page.active{display:block;animation:pageIn .35s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-title{font-family:"Noto Serif SC",serif;font-size:24px;font-weight:700}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+/* 玻璃卡片 */
+.gcard{background:var(--glass);border:1px solid var(--border);
+  border-radius:14px;padding:20px;transition:all .2s;box-shadow:var(--shadow)}
+.gcard:hover{border-color:var(--border-hover);box-shadow:var(--shadow-hover)}
+.gcard-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.gcard-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.gcard-title svg{width:17px;height:17px;color:#6366f1}
+.gcard-link{font-size:12px;color:#6366f1;cursor:pointer;text-decoration:none}
+.gcard-link:hover{color:#4f46e5}
+
+/* 按钮 */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;
+  font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .18s}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(99,102,241,.3)}
+.btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,.5);transform:translateY(-1px)}
+.btn-ghost{background:var(--glass);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--glass-hover);border-color:var(--border-hover)}
+
+/* 徽章 */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.badge svg{width:12px;height:12px}
+.badge-indigo{background:rgba(99,102,241,.15);color:#4f46e5}
+.badge-cyan{background:rgba(6,182,212,.15);color:#67e8f9}
+.badge-amber{background:rgba(245,158,11,.15);color:#fcd34d}
+.badge-rose{background:rgba(244,63,94,.15);color:#fda4af}
+.badge-emerald{background:rgba(16,185,129,.15);color:#6ee7b7}
+
+/* 输入框 */
+.input{width:100%;padding:10px 14px;background:#f8fafc;border:1.5px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:all .15s}
+.input::placeholder{color:var(--dim)}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12);background:#fff}
+
+/* 标注标签 */
+.annotation{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;
+  background:rgba(6,182,212,.15);color:#67e8f9;margin-left:8px;vertical-align:middle}
+.source-tag{font-size:10px;color:var(--dim);font-family:monospace;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+
+/* 浅色卡片统一阴影层次 */
+.sched-day,.related-toggle,.related-chunk,.book-card,.exam-row,.sr-item,.diag-card,.hw-card,.privacy-item{box-shadow:var(--shadow)}
+.related-chunk:hover,.book-card:hover,.exam-row:hover,.sr-item:hover,.diag-card:hover,.hw-card:hover,.privacy-item:hover{box-shadow:var(--shadow-hover)}
+.book-card:hover,.exam-row:hover,.sr-item:hover,.hw-card:hover,.privacy-item:hover{transform:translateY(-2px)}
+
+/* ===== 首页 ===== */
+.welcome-banner{background:#ffffff;border:1px solid var(--border);
+  border-radius:16px;padding:24px 28px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.welcome-banner::after{content:"";position:absolute;right:-40px;top:-40px;width:220px;height:220px;
+  background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);border-radius:50%}
+.welcome-hi{font-size:22px;font-weight:700;margin-bottom:4px}
+.welcome-sub{font-size:13px;color:var(--muted)}
+.welcome-stats{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}
+.wstat{display:flex;align-items:center;gap:8px}
+.wstat-num{font-size:22px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.wstat-label{font-size:12px;color:var(--muted)}
+
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+.course-card{background:#ffffff;border:1px solid var(--border);
+  border-radius:14px;padding:18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.course-card:hover{transform:translateY(-3px);border-color:var(--border-hover);box-shadow:var(--shadow-hover)}
+.course-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;opacity:0;transition:opacity .2s}
+.course-card:hover::before{opacity:1}
+.course-card.c1::before{background:linear-gradient(90deg,#6366f1,#8b5cf6)}
+.course-card.c2::before{background:linear-gradient(90deg,#06b6d4,#3b82f6)}
+.course-card.c3::before{background:linear-gradient(90deg,#8b5cf6,#ec4899)}
+.course-card.c4::before{background:linear-gradient(90deg,#10b981,#06b6d4)}
+.course-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+  font-family:"Noto Serif SC",serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:12px}
+.c1 .course-icon{background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+.c2 .course-icon{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+.c3 .course-icon{background:linear-gradient(135deg,#8b5cf6,#ec4899)}
+.c4 .course-icon{background:linear-gradient(135deg,#10b981,#06b6d4)}
+.course-card.c5::before{background:linear-gradient(90deg,#f97316,#ef4444)}
+.course-card.c6::before{background:linear-gradient(90deg,#f59e0b,#f97316)}
+.course-card.c7::before{background:linear-gradient(90deg,#ec4899,#8b5cf6)}
+.course-card.c8::before{background:linear-gradient(90deg,#3b82f6,#8b5cf6)}
+.c5 .course-icon{background:linear-gradient(135deg,#f97316,#ef4444)}
+.c6 .course-icon{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.c7 .course-icon{background:linear-gradient(135deg,#ec4899,#8b5cf6)}
+.c8 .course-icon{background:linear-gradient(135deg,#3b82f6,#8b5cf6)}
+.course-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.course-topic{font-size:12px;color:var(--muted);margin-bottom:10px}
+.course-progress{height:5px;background:#eef2f7;border-radius:3px;overflow:hidden;margin-bottom:6px}
+.course-progress-bar{height:100%;border-radius:2px;background:var(--grad)}
+.course-meta{font-size:11px;color:var(--dim);display:flex;justify-content:space-between}
+
+.home-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.hw-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.hw-item:last-child{border-bottom:none}
+.hw-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.hw-dot.urgent{background:#f43f5e;box-shadow:0 0 8px rgba(244,63,94,.5)}
+.hw-dot.normal{background:#f59e0b}
+.hw-info{flex:1;min-width:0}
+.hw-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hw-due{font-size:11px;color:var(--dim)}
+.recent-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.recent-item:last-child{border-bottom:none}
+.recent-icon{width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,.15);display:grid;place-items:center;flex-shrink:0}
+.recent-icon svg{width:15px;height:15px;color:#6366f1}
+.recent-text{flex:1;font-size:13px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-time{font-size:11px;color:var(--dim);flex-shrink:0}
+
+/* 课表 */
+.schedule-strip{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px}
+.sched-day{min-width:100px;padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;flex-shrink:0}
+.sched-day-name{font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px}
+.sched-class{font-size:11px;padding:4px 7px;border-radius:6px;margin-bottom:3px;font-weight:500}
+.sched-class.math{background:rgba(99,102,241,.15);color:#4f46e5}
+.sched-class.phys{background:rgba(6,182,212,.15);color:#67e8f9}
+.sched-class.alg{background:rgba(168,85,247,.18);color:#d8b4fe}
+.sched-empty{font-size:10px;color:var(--dim)}
+
+/* ===== 对话页 ===== */
+.chat-layout{display:flex;gap:14px;height:calc(100vh - 100px);min-height:500px}
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.course-select{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#fff;
+  border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+.course-select svg{width:14px;height:14px;color:var(--muted)}
+.hint-tools{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.hint-pill{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:99px;
+  background:#fff;border:1px solid var(--border);font-size:12px;font-weight:500;
+  color:var(--muted);cursor:pointer;transition:all .18s;font-family:inherit;box-shadow:var(--shadow)}
+.hint-pill svg{width:13px;height:13px}
+.hint-pill:hover{border-color:var(--primary);color:#6366f1;background:#f5f3ff}
+.hint-pill.active{background:#eef2ff;border-color:var(--primary);color:#4f46e5;font-weight:600}
+
+.chat-messages{flex:1;overflow-y:auto;padding:4px 4px 12px;display:flex;flex-direction:column;gap:16px}
+.msg{display:flex;gap:10px;max-width:85%}
+.msg-avatar{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:grid;place-items:center}
+.msg-avatar.ai{background:var(--grad);box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.msg-avatar.ai svg{width:17px;height:17px;color:#fff}
+.msg-avatar.me{background:#e2e8f0}
+.msg-avatar.me svg{width:16px;height:16px;color:var(--muted)}
+.msg-body{min-width:0}
+.msg-name{font-size:11px;color:var(--dim);margin-bottom:3px;font-weight:600}
+.msg-bubble{padding:12px 16px;border-radius:12px;font-size:13.5px;line-height:1.7}
+.msg.ai .msg-bubble{background:#fff;border:1px solid var(--border);border-top-left-radius:4px;box-shadow:var(--shadow)}
+.msg.me{align-self:flex-end;flex-direction:row-reverse}
+.msg.me .msg-bubble{background:#eef2ff;border:1px solid #c7d2fe;border-top-right-radius:4px}
+.msg.me .msg-name{text-align:right}
+.msg-bubble .formula{font-family:"Noto Serif SC",serif;font-style:italic;color:#4f46e5}
+.msg-bubble ol,.msg-bubble ul{padding-left:20px;margin:6px 0}
+.msg-bubble li{margin-bottom:4px}
+.msg-bubble strong{color:#4338ca}
+
+.msg-actions{display:flex;gap:6px;margin-top:8px}
+.msg-action{display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:6px;
+  font-size:11px;color:var(--dim);cursor:pointer;background:none;border:none;font-family:inherit;transition:all .15s}
+.msg-action svg{width:13px;height:13px}
+.msg-action:hover{color:var(--muted);background:var(--glass)}
+
+.typing-indicator{display:flex;gap:4px;padding:4px 0}
+.typing-indicator span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typing 1.4s infinite}
+.typing-indicator span:nth-child(2){animation-delay:.2s}
+.typing-indicator span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+
+.chat-input-area{padding-top:12px;border-top:1px solid var(--border)}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+.chat-input-tools{display:flex;gap:4px}
+.chat-tool-btn{width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow);
+  display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:all .15s}
+.chat-tool-btn svg{width:18px;height:18px}
+.chat-tool-btn:hover{color:#6366f1;border-color:var(--primary);background:#f5f3ff}
+.chat-input-wrap{flex:1;position:relative}
+.chat-input{width:100%;padding:10px 44px 10px 14px;background:#fff;line-height:1.5;
+  border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-size:13.5px;
+  font-family:inherit;outline:none;resize:none;min-height:42px;max-height:140px;transition:all .15s}
+.chat-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.chat-send{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:9px;
+  background:var(--grad);border:none;cursor:pointer;display:grid;place-items:center;box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.chat-send svg{width:16px;height:16px;color:#fff}
+
+/* 关联教材侧栏 */
+.related-panel{width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.related-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--glass);
+  border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;
+  color:var(--muted);font-family:inherit;transition:all .15s}
+.related-toggle svg{width:15px;height:15px}
+.related-toggle:hover{color:#4f46e5;border-color:var(--primary)}
+.related-chunk{padding:14px;background:var(--glass);border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;transition:all .18s}
+.related-chunk:hover{border-color:var(--border-hover);background:var(--glass-hover)}
+.related-chunk-loc{font-size:11px;color:#6366f1;font-weight:600;margin-bottom:5px}
+.related-chunk-text{font-size:12px;color:var(--muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.related-score{font-size:10px;color:var(--dim);margin-top:6px}
+
+/* ===== 资源中心 ===== */
+.rc-search-row{display:flex;gap:8px;margin-bottom:16px}
+.rc-search-wrap{flex:1;position:relative}
+.rc-search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--dim)}
+.rc-search{width:100%;padding:11px 14px 11px 38px;background:#fff;border:1.5px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:all .15s}
+.rc-search:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.rc-search::placeholder{color:var(--dim)}
+.rc-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;
+  background:#f1f5f9;padding:2px 7px;border-radius:5px;color:var(--dim)}
+
+.rc-tabs{display:flex;gap:4px;margin-bottom:16px;background:#f1f5f9;padding:4px;border-radius:10px;width:fit-content}
+.rc-tab{padding:8px 18px;border-radius:7px;font-size:13px;font-weight:500;color:var(--muted);
+  cursor:pointer;border:none;background:none;font-family:inherit;transition:all .18s;display:flex;align-items:center;gap:6px}
+.rc-tab svg{width:15px;height:15px}
+.rc-tab:hover{color:var(--text)}
+.rc-tab.active{background:rgba(99,102,241,.15);color:#4f46e5;font-weight:600}
+.rc-count{font-size:10px;background:#e2e8f0;padding:1px 7px;border-radius:99px}
+.rc-tab.active .rc-count{background:rgba(99,102,241,.35)}
+
+.rc-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.rc-filter{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:500;color:var(--muted);
+  background:var(--glass);border:1px solid var(--border);cursor:pointer;font-family:inherit;transition:all .15s}
+.rc-filter:hover{border-color:var(--primary);color:#4f46e5}
+.rc-filter.active{background:rgba(99,102,241,.15);border-color:var(--primary);color:#4f46e5}
+
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.book-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  cursor:pointer;transition:all .25s}
+.book-card:hover{transform:translateY(-3px);border-color:var(--border-hover);box-shadow:0 12px 28px rgba(0,0,0,.3)}
+.book-cover{height:130px;display:grid;place-items:center;position:relative;overflow:hidden}
+.book-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.3))}
+.book-cover-icon{font-family:"Noto Serif SC",serif;font-size:36px;font-weight:900;color:rgba(255,255,255,.9);z-index:1}
+.book-cover.math{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.book-cover.alg{background:linear-gradient(135deg,#0891b2,#2563eb)}
+.book-cover.phys{background:linear-gradient(135deg,#7c3aed,#db2777)}
+.book-info{padding:12px 14px}
+.book-name{font-size:13.5px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-meta{font-size:11px;color:var(--dim);display:flex;justify-content:space-between;margin-top:6px}
+
+.exam-list{display:flex;flex-direction:column;gap:10px}
+.exam-row{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--glass);
+  border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s}
+.exam-row:hover{border-color:var(--border-hover);background:var(--glass-hover)}
+.exam-icon{width:42px;height:42px;border-radius:10px;background:rgba(245,158,11,.15);
+  display:grid;place-items:center;flex-shrink:0}
+.exam-icon svg{width:20px;height:20px;color:#fbbf24}
+.exam-info{flex:1;min-width:0}
+.exam-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.exam-meta{font-size:12px;color:var(--dim)}
+.exam-tags{display:flex;gap:5px;flex-shrink:0}
+
+/* 搜索结果 */
+.search-result-head{font-size:13px;color:var(--muted);margin-bottom:14px}
+.search-result-head strong{color:#4f46e5}
+.sr-item{padding:16px;background:var(--glass);border:1px solid var(--border);border-radius:11px;
+  margin-bottom:10px;cursor:pointer;transition:all .18s}
+.sr-item:hover{border-color:var(--border-hover)}
+.sr-loc{font-size:11px;color:#6366f1;font-weight:600;margin-bottom:6px}
+.sr-text{font-size:13px;color:var(--muted);line-height:1.7}
+.sr-text mark{background:rgba(99,102,241,.2);color:#4338ca;border-radius:3px;padding:0 2px;font-weight:600}
+.sr-score{font-size:10px;color:var(--dim);margin-top:6px}
+
+/* ===== 学习档案 ===== */
+.fb-filters{display:flex;gap:8px}
+.fb-select{padding:8px 14px;background:var(--glass);border:1px solid var(--border);border-radius:9px;
+  color:var(--text);font-size:12.5px;font-family:inherit;cursor:pointer;outline:none}
+.fb-select option{background:#fff;color:#0f172a}
+
+.diagnosis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px}
+.diag-card{padding:16px;background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  transition:all .2s;position:relative;overflow:hidden}
+.diag-card:hover{border-color:var(--border-hover)}
+.diag-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+.diag-card.weak::before{background:#f43f5e}
+.diag-card.medium::before{background:#f59e0b}
+.diag-card.strong::before{background:#10b981}
+.diag-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.diag-name{font-size:13.5px;font-weight:600}
+.diag-level{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px}
+.diag-level.weak{background:rgba(244,63,94,.18);color:#fda4af}
+.diag-level.medium{background:rgba(245,158,11,.18);color:#fcd34d}
+.diag-level.strong{background:rgba(16,185,129,.18);color:#6ee7b7}
+.diag-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.diag-evidence{font-size:11px;color:var(--dim)}
+.diag-action{margin-top:8px;font-size:11px;color:#6366f1;cursor:pointer;display:flex;align-items:center;gap:4px}
+.diag-action svg{width:12px;height:12px}
+
+.fb-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{padding:18px}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chart-title svg{width:16px;height:16px;color:#6366f1}
+
+/* 柱状图 */
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:140px;padding:0 4px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bar{width:100%;max-width:32px;border-radius:6px 6px 2px 2px;background:var(--grad);
+  transition:all .3s;position:relative;min-height:4px}
+.bar:hover{opacity:.8;transform:scaleY(1.03);transform-origin:bottom}
+.bar-label{font-size:10px;color:var(--dim)}
+.bar-val{font-size:10px;color:var(--muted);font-weight:600}
+
+/* 反馈分布 */
+.outcome-grid{display:flex;flex-direction:column;gap:10px}
+.outcome-row{display:flex;align-items:center;gap:10px}
+.outcome-label{font-size:12px;color:var(--muted);width:80px;flex-shrink:0}
+.outcome-bar-wrap{flex:1;height:8px;background:#eef2f7;border-radius:4px;overflow:hidden}
+.outcome-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.outcome-num{font-size:12px;font-weight:600;width:24px;text-align:right}
+
+/* 学习记录 */
+.record-list{display:flex;flex-direction:column;gap:10px}
+.record-item{padding:14px 16px;background:var(--glass);border:1px solid var(--border);border-radius:11px}
+.record-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.record-theme{font-size:12px;font-weight:600}
+.record-date{font-size:11px;color:var(--dim);margin-left:auto}
+.record-text{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* ===== 作业页 ===== */
+.hw-tabs{display:flex;gap:4px;margin-bottom:16px}
+.hw-tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);
+  cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
+.hw-tab.active{background:rgba(99,102,241,.15);color:#4f46e5;font-weight:600}
+.hw-list{display:flex;flex-direction:column;gap:10px}
+.hw-card{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--glass);
+  border:1px solid var(--border);border-radius:12px;transition:all .2s;cursor:pointer}
+.hw-card:hover{border-color:var(--border-hover);background:var(--glass-hover)}
+.hw-card-icon{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.hw-card-icon svg{width:21px;height:21px}
+.hw-card-icon.math{background:rgba(99,102,241,.12);color:#6366f1}
+.hw-card-icon.alg{background:rgba(6,182,212,.15);color:#67e8f9}
+.hw-card-info{flex:1;min-width:0}
+.hw-card-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.hw-card-meta{font-size:12px;color:var(--dim)}
+.hw-card-status{flex-shrink:0}
+
+/* ===== 隐私页 ===== */
+.privacy-section{margin-bottom:16px}
+.privacy-item{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--glass);
+  border:1px solid var(--border);border-radius:12px;margin-bottom:8px}
+.privacy-icon{width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,.15);
+  display:grid;place-items:center;flex-shrink:0}
+.privacy-icon svg{width:18px;height:18px;color:#6366f1}
+.privacy-info{flex:1}
+.privacy-name{font-size:13.5px;font-weight:600;margin-bottom:2px}
+.privacy-desc{font-size:12px;color:var(--muted)}
+.toggle{width:42px;height:24px;border-radius:99px;background:#cbd5e1;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;transition:transform .2s}
+.toggle.on{background:var(--primary)}
+.toggle.on::after{transform:translateX(18px)}
+
+@media(max-width:900px){
+  .fb-charts{grid-template-columns:1fr}
+}
+  .sidebar{width:60px;padding:14px 8px}
+  .logo-text,.nav-item span:not(.nav-badge),.sidebar-footer span{display:none}
+  .main{max-width:calc(100vw - 60px);padding:20px 16px}
+  .home-cols{grid-template-columns:1fr}
+}
+
+/* ===== R2 新增组件 ===== */
+
+/* 课程子导航 */
+.subtabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px;border:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap}
+.subtab{padding:6px 14px;border-radius:7px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .18s;border:none;background:none;font-family:inherit;white-space:nowrap}
+.subtab:hover{color:var(--text)}
+.subtab.active{background:var(--glass);color:#4f46e5;font-weight:600;box-shadow:var(--shadow)}
+
+/* 工作状态指示 */
+.work-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px}
+.work-status .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* 筛选条 */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filter-group{display:flex;gap:6px;align-items:center}
+.filter-label{font-size:12px;color:var(--dim);margin-right:2px}
+
+/* 结果列表项 */
+.result-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;transition:all .18s;cursor:pointer}
+.result-item:hover{box-shadow:var(--shadow-hover);border-color:#c7d2fe}
+.result-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(99,102,241,.1);color:#6366f1}
+.result-icon svg{width:18px;height:18px;stroke-width:2}
+.result-body{flex:1;min-width:0}
+.result-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.result-meta{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.result-snippet{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.55}
+.result-snippet mark{background:rgba(99,102,241,.2);color:#4338ca;border-radius:3px;padding:0 2px;font-weight:600}
+.result-tag{font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600}
+.tag-title{background:rgba(99,102,241,.12);color:#4f46e5}
+.tag-body{background:rgba(6,182,212,.12);color:#0e7490}
+
+/* 试卷详情分区 */
+.paper-sections{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:900px){.paper-sections{grid-template-columns:1fr}}
+.paper-section{background:var(--bg);border-radius:10px;padding:14px}
+.paper-section h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);display:flex;align-items:center;gap:6px}
+
+/* 复习提纲：步骤条 */
+.stepper{display:flex;align-items:center;margin-bottom:24px;padding:16px 20px;background:var(--glass);border-radius:12px;border:1px solid var(--border)}
+.step{display:flex;align-items:center;gap:8px;flex:1}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--primary);color:#fff}
+.step.active .step-num{background:var(--grad);color:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.15)}
+.step.todo .step-num{background:var(--bg);color:var(--dim);border:1.5px solid var(--border)}
+.step-label{font-size:12.5px;font-weight:500;white-space:nowrap}
+.step.done .step-label{color:var(--muted)}
+.step.active .step-label{color:#4f46e5;font-weight:600}
+.step.todo .step-label{color:var(--dim)}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 8px;border-radius:1px}
+.step.done+.step-line{background:var(--primary)}
+
+/* 考点卡片 */
+.kp-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:all .18s}
+.kp-card:hover{box-shadow:var(--shadow-hover)}
+.kp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.kp-name{font-size:14px;font-weight:600;color:var(--text)}
+.kp-status{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600}
+.kp-full{background:rgba(16,185,129,.12);color:#059669}
+.kp-partial{background:rgba(245,158,11,.12);color:#b45309}
+.kp-missing{background:rgba(239,68,68,.1);color:#dc2626}
+.kp-conflict{background:rgba(139,92,246,.12);color:#7c3aed}
+.kp-meta{font-size:12px;color:var(--muted);line-height:1.6}
+.kp-meta strong{color:var(--text);font-weight:600}
+.kp-source{display:inline-block;margin-right:10px;font-size:11.5px;color:#6366f1}
+
+/* 覆盖率 */
+.coverage-bar{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px}
+.coverage-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.coverage-pct{font-size:24px;font-weight:700;color:#4f46e5}
+.coverage-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.coverage-fill{height:100%;background:var(--grad);border-radius:4px}
+.coverage-note{font-size:11.5px;color:var(--dim);margin-top:8px}
+
+/* TA 审校：状态流 */
+.ta-flow{display:flex;align-items:center;gap:0;margin-bottom:20px;padding:14px 18px;background:var(--glass);border-radius:10px;border:1px solid var(--border);overflow-x:auto}
+.ta-step{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.ta-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ta-dot.done{background:var(--primary)}
+.ta-dot.active{background:var(--cyan);box-shadow:0 0 0 4px rgba(6,182,212,.15)}
+.ta-dot.todo{background:var(--border)}
+.ta-step-label{font-size:12px;font-weight:500;color:var(--muted)}
+.ta-step.active .ta-step-label{color:var(--text);font-weight:600}
+.ta-arrow{width:24px;height:2px;background:var(--border);margin:0 8px}
+
+/* TA 并排对比 */
+.ta-compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:900px){.ta-compare{grid-template-columns:1fr}}
+.ta-pane{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ta-pane-head{padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.ta-pane-student .ta-pane-head{background:rgba(100,116,139,.06);color:var(--text)}
+.ta-pane-ai .ta-pane-head{background:rgba(99,102,241,.08);color:#4f46e5}
+.ta-pane-body{padding:14px;font-size:13px;line-height:1.7;color:var(--text)}
+.ta-evidence{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted);border-left:3px solid var(--cyan)}
+
+/* TA 操作按钮 */
+.ta-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ta-btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:inherit}
+.ta-btn-approve{background:var(--primary);color:#fff}
+.ta-btn-approve:hover{background:#4f46e5;box-shadow:var(--shadow-hover)}
+.ta-btn-edit{background:var(--glass);color:var(--text);border:1px solid var(--border)}
+.ta-btn-edit:hover{border-color:var(--primary);color:var(--primary)}
+.ta-btn-reject{background:var(--glass);color:#dc2626;border:1px solid #fecaca}
+.ta-btn-reject:hover{background:#fef2f2}
+
+/* 空态 */
+.empty-state{text-align:center;padding:40px 20px;color:var(--dim)}
+.empty-state svg{width:40px;height:40px;margin-bottom:12px;stroke-width:1.5;opacity:.5}
+.empty-state h4{font-size:14px;color:var(--muted);margin-bottom:4px}
+.empty-state p{font-size:12.5px}
+
+/* 教材待补充标签 */
+.tbd{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#b45309;background:rgba(245,158,11,.1);padding:2px 8px;border-radius:99px;font-weight:600}
+
+/* 课程选择器 */
+.course-picker{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text)}
+.course-picker:hover{border-color:#c7d2fe}
+.course-picker svg{width:16px;height:16px;color:var(--muted)}
+
+/* 代码块（Python） */
+.code-block{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px 16px;font-family:'Cascadia Code',Consolas,monospace;font-size:12.5px;line-height:1.6;overflow-x:auto;margin:10px 0}
+.code-block .ln{color:#64748b;display:inline-block;width:2em;user-select:none}
+.code-err{background:rgba(239,68,68,.15);border-radius:4px;padding:1px 4px;color:#fca5a5}
+
+
+/* ===== R4 聊天布局修订 ===== */
+
+/* 聊天三栏布局：历史栏 | 主对话 | 关联教材 */
+.chat-layout{display:flex;gap:0;height:calc(100vh - 0px);overflow:hidden}
+.chat-history{width:240px;flex-shrink:0;background:#ffffff;border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .25s ease,margin .25s ease;overflow:hidden}
+.chat-history.collapsed{width:0;margin-left:0;border-right:none}
+.chat-history-head{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.chat-history-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.chat-history-title svg{width:15px;height:15px;color:#6366f1}
+.chat-history-toggle{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:none;color:var(--muted);transition:all .15s}
+.chat-history-toggle:hover{background:var(--bg);color:var(--text)}
+.chat-history-toggle svg{width:15px;height:15px}
+.new-chat-btn{margin:10px 12px;padding:8px 12px;background:var(--grad);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .18s;font-family:inherit;flex-shrink:0}
+.new-chat-btn:hover{box-shadow:0 2px 12px rgba(99,102,241,.35);transform:translateY(-1px)}
+.new-chat-btn svg{width:14px;height:14px}
+.history-list{flex:1;overflow-y:auto;padding:4px 8px 12px}
+.history-group-label{font-size:10.5px;font-weight:600;color:var(--dim);padding:10px 8px 4px;text-transform:uppercase;letter-spacing:.04em}
+.history-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all .15s;margin-bottom:2px;position:relative}
+.history-item:hover{background:var(--bg)}
+.history-item.active{background:rgba(99,102,241,.1);color:#4f46e5}
+.history-item.active .history-item-title{color:#4f46e5;font-weight:600}
+.history-item-icon{width:16px;height:16px;flex-shrink:0;color:var(--dim);margin-top:1px}
+.history-item.active .history-item-icon{color:#6366f1}
+.history-item-body{flex:1;min-width:0}
+.history-item-title{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.history-item-time{font-size:10.5px;color:var(--dim);margin-top:2px}
+.history-item-del{opacity:0;width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--dim);cursor:pointer;transition:all .15s;flex-shrink:0}
+.history-item:hover .history-item-del{opacity:1}
+.history-item-del:hover{background:rgba(244,63,94,.1);color:#f43f5e}
+.history-item-del svg{width:12px;height:12px}
+.history-empty{text-align:center;padding:30px 16px;color:var(--dim);font-size:12px}
+.history-empty svg{width:28px;height:28px;margin-bottom:8px;opacity:.4}
+.history-loading{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--dim);font-size:12px}
+.history-loading .dot{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:pulse 1.2s infinite}
+
+/* 历史栏收起后的入口按钮 */
+.history-reopen{position:absolute;top:16px;left:16px;z-index:10;width:32px;height:32px;border-radius:8px;background:var(--glass);border:1px solid var(--border);display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);color:var(--muted)}
+.history-reopen svg{width:16px;height:16px}
+.chat-history.collapsed ~ .chat-main .history-reopen{display:flex}
+
+/* 回复后操作组（替代常驻顶部 hint-pill） */
+.reply-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);opacity:0;transform:translateY(4px);transition:all .3s ease;pointer-events:none}
+.reply-actions.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.reply-action-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit}
+.reply-action-btn:hover{border-color:var(--primary);color:#4f46e5;background:#eef2ff}
+.reply-action-btn svg{width:13px;height:13px}
+.reply-action-btn:disabled{opacity:.4;cursor:not-allowed}
+.reply-action-btn:disabled:hover{border-color:var(--border);color:var(--muted);background:var(--bg)}
+
+/* 三级课程提示（替代七级） */
+.hint-levels{display:flex;gap:6px;margin-bottom:12px}
+.hint-level{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--glass);color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;display:flex;align-items:center;gap:5px}
+.hint-level svg{width:13px;height:13px}
+.hint-level:hover{border-color:var(--primary);color:#4f46e5}
+.hint-level.active{background:rgba(99,102,241,.12);border-color:var(--primary);color:#4f46e5;font-weight:600}
+.hint-level.done{background:rgba(16,185,129,.1);border-color:#10b981;color:#059669}
+
+/* 欢迎区（按课程变化） */
+.chat-welcome{padding:24px 28px;text-align:center;color:var(--muted)}
+.chat-welcome h3{font-family:"Noto Serif SC",serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px}
+.chat-welcome p{font-size:13.5px;color:var(--muted);max-width:420px;margin:0 auto}
+.chat-welcome .welcome-suggest{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.welcome-suggest-btn{padding:7px 14px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--text);cursor:pointer;transition:all .15s;font-family:inherit}
+.welcome-suggest-btn:hover{border-color:var(--primary);color:#4f46e5;box-shadow:var(--shadow)}
+
+/* 资源中心状态卡 */
+.res-status{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:10px;margin-bottom:12px;font-size:13px}
+.res-status svg{width:18px;height:18px;flex-shrink:0}
+.res-status.loading{background:rgba(99,102,241,.06);color:#4f46e5;border:1px solid rgba(99,102,241,.2)}
+.res-status.empty{background:rgba(100,116,139,.05);color:var(--muted);border:1px solid var(--border)}
+.res-status.error{background:rgba(244,63,94,.06);color:#dc2626;border:1px solid rgba(244,63,94,.2)}
+.res-status.noauth{background:rgba(245,158,11,.06);color:#b45309;border:1px solid rgba(245,158,11,.2)}
+
+/* 课程教材状态标签 */
+.course-status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:99px}
+.course-status.ready{background:rgba(16,185,129,.12);color:#059669}
+.course-status.importing{background:rgba(245,158,11,.12);color:#b45309}
+.course-status.pending{background:rgba(100,116,139,.1);color:#64748b}
+
+/* 手机端历史抽屉遮罩 */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:50}
+.drawer-overlay.open{display:block}
+@media(max-width:768px){
+  .chat-history{position:fixed;left:0;top:0;bottom:0;width:280px;z-index:60;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 24px rgba(15,23,42,.15)}
+  .chat-history.open{transform:translateX(0)}
+  .chat-history.collapsed{width:280px;transform:translateX(-100%);border-right:1px solid var(--border)}
+  .history-reopen{display:flex!important;position:static;margin:0 0 12px}
+  .chat-main{width:100%;max-width:100%;padding:12px}
+  .related-panel{display:none}
+  .chat-layout{height:auto;min-height:100vh}
+  .chat-messages{max-height:none}
+  .subtabs{overflow-x:auto;flex-wrap:nowrap}
+  .subtab{white-space:nowrap;flex-shrink:0}
+  .hint-levels{overflow-x:auto;flex-wrap:nowrap}
+  .hint-level{white-space:nowrap;flex-shrink:0}
+  .chat-welcome{padding:16px 12px}
+  .chat-welcome h3{font-size:17px}
+  .welcome-suggest{flex-direction:column;align-items:stretch}
+  .welcome-suggest-btn{width:100%}
+}
+
+
+/* ===== R5 侧栏与反馈样式 ===== */
+
+/* 会话列表新样式：透明无描边、悬停浅蓝、选中略深 */
+.history-item{background:transparent;border:none;font-size:13px;padding:7px 10px}
+.history-item:hover{background:#f0f5ff}
+.history-item.active{background:#e6eeff}
+.history-item.active .history-item-title{color:#1d4ed8;font-weight:600}
+.history-item.active .history-item-icon{color:#3b82f6}
+.history-item-time{display:inline}
+@media(hover:hover) and (pointer:fine){.history-item-time{display:none}.history-item:hover .history-item-time,.history-item:focus-within .history-item-time{display:inline}}
+.history-group-label{padding:12px 8px 6px}
+
+/* 窄轨按钮默认隐藏，仅 rail 模式显示 */
+.chat-history .rail-btn{display:none}
+.chat-history.rail .rail-btn{display:flex}
+/* 折叠后窄轨 */
+.chat-history.rail{width:44px;padding:0;border-right:1px solid var(--border);background:#fff;display:flex;align-items:flex-start;justify-content:center;padding-top:14px;cursor:pointer;flex-shrink:0}
+.chat-history.rail .rail-btn{width:36px;height:36px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;color:var(--muted)}
+.chat-history.rail .rail-btn:hover{background:#e0eaff;color:#3b82f6}
+.chat-history.rail .rail-btn svg{width:16px;height:16px}
+.chat-history.rail > *:not(.rail-btn){display:none}
+
+/* 左栏课程选择器（唯一入口） */
+.history-course{margin:10px 12px 4px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;background:#fff;color:var(--text)}
+.history-course:hover{border-color:#93c5fd;background:#f8fbff}
+.history-course svg{width:14px;height:14px;color:#3b82f6}
+.history-course .chev{margin-left:auto;color:var(--dim)}
+
+/* 课程阶段概览 */
+.stage-overview{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.stage-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.stage-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.stage-card-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.stage-card-icon svg{width:15px;height:15px}
+.stage-card-name{font-size:13.5px;font-weight:600;color:var(--text)}
+.stage-card-chapter{font-size:12px;color:#3b82f6;font-weight:500;margin-bottom:4px}
+.stage-card-note{font-size:11px;color:var(--dim)}
+
+/* 活动时间线 */
+.activity-timeline{position:relative;padding-left:28px}
+.activity-timeline::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,#93c5fd,#dbeafe)}
+.activity-item{position:relative;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;box-shadow:var(--shadow);transition:all .18s}
+.activity-item:hover{box-shadow:var(--shadow-hover);border-color:#bfdbfe}
+.activity-item::before{content:"";position:absolute;left:-23px;top:18px;width:10px;height:10px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #bfdbfe}
+.activity-item.pending::before{background:#cbd5e1;box-shadow:0 0 0 2px #e2e8f0}
+.activity-item.failed::before{background:#f87171;box-shadow:0 0 0 2px #fecaca}
+.activity-head{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.activity-type{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;padding:2px 8px;border-radius:6px}
+.activity-type svg{width:11px;height:11px}
+.activity-course{font-size:11px;color:var(--dim)}
+.activity-time{font-size:10.5px;color:var(--dim);margin-left:auto}
+.activity-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.5}
+.activity-title .src{color:#3b82f6;font-size:11.5px;margin-left:6px;cursor:pointer;text-decoration:none}
+.activity-title .src:hover{text-decoration:underline}
+.activity-title .classified{font-size:10.5px;color:var(--dim);background:var(--bg);padding:1px 6px;border-radius:4px;margin-left:6px}
+
+/* 待复习事项 */
+.review-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+.review-item-icon{width:30px;height:30px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.review-item-icon svg{width:15px;height:15px;color:#3b82f6}
+.review-item-body{flex:1;min-width:0}
+.review-item-name{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px}
+.review-item-evidence{font-size:12px;color:var(--muted);line-height:1.5}
+.review-item-evidence .weak{color:#94a3b8;font-style:italic}
+.review-item-link{font-size:11.5px;color:#3b82f6;cursor:pointer;margin-top:4px;display:inline-flex;align-items:center;gap:4px}
+.review-item-link:hover{text-decoration:underline}
+
+/* 资源封面 cover */
+.book-cover{overflow:hidden}
+.book-cover img,.book-cover .cover-img{width:100%;height:100%;object-fit:cover}
+
+</style>
+</head>
+<body>
+<div class="app">
+<!-- ===== 侧边栏 ===== -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">镜</div>
+    <div class="logo-text">学镜<span class="logo-en">Learning Mirror</span></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-item active" onclick="go(0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      <span>学习首页</span>
+    </button>
+    <button class="nav-item" onclick="go(1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span>课程学习</span>
+    </button>
+    <button class="nav-item" onclick="go(2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <span>资源中心</span>
+    </button>
+    <button class="nav-item" onclick="go(3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span>复习提纲</span>
+      <span class="nav-badge">新</span>
+    </button>
+    <button class="nav-item" onclick="go(4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      <span>我的作业</span>
+    </button>
+    <button class="nav-item" onclick="go(5)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span>学习档案</span>
+    </button>
+    <button class="nav-item" onclick="go(6)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg>
+      <span>TA 审校</span>
+      <span class="nav-badge">新</span>
+    </button>
+    <button class="nav-item" onclick="go(7)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>档案与隐私</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+      <span>切换到教师端</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<main class="main">
+
+<!-- ====== 页面 0：学习首页 ====== -->
+<div class="page active" id="p0">
+  <div class="welcome-banner">
+    <div class="welcome-hi">下午好，同学</div>
+    <div class="welcome-sub">今天有 2 门课程，数学分析第三章「函数极限」待复习</div>
+    <div class="welcome-stats">
+      <div class="wstat"><span class="wstat-num">12</span><span class="wstat-label">本周对话</span></div>
+      <div class="wstat"><span class="wstat-num">8</span><span class="wstat-label">已掌握知识点</span></div>
+      <div class="wstat"><span class="wstat-num">3</span><span class="wstat-label">待完成作业</span></div>
+      <div class="wstat"><span class="wstat-num">2</span><span class="wstat-label">薄弱点</span></div>
+    </div>
+  </div>
+
+  <div class="gcard" style="margin-bottom:20px;padding:16px 20px">
+    <div class="gcard-title" style="margin-bottom:10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      本周课表
+    </div>
+    <div class="schedule-strip">
+      <div class="sched-day"><div class="sched-day-name">周一</div><div class="sched-class math">数学分析</div><div class="sched-class alg">高等代数</div></div>
+      <div class="sched-day"><div class="sched-day-name">周二</div><div class="sched-class phys">大学物理</div></div>
+      <div class="sched-day"><div class="sched-day-name">周三</div><div class="sched-class math">数学分析</div></div>
+      <div class="sched-day"><div class="sched-day-name">周四</div><div class="sched-class alg">高等代数</div><div class="sched-class phys">大学物理</div></div>
+      <div class="sched-day"><div class="sched-day-name">周五</div><div class="sched-class math">数分习题</div></div>
+      <div class="sched-day"><div class="sched-day-name">周六</div><div class="sched-empty">无课程</div></div>
+      <div class="sched-day"><div class="sched-day-name">周日</div><div class="sched-empty">无课程</div></div>
+    </div>
+  </div>
+
+  <div class="page-head">
+    <div>
+      <div class="page-title">我的课程</div>
+    </div>
+    <button class="btn btn-ghost">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      搜索课程
+    </button>
+  </div>
+  <div class="course-grid">
+    <div class="course-card c1">
+      <div class="course-icon">∑</div>
+      <div class="course-name">数学分析</div>
+      <div class="course-topic">第三章 · 函数极限</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:62%"></div></div>
+      <div class="course-meta"><span>进度 62%</span><span>3 个薄弱点</span></div>
+    </div>
+    <div class="course-card c2">
+      <div class="course-icon">A</div>
+      <div class="course-name">高等代数</div>
+      <div class="course-topic">第二章 · 矩阵运算</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:45%"></div></div>
+      <div class="course-meta"><span>进度 45%</span><span>1 个薄弱点</span></div>
+    </div>
+    <div class="course-card c3">
+      <div class="course-icon">φ</div>
+      <div class="course-name">大学物理</div>
+      <div class="course-topic">第一章 · 质点运动学</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:30%"></div></div>
+      <div class="course-meta"><span>进度 30%</span><span>2 个薄弱点</span></div>
+    </div>
+    <div class="course-card c4">
+      <div class="course-icon">∫</div>
+      <div class="course-name">常微分方程</div>
+      <div class="course-topic">未开始</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:0%"></div></div>
+      <div class="course-meta"><span>进度 0%</span><span>—</span></div>
+    </div>
+    <div class="course-card c5">
+      <div class="course-icon">&lt;/&gt;</div>
+      <div class="course-name">Python 程序设计</div>
+      <div class="course-topic">第四章 · 函数与调试</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:35%"></div></div>
+      <div class="course-meta"><span>进度 35%</span><span class="course-status pending">教材暂缓</span></div>
+    </div>
+    <div class="course-card c6">
+      <div class="course-icon">⏚</div>
+      <div class="course-name">电子电路基础</div>
+      <div class="course-topic">第一章 · 电路基本定律</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:12%"></div></div>
+      <div class="course-meta"><span>进度 12%</span><span class="course-status importing">教材导入中</span></div>
+    </div>
+    <div class="course-card c7">
+      <div class="course-icon">♡</div>
+      <div class="course-name">心理学及应用</div>
+      <div class="course-topic">课程可进入 · 教材暂缓收录</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:0%"></div></div>
+      <div class="course-meta"><span>进度 0%</span><span class="course-status pending">教材暂缓</span></div>
+    </div>
+    <div class="course-card c8">
+      <div class="course-icon">Aa</div>
+      <div class="course-name">大学英语</div>
+      <div class="course-topic">课程可进入 · 教材暂缓收录</div>
+      <div class="course-progress"><div class="course-progress-bar" style="width:0%"></div></div>
+      <div class="course-meta"><span>进度 0%</span><span class="course-status pending">教材暂缓</span></div>
+    </div>
+  </div>
+
+  <div class="home-cols">
+    <div class="gcard">
+      <div class="gcard-head">
+        <div class="gcard-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          待完成作业
+        </div>
+        <a class="gcard-link">全部</a>
+      </div>
+      <div class="hw-item"><div class="hw-dot urgent"></div><div class="hw-info"><div class="hw-name">数分习题三 · 极限计算</div><div class="hw-due">明天 23:59 截止</div></div><span class="badge badge-rose">紧急</span></div>
+      <div class="hw-item"><div class="hw-dot normal"></div><div class="hw-info"><div class="hw-name">高代作业二 · 矩阵求秩</div><div class="hw-due">3 天后截止</div></div></div>
+      <div class="hw-item"><div class="hw-dot normal"></div><div class="hw-info"><div class="hw-name">物理实验报告</div><div class="hw-due">5 天后截止</div></div></div>
+    </div>
+    <div class="gcard">
+      <div class="gcard-head">
+        <div class="gcard-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          最近学习
+        </div>
+        <a class="gcard-link">全部</a>
+      </div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="recent-text">数学分析 · 函数极限的定义</div><div class="recent-time">10 分钟前</div></div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="recent-text">高等代数 · 初等变换求秩</div><div class="recent-time">昨天</div></div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div><div class="recent-text">教材阅读 · 一致连续性</div><div class="recent-time">2 天前</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 后续页面占位 -->
+<div class="page" id="p1">
+  <div class="chat-layout">
+
+    <!-- ===== 左侧历史会话栏 ===== -->
+    <div class="chat-history" id="chatHistory">
+      <button class="rail-btn" onclick="document.getElementById('chatHistory').className='chat-history'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <div class="chat-history-head">
+        <div class="chat-history-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          历史会话
+        </div>
+        <button class="chat-history-toggle" onclick="var h=document.getElementById('chatHistory');h.className='chat-history rail'" title="收起为窄轨">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <button class="history-course">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        数学分析
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button class="new-chat-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+        新对话
+      </button>
+      <div class="history-list">
+        <div class="history-group-label">今天</div>
+        <div class="history-item active">
+          <svg class="history-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div class="history-item-body">
+            <div class="history-item-title">数列极限的证明思路</div>
+            <div class="history-item-time">14:32</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <svg class="history-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div class="history-item-body">
+            <div class="history-item-title">一致连续的判别方法总结</div>
+            <div class="history-item-time">10:15</div>
+          </div>
+        </div>
+        <div class="history-group-label">昨天</div>
+        <div class="history-item">
+          <svg class="history-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div class="history-item-body">
+            <div class="history-item-title">函数极限 ε-δ 定义理解</div>
+            <div class="history-item-time">昨天 21:40</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <svg class="history-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div class="history-item-body">
+            <div class="history-item-title">三角不等式的反向形式及应用</div>
+            <div class="history-item-time">昨天 19:22</div>
+          </div>
+        </div>
+        <div class="history-group-label">更早</div>
+        <div class="history-item">
+          <svg class="history-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div class="history-item-body">
+            <div class="history-item-title">实数完备性六大定理的关系梳理</div>
+            <div class="history-item-time">3 天前</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 主对话区 ===== -->
+    <div class="chat-main">
+      <div class="subtabs">
+        <button class="subtab active">对话</button>
+        <button class="subtab">教材与资源</button>
+        <button class="subtab">例题习题</button>
+        <button class="subtab">真题卷</button>
+        <button class="subtab">我的笔记</button>
+        <button class="subtab">复习提纲</button>
+      </div>
+
+      <div class="chat-toolbar">
+        <!-- 三级课程提示：方向 / 关键步骤 / 整体解题流程 -->
+        <div class="hint-levels">
+          <button class="hint-level active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+            方向
+          </button>
+          <button class="hint-level">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            关键步骤
+          </button>
+          <button class="hint-level">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            整体流程
+          </button>
+        </div>
+      </div>
+
+      <!-- 唯一纵向滚动区 -->
+      <div class="chat-messages">
+
+        <!-- 欢迎区（按课程变化，数分示例） -->
+        <div class="chat-welcome">
+          <h3>数学分析</h3>
+          <p>理解定义、定理与证明思路。从一道题开始，我会一步步引导你思考。</p>
+          <div class="welcome-suggest">
+            <button class="welcome-suggest-btn">数列极限的 ε-N 定义</button>
+            <button class="welcome-suggest-btn">一致连续怎么判别</button>
+            <button class="welcome-suggest-btn">上传一道题目</button>
+          </div>
+        </div>
+
+        <!-- 用户消息 -->
+        <div class="msg me">
+          <div class="msg-avatar me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="msg-body">
+            <div class="msg-name">我</div>
+            <div class="msg-bubble">证明：若 <span class="formula">lim x<sub>n</sub> = a</span>，则 <span class="formula">lim |x<sub>n</sub>| = |a|</span>，反之成立吗？</div>
+          </div>
+        </div>
+
+        <!-- AI 第一轮回复（历史轮，无操作组） -->
+        <div class="msg ai">
+          <div class="msg-avatar ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6"/></svg></div>
+          <div class="msg-body">
+            <div class="msg-name">Course Mirror · 数学分析</div>
+            <div class="msg-bubble">
+              好问题。先回忆一个关键不等式——你能想到哪个不等式联系了 <span class="formula">||x| − |a||</span> 和 <span class="formula">|x − a|</span>？
+              <ol><li>想想绝对值的<strong>三角不等式</strong></li><li>它的反向形式是什么？</li></ol>
+              试着写一下，我再帮你往下推。
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户追问 -->
+        <div class="msg me">
+          <div class="msg-avatar me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="msg-body">
+            <div class="msg-name">我</div>
+            <div class="msg-bubble">是 <span class="formula">||x| − |a|| ≤ |x − a|</span> 吗？</div>
+          </div>
+        </div>
+
+        <!-- AI 最新回复（成功后3秒显示操作组） -->
+        <div class="msg ai">
+          <div class="msg-avatar ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6"/></svg></div>
+          <div class="msg-body">
+            <div class="msg-name">Course Mirror · 数学分析</div>
+            <div class="msg-bubble">
+              <strong>没错，就是它。</strong>这就是三角不等式的反向形式。现在用极限的 <span class="formula">ε-N</span> 定义来完成证明：
+              <ol>
+                <li>任给 <span class="formula">ε &gt; 0</span>，由 <span class="formula">lim x<sub>n</sub> = a</span>，存在 N，当 n &gt; N 时 <span class="formula">|x<sub>n</sub> − a| &lt; ε</span></li>
+                <li>代入反向不等式：<span class="formula">||x<sub>n</sub>| − |a|| ≤ |x<sub>n</sub> − a| &lt; ε</span></li>
+              </ol>
+              所以 <span class="formula">lim |x<sub>n</sub>| = |a|</span>。
+              <br><br>
+              <strong>反过来成立吗？</strong>考虑在 a 和 −a 之间振荡的数列，比如 <span class="formula">x<sub>n</sub> = (−1)<sup>n</sup></span>，你发现了什么？
+
+              <!-- 回复后操作组：回答成功3秒后显示，仅最新一轮 -->
+              <div class="reply-actions show">
+                <button class="reply-action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+                  我卡住了
+                </button>
+                <button class="reply-action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  再深入一点
+                </button>
+                <button class="reply-action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                  梳理解题框架
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 输入区固定底部 -->
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <div class="chat-input-tools">
+            <button class="chat-tool-btn" title="拍照搜题">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <button class="chat-tool-btn" title="上传图片">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </button>
+          </div>
+          <div class="chat-input-wrap">
+            <textarea class="chat-input" placeholder="输入题目、思路或疑问…（Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
+            <button class="chat-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 右侧关联教材 ===== -->
+    <div class="related-panel">
+      <button class="related-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        关联教材段落
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="margin-left:auto"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <div class="work-status"><span class="dot"></span>查找主教材 · 华东师大《数学分析》第五版</div>
+      <div class="related-chunk">
+        <div class="related-chunk-loc">数学分析 · 第一章 §1.3</div>
+        <div class="related-chunk-text">定理（三角不等式）：对任意实数 x, y，有 |x + y| ≤ |x| + |y|。由此可推出反向形式：||x| − |y|| ≤ |x − y|。</div>
+        <div class="related-score">相关度 96%</div>
+      </div>
+      <div class="related-chunk">
+        <div class="related-chunk-loc">数学分析 · 第二章 §2.1</div>
+        <div class="related-chunk-text">数列极限的定义：设 {x<sub>n</sub>} 为数列，a 为定数。若对任意 ε &gt; 0，总存在正整数 N，使得当 n &gt; N 时有 |x<sub>n</sub> − a| &lt; ε…</div>
+        <div class="related-score">相关度 89%</div>
+      </div>
+      <div class="related-chunk">
+        <div class="related-chunk-loc">数学分析 · 第二章 §2.2</div>
+        <div class="related-chunk-text">定理：若 lim x<sub>n</sub> = a，则 lim |x<sub>n</sub>| = |a|。但反之不真，例如 x<sub>n</sub> = (−1)<sup>n</sup>…</div>
+        <div class="related-score">相关度 85%</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="page" id="p2">
+  <div class="page-head">
+    <div>
+      <div class="page-title">资源中心</div>
+      <div class="page-sub">电子教材 · 历年真题 · 全文检索</div>
+    </div>
+  </div>
+
+  <div class="rc-search-row">
+    <div class="rc-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="rc-search" placeholder="搜索教材全文，如：一致连续、拉格朗日中值定理、矩阵求秩…">
+      <span class="rc-kbd">⌘K</span>
+    </div>
+    <button class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="8"/></svg>
+      搜索
+    </button>
+  </div>
+
+  <div class="rc-tabs">
+    <button class="rc-tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      教材库 <span class="rc-count">3</span>
+    </button>
+    <button class="rc-tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>
+      真题卷 <span class="rc-count">5</span>
+    </button>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">课程</span>
+      <button class="rc-filter active">全部</button>
+      <button class="rc-filter">数学分析</button>
+      <button class="rc-filter">高等代数</button>
+      <button class="rc-filter">大学物理</button>
+      <button class="rc-filter">Python</button>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">类型</span>
+      <button class="rc-filter active">全部</button>
+      <button class="rc-filter">教材</button>
+      <button class="rc-filter">讲义</button>
+      <button class="rc-filter">PPT</button>
+      <button class="rc-filter">试卷</button>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">主辅</span>
+      <button class="rc-filter active">全部</button>
+      <button class="rc-filter">主教材</button>
+      <button class="rc-filter">辅教材</button>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">学年</span>
+      <button class="rc-filter active">全部</button>
+      <button class="rc-filter">2025-2026</button>
+      <button class="rc-filter">2024-2025</button>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:14px;height:14px;color:#6366f1"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+    书目检索 · 点击封面查看原 PDF 入口 · 未授权资源需教师开通
+  </div>
+  <div class="book-grid">
+    <div class="book-card">
+      <div class="book-cover math"><span class="book-cover-icon">∑</span></div>
+      <div class="book-info">
+        <div class="book-name">数学分析（上册）</div>
+        <div class="book-meta"><span>华东师大 · 第五版</span><span>6319 段落</span></div>
+      </div>
+    </div>
+    <div class="book-card">
+      <div class="book-cover math"><span class="book-cover-icon">∫</span></div>
+      <div class="book-info">
+        <div class="book-name">数学分析（下册）</div>
+        <div class="book-meta"><span>华东师大 · 第五版</span><span>待录入</span></div>
+      </div>
+    </div>
+    <div class="book-card">
+      <div class="book-cover alg"><span class="book-cover-icon">A</span></div>
+      <div class="book-info">
+        <div class="book-name">高等代数</div>
+        <div class="book-meta"><span>北京大学 · 第四版</span><span>待录入</span></div>
+      </div>
+    </div>
+    <div class="book-card">
+      <div class="book-cover phys"><span class="book-cover-icon">φ</span></div>
+      <div class="book-info">
+        <div class="book-name">大学物理教程</div>
+        <div class="book-meta"><span>待录入</span><span>—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:28px">
+    <div class="gcard-title" style="margin-bottom:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+      历年期末真题卷
+    </div>
+    <div class="res-status noauth">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      部分试卷需课程授权后查看原卷 · 当前账号已授权 3 份，其余仅可见题录
+    </div>
+    <div class="exam-list">
+      <div class="exam-row">
+        <div class="exam-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="exam-info">
+          <div class="exam-name">2025-2026 学年春季学期 · 数学分析（一）期末</div>
+          <div class="exam-meta">浙江大学 · 含参考答案 · 8 道大题</div>
+        </div>
+        <div class="exam-tags"><span class="badge badge-emerald">有答案</span></div>
+      </div>
+      <div class="exam-row">
+        <div class="exam-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="exam-info">
+          <div class="exam-name">2024-2025 学年秋季学期 · 数学分析（一）期末</div>
+          <div class="exam-meta">浙江大学 · 含参考答案 · 7 道大题</div>
+        </div>
+        <div class="exam-tags"><span class="badge badge-emerald">有答案</span></div>
+      </div>
+      <div class="exam-row">
+        <div class="exam-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="exam-info">
+          <div class="exam-name">2024-2025 学年春季学期 · 高等代数（上）期末</div>
+          <div class="exam-meta">浙江大学 · 参考答案整理中</div>
+        </div>
+        <div class="exam-tags"><span class="badge badge-amber">答案整理中</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ===== 复习提纲 p3 ===== -->
+<div class="page" id="p3">
+  <div class="page-head">
+    <div class="page-title">复习提纲</div>
+    <div class="page-sub">按考试范围逐考点核对资料覆盖，不预测必考</div>
+  </div>
+
+  <div class="course-picker">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    数学分析（上） · 期末考试复习
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg>
+  </div>
+
+  <!-- 步骤条 -->
+  <div class="stepper">
+    <div class="step done"><div class="step-num">1</div><span class="step-label">填写范围</span></div>
+    <div class="step-line"></div>
+    <div class="step done"><div class="step-num">2</div><span class="step-label">选择教材</span></div>
+    <div class="step-line"></div>
+    <div class="step done"><div class="step-num">3</div><span class="step-label">确认考点</span></div>
+    <div class="step-line"></div>
+    <div class="step active"><div class="step-num">4</div><span class="step-label">核对编辑</span></div>
+    <div class="step-line"></div>
+    <div class="step todo"><div class="step-num">5</div><span class="step-label">导出</span></div>
+  </div>
+
+  <!-- 覆盖率 -->
+  <div class="coverage-bar">
+    <div class="coverage-head">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">已确认考试范围的资料覆盖</div>
+        <div style="font-size:11.5px;color:var(--dim);margin-top:2px">仅表示资料检索范围，不代表已掌握程度</div>
+      </div>
+      <div class="coverage-pct">78%</div>
+    </div>
+    <div class="coverage-track"><div class="coverage-fill" style="width:78%"></div></div>
+    <div class="coverage-note">已定位 14 / 18 个考点的教材与课件出处 · 3 个考点缺资料 · 1 个考点资料存在冲突</div>
+  </div>
+
+  <!-- 考点列表 -->
+  <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">考点核对（18）</div>
+
+  <div class="kp-card">
+    <div class="kp-head">
+      <div class="kp-name">数列极限的定义与性质</div>
+      <span class="kp-status kp-full">已有资料支持</span>
+    </div>
+    <div class="kp-meta">
+      <span class="kp-source">主教材 · 第一章 §1.1–1.3</span>
+      <span class="kp-source">课件 · 第2讲</span>
+      <div style="margin-top:4px">重点：ε–N 定义、唯一性、有界性、保号性 · 配套练习 6 题</div>
+    </div>
+  </div>
+
+  <div class="kp-card">
+    <div class="kp-head">
+      <div class="kp-name">函数极限与无穷小量</div>
+      <span class="kp-status kp-full">已有资料支持</span>
+    </div>
+    <div class="kp-meta">
+      <span class="kp-source">主教材 · 第二章 §2.1–2.3</span>
+      <span class="kp-source">辅教材 · 习题详解 §2</span>
+      <div style="margin-top:4px">重点：ε–δ 定义、极限运算法则、两个重要极限 · 配套练习 8 题</div>
+    </div>
+  </div>
+
+  <div class="kp-card">
+    <div class="kp-head">
+      <div class="kp-name">连续函数与一致连续</div>
+      <span class="kp-status kp-partial">部分支持</span>
+    </div>
+    <div class="kp-meta">
+      <span class="kp-source">主教材 · 第三章 §3.1–3.2</span>
+      <span style="color:#b45309">缺：一致连续的判别例题</span>
+      <div style="margin-top:4px">建议上传课程 PPT 或补充辅教材相关章节</div>
+    </div>
+  </div>
+
+  <div class="kp-card">
+    <div class="kp-head">
+      <div class="kp-name">实数完备性定理</div>
+      <span class="kp-status kp-missing">缺资料</span>
+    </div>
+    <div class="kp-meta">
+      <span style="color:#dc2626">教材与课件中均未找到本章完整内容</span>
+      <div style="margin-top:4px">请上传老师指定的参考资料，或在考试范围中确认是否包含</div>
+    </div>
+  </div>
+
+  <div class="kp-card">
+    <div class="kp-head">
+      <div class="kp-name">闭区间上连续函数的性质</div>
+      <span class="kp-status kp-conflict">资料冲突</span>
+    </div>
+    <div class="kp-meta">
+      <span class="kp-source">主教材 · 第三章 §3.3</span>
+      <span class="kp-source">课件 · 第5讲</span>
+      <div style="margin-top:4px;color:#7c3aed">主教材要求证明介值定理，课件仅要求会用。请确认考试范围按哪个版本</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:18px">
+    <button class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      导出为 PDF
+    </button>
+    <button class="btn" style="display:inline-flex;align-items:center;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg>
+      上传补充资料
+    </button>
+    <button class="btn">修订考试范围</button>
+  </div>
+</div>
+
+<div class="page" id="p4">
+  <div class="page-head">
+    <div>
+      <div class="page-title">我的作业</div>
+      <div class="page-sub">查看作业要求、提交状态与批改结果</div>
+    </div>
+  </div>
+  <div class="hw-tabs">
+    <button class="hw-tab active">进行中（3）</button>
+    <button class="hw-tab">已提交（5）</button>
+    <button class="hw-tab">已截止（2）</button>
+  </div>
+  <div class="hw-list">
+    <div class="hw-card">
+      <div class="hw-card-icon math"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
+      <div class="hw-card-info">
+        <div class="hw-card-name">数分习题三 · 极限计算与证明</div>
+        <div class="hw-card-meta">数学分析 · 共 6 题 · 明天 23:59 截止</div>
+      </div>
+      <div class="hw-card-status"><span class="badge badge-rose">未提交</span></div>
+    </div>
+    <div class="hw-card">
+      <div class="hw-card-icon alg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
+      <div class="hw-card-info">
+        <div class="hw-card-name">高代作业二 · 矩阵的秩</div>
+        <div class="hw-card-meta">高等代数 · 共 8 题 · 3 天后截止</div>
+      </div>
+      <div class="hw-card-status"><span class="badge badge-amber">进行中</span></div>
+    </div>
+    <div class="hw-card">
+      <div class="hw-card-icon math"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11H3v10h6zM21 3h-6v18h6zM15 7H9v10h6z"/></svg></div>
+      <div class="hw-card-info">
+        <div class="hw-card-name">物理实验报告 · 单摆测重力加速度</div>
+        <div class="hw-card-meta">大学物理 · 5 天后截止</div>
+      </div>
+      <div class="hw-card-status"><span class="badge badge-cyan">未开始</span></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="p5">
+  <div class="page-head">
+    <div>
+      <div class="page-title">学习反馈</div>
+      <div class="page-sub">基于真实学习活动的候选观察 · 未经核验不生成进展结论</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="padding:7px 14px;font-size:12.5px">近 14 天</button>
+    </div>
+  </div>
+
+  <!-- 说明条 -->
+  <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:11px 15px;font-size:12.5px;color:#0369a1;line-height:1.6;margin-bottom:22px;display:flex;gap:9px;align-items:flex-start">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div>这里显示的是系统从真实学习活动中整理的<strong>候选观察</strong>，不是成绩或掌握结论；普通问答仍保存在原会话中，不在此页逐条列出。设定学习目标并完成核验前，不生成课程进展、章节或百分比。</div>
+  </div>
+
+  <!-- 候选观察（最多三项） -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:600;color:var(--text)">候选观察</div>
+    <div style="font-size:11.5px;color:var(--dim)">最多显示 3 项，需你确认后才会用于后续建议</div>
+  </div>
+
+  <div class="obs-card" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;padding:2px 8px;border-radius:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        真实检索
+      </span>
+      <span style="font-size:11.5px;color:var(--muted)">数学分析</span>
+      <span style="font-size:10.5px;color:var(--dim);margin-left:auto">今天 14:32</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:9px">你在“数列极限证明”中主动调用了三角不等式的反向形式，并完成了 |x<sub>n</sub>|-|a| 一步的推导；该步骤与教材第一章 §1.3 内容对应。</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a style="font-size:11.5px;color:#3b82f6;cursor:pointer;display:inline-flex;align-items:center;gap:4px">查看来源
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <span style="font-size:10.5px;color:#94a3b8;margin-left:auto">候选观察 · 未核验，不计为掌握</span>
+    </div>
+  </div>
+
+  <div class="obs-card" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#475569;background:#f1f5f9;padding:2px 8px;border-radius:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+        主题分类
+      </span>
+      <span style="font-size:11.5px;color:var(--muted)">数学分析</span>
+      <span style="font-size:10.5px;color:var(--dim);margin-left:auto">今天 10:15</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:9px">你围绕“一致连续判别”进行了提问与例题尝试；该活动被归类到“函数连续性”主题，<strong>未检索到可直接引用的教材依据</strong>。</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a style="font-size:11.5px;color:#3b82f6;cursor:pointer;display:inline-flex;align-items:center;gap:4px">在原会话中查看
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <span style="font-size:10.5px;color:#94a3b8;margin-left:auto">候选观察 · 主题分类，非教材出处</span>
+    </div>
+  </div>
+
+  <div class="obs-card" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#475569;background:#f1f5f9;padding:2px 8px;border-radius:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        学生自报
+      </span>
+      <span style="font-size:11.5px;color:var(--muted)">高等代数</span>
+      <span style="font-size:10.5px;color:var(--dim);margin-left:auto">昨天 16:20</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:9px">你表示“矩阵初等变换与秩的关系已经理解”；该记录来自本人反馈，<strong>属于弱证据</strong>，需配合练习核验。</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a style="font-size:11.5px;color:#3b82f6;cursor:pointer;display:inline-flex;align-items:center;gap:4px">去核验
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:11px;height:11px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <span style="font-size:10.5px;color:#94a3b8;margin-left:auto">候选观察 · 自报不升级为掌握</span>
+    </div>
+  </div>
+
+  <button class="btn btn-ghost" style="width:100%;padding:9px;font-size:12.5px;margin-bottom:28px;justify-content:center;display:flex">查看更多观察</button>
+
+  <!-- 学习目标与待复习（核验流程未上线，空态说明） -->
+  <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)">学习目标与待复习</div>
+  <div style="background:#fff;border:1px dashed var(--border);border-radius:12px;padding:26px 20px;text-align:center">
+    <div style="width:42px;height:42px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:20px;height:20px;color:var(--dim)"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    </div>
+    <div style="font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:5px">暂无可核验的待复习事项</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;max-width:460px;margin:0 auto">设定学习目标并完成对应练习核验后，这里会基于真实证据显示待复习事项；系统不会仅根据提问次数或提示层级生成复习清单。</div>
+  </div>
+
+  <!-- 折叠区：统计 / 原始反馈（默认折叠） -->
+  <details style="margin-top:24px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)">
+    <summary style="padding:12px 16px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:15px;height:15px;color:var(--muted)"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      学习统计
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:13px;height:13px;color:var(--dim);margin-left:auto"><path d="M6 9l6 6 6-6"/></svg>
+    </summary>
+    <div style="padding:4px 16px 16px;font-size:12.5px;color:var(--muted);line-height:2;border-top:1px solid var(--border);padding-top:14px">
+      统计仅作活动计数（如近 14 天对话数、练习尝试数），不换算为掌握度或能力分数；目标关联与核验流程上线后补充。
+    </div>
+  </details>
+
+  <details style="margin-top:10px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)">
+    <summary style="padding:12px 16px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:15px;height:15px;color:var(--muted)"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      原始反馈记录
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:13px;height:13px;color:var(--dim);margin-left:auto"><path d="M6 9l6 6 6-6"/></svg>
+    </summary>
+    <div style="padding:4px 16px 16px;font-size:12.5px;color:var(--muted);line-height:2;border-top:1px solid var(--border);padding-top:14px">
+      完整问答活动可在对应课程会话及数据导出中查看；本页默认不逐条展开，普通活动查询可通过 include_activities=false 跳过。
+    </div>
+  </details>
+
+</div>
+
+<div class="page" id="p6">
+  <div class="page-head">
+    <div class="page-title">TA 审校</div>
+    <div class="page-sub">AI 候选结论需人工确认后才计入学生反馈</div>
+  </div>
+
+  <!-- 状态流 -->
+  <div class="ta-flow">
+    <div class="ta-step"><div class="ta-dot done"></div><span class="ta-step-label">已提交</span></div>
+    <div class="ta-arrow"></div>
+    <div class="ta-step"><div class="ta-dot done"></div><span class="ta-step-label">分析完成</span></div>
+    <div class="ta-arrow"></div>
+    <div class="ta-step"><div class="ta-dot active"></div><span class="ta-step-label">候选待审</span></div>
+    <div class="ta-arrow"></div>
+    <div class="ta-step"><div class="ta-dot todo"></div><span class="ta-step-label">TA 确认</span></div>
+    <div class="ta-arrow"></div>
+    <div class="ta-step"><div class="ta-dot todo"></div><span class="ta-step-label">教师审批</span></div>
+    <div class="ta-arrow"></div>
+    <div class="ta-step"><div class="ta-dot todo"></div><span class="ta-step-label">完成</span></div>
+  </div>
+
+  <!-- 审校项头部 -->
+  <div class="gcard" style="margin-bottom:14px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">数分习题三 · 第 4 题</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">学生：张同学 · 提交于昨天 22:14 · AI 已定位 2 处疑似错误</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <span class="badge badge-rose">需确认</span>
+        <span class="badge badge-amber">第 2 版</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 并排对比 -->
+  <div class="ta-compare">
+    <div class="ta-pane ta-pane-student">
+      <div class="ta-pane-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+        学生作答原文
+      </div>
+      <div class="ta-pane-body">
+        <div style="margin-bottom:8px;color:var(--muted);font-size:12px">题目：证明 lim<sub>n→∞</sub> x<sub>n</sub> = a，则 lim |x<sub>n</sub>| = |a|</div>
+        <p>学生：由极限定义，对任意 ε > 0，存在 N，当 n > N 时 |x<sub>n</sub> - a| < ε。</p>
+        <p style="background:rgba(239,68,68,.08);padding:6px 8px;border-radius:6px;margin-top:6px">所以 ||x<sub>n</sub>| - |a|| = |x<sub>n</sub> - a| < ε。<span style="color:#dc2626;font-size:11px;margin-left:6px">AI 标注：此处误用绝对值等式</span></p>
+      </div>
+    </div>
+    <div class="ta-pane ta-pane-ai">
+      <div class="ta-pane-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:14px;height:14px"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 013 3v1H4v-1a3 3 0 013-3h1V6a4 4 0 014-4z"/><path d="M5 15h14M5 19h14"/></svg>
+        AI 候选依据
+      </div>
+      <div class="ta-pane-body">
+        <p style="color:#dc2626;font-weight:600;margin-bottom:6px">疑似错误：绝对值不等式方向</p>
+        <p>学生写 ||x<sub>n</sub>| - |a|| = |x<sub>n</sub> - a|，但由反向三角不等式应为：</p>
+        <p style="font-family:serif;text-align:center;padding:8px;background:var(--bg);border-radius:6px;margin:8px 0">||x<sub>n</sub>| - |a|| ≤ |x<sub>n</sub> - a|</p>
+        <p>结论方向正确，但推导中写成了等号，应改为 ≤。</p>
+        <div class="ta-evidence">
+          <strong>出处：</strong>主教材 §1.3 定理 1.2（三角不等式及其反向形式）· 第 11 页
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 操作区 -->
+  <div class="gcard" style="padding:14px 16px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)">审校操作</div>
+    <div class="ta-actions">
+      <button class="ta-btn ta-btn-approve">确认 AI 结论</button>
+      <button class="ta-btn ta-btn-edit">修改批注</button>
+      <button class="ta-btn ta-btn-reject">否决并提交重审</button>
+      <span style="font-size:11.5px;color:var(--dim);margin-left:auto">确认后将提交教师审批，学生不可见中间过程</span>
+    </div>
+  </div>
+
+  <!-- 其他待审 -->
+  <div style="font-size:13px;font-weight:600;margin:20px 0 10px;color:var(--text)">其他待审（3）</div>
+  <div class="result-item">
+    <div class="result-icon" style="background:rgba(245,158,11,.1);color:#b45309">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+    </div>
+    <div class="result-body">
+      <div class="result-title">高代作业二 · 第 3 题 · 矩阵求秩</div>
+      <div class="result-meta"><span>学生：李同学</span><span>AI 标注 1 处疑似跳步</span><span style="color:#b45309">待 TA 确认</span></div>
+    </div>
+  </div>
+  <div class="result-item">
+    <div class="result-icon" style="background:rgba(239,68,68,.1);color:#dc2626">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    </div>
+    <div class="result-body">
+      <div class="result-title">数分习题三 · 第 7 题 · 一致连续证明</div>
+      <div class="result-meta"><span>学生：王同学</span><span>AI 分析超时，待重新分析</span><span style="color:#dc2626">待处理</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p7">
+  <div class="page-head">
+    <div>
+      <div class="page-title">档案与隐私</div>
+      <div class="page-sub">你拥有自己学习数据的完全控制权</div>
+    </div>
+  </div>
+
+  <div class="gcard privacy-section">
+    <div class="gcard-title" style="margin-bottom:14px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      数据使用原则
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="privacy-info">
+        <div class="privacy-name">学习数据仅用于教学诊断</div>
+        <div class="privacy-desc">对话记录、反馈数据仅用于生成你的个人学习画像，不用于其他用途</div>
+      </div>
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="privacy-info">
+        <div class="privacy-name">教师可见范围</div>
+        <div class="privacy-desc">教师仅可查看经你确认的学习证据与作业提交，不可查看完整对话内容</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gcard privacy-section">
+    <div class="gcard-title" style="margin-bottom:14px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      隐私设置
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+      <div class="privacy-info">
+        <div class="privacy-name">允许学习档案诊断</div>
+        <div class="privacy-desc">系统基于对话记录自动分析薄弱点</div>
+      </div>
+      <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg></div>
+      <div class="privacy-info">
+        <div class="privacy-name">向教师展示学习证据</div>
+        <div class="privacy-desc">经你确认的学习状态可被授课教师查看</div>
+      </div>
+      <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+    </div>
+  </div>
+
+  <div class="gcard">
+    <div class="gcard-title" style="margin-bottom:14px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      数据管理
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        查看我的数据
+      </button>
+      <button class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        导出学习档案
+      </button>
+      <button class="btn btn-ghost" style="color:#fda4af;border-color:rgba(244,63,94,.3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        删除所有数据
+      </button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+function go(i){
+  document.querySelectorAll('.page').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+  document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+}
+</script>
+</body>
+</html>

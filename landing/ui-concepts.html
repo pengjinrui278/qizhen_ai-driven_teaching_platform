@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学镜 UI 概念设计方案 — 三套方向对比</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@600;700;900&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans SC",system-ui,sans-serif;background:#f1f5f9;color:#1e293b;line-height:1.6;-webkit-font-smoothing:antialiased}
+.container{max-width:1200px;margin:0 auto;padding:40px 24px}
+h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:900;margin-bottom:8px;color:#0f172a}
+.subtitle{font-size:15px;color:#64748b;margin-bottom:48px}
+h2{font-size:22px;font-weight:700;margin:48px 0 8px;color:#0f172a}
+.desc{font-size:14px;color:#64748b;margin-bottom:24px;max-width:700px}
+
+/* 方向选择器 */
+.direction-tabs{display:flex;gap:8px;margin-bottom:32px;flex-wrap:wrap}
+.direction-tab{
+  padding:10px 20px;border-radius:10px;border:1.5px solid #e2e8f0;
+  background:#fff;font-size:14px;font-weight:500;cursor:pointer;
+  transition:all .2s;
+}
+.direction-tab:hover{border-color:#93c5fd}
+.direction-tab.active{border-color:#2563eb;background:#eff6ff;color:#2563eb;font-weight:600}
+
+/* 方案卡片 */
+.direction-panel{display:none}
+.direction-panel.active{display:block}
+
+/* 配色板 */
+.palette{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}
+.swatch{width:80px;text-align:center}
+.swatch-color{height:56px;border-radius:10px;margin-bottom:6px;border:1px solid rgba(0,0,0,.06)}
+.swatch-name{font-size:11px;font-weight:600;color:#334155}
+.swatch-hex{font-size:10px;color:#94a3b8;font-family:monospace}
+
+/* 组件预览 */
+.component-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:20px 0}
+.component-card{
+  background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;
+  transition:all .2s;
+}
+.component-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.06);transform:translateY(-2px)}
+.component-label{font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.component-demo{margin-bottom:12px;min-height:60px;display:flex;align-items:center;justify-content:center}
+.component-source{font-size:11px;color:#94a3b8;font-family:monospace;padding-top:8px;border-top:1px solid #f1f5f9}
+
+/* ===== 方向 A：学术精致 ===== */
+.theme-academic .swatch-color.primary{background:#2563eb}
+.theme-academic .swatch-color.teal{background:#14b8a6}
+.theme-academic .swatch-color.bg{background:#fafbfc}
+.theme-academic .swatch-color.card{background:#ffffff}
+.theme-academic .swatch-color.text{background:#0f172a}
+.theme-academic .swatch-color.muted{background:#64748b}
+
+.theme-academic .demo-btn{
+  padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;
+  background:#2563eb;color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.2);
+  transition:all .15s;display:inline-block;
+}
+.theme-academic .demo-btn:hover{background:#1d4ed8;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.3)}
+
+.theme-academic .demo-card{
+  padding:16px 20px;border-radius:10px;border:1px solid #e2e8f0;
+  background:#fff;max-width:220px;
+}
+.theme-academic .demo-card-title{font-size:14px;font-weight:600;color:#0f172a;margin-bottom:4px}
+.theme-academic .demo-card-desc{font-size:12px;color:#64748b}
+
+.theme-academic .demo-input{
+  width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;
+  font-size:13px;outline:none;transition:border .15s;
+}
+.theme-academic .demo-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+
+.theme-academic .demo-badge{
+  display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;
+}
+.theme-academic .demo-badge.blue{background:#dbeafe;color:#1d4ed8}
+.theme-academic .demo-badge.teal{background:#ccfbf1;color:#0f766e}
+.theme-academic .demo-badge.amber{background:#fef3c7;color:#92400e}
+
+/* ===== 方向 B：现代灵动 ===== */
+.theme-dynamic .swatch-color.primary{background:#6366f1}
+.theme-dynamic .swatch-color.teal{background:#06b6d4}
+.theme-dynamic .swatch-color.bg{background:#0f172a}
+.theme-dynamic .swatch-color.card{background:#1e293b}
+.theme-dynamic .swatch-color.text{background:#f1f5f9}
+.theme-dynamic .swatch-color.muted{background:#94a3b8}
+
+.theme-dynamic .demo-glass{
+  background:rgba(255,255,255,.08);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.12);border-radius:14px;
+  padding:20px;max-width:220px;
+}
+.theme-dynamic .demo-glass-title{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:4px}
+.theme-dynamic .demo-glass-desc{font-size:12px;color:#94a3b8}
+
+.theme-dynamic .demo-btn-glow{
+  padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;
+  box-shadow:0 0 20px rgba(99,102,241,.4);transition:all .2s;
+}
+.theme-dynamic .demo-btn-glow:hover{box-shadow:0 0 30px rgba(99,102,241,.6);transform:scale(1.03)}
+
+.theme-dynamic .demo-float{
+  width:60px;height:60px;border-radius:16px;
+  background:linear-gradient(135deg,#6366f1,#06b6d4);
+  display:grid;place-items:center;color:#fff;font-size:24px;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ===== 方向 C：暗色专注 ===== */
+.theme-focus .swatch-color.primary{background:#3b82f6}
+.theme-focus .swatch-color.teal{background:#2dd4bf}
+.theme-focus .swatch-color.bg{background:#0a0f1e}
+.theme-focus .swatch-color.card{background:#111827}
+.theme-focus .swatch-color.text{background:#e5e7eb}
+.theme-focus .swatch-color.muted{background:#6b7280}
+
+.theme-focus .demo-dark-card{
+  background:#111827;border:1px solid #1f2937;border-radius:12px;
+  padding:16px;max-width:220px;
+}
+.theme-focus .demo-dark-title{font-size:14px;font-weight:600;color:#e5e7eb;margin-bottom:4px}
+.theme-focus .demo-dark-desc{font-size:12px;color:#9ca3af}
+
+.theme-focus .demo-dark-input{
+  width:100%;padding:10px 14px;border:1.5px solid #1f2937;border-radius:8px;
+  background:#0a0f1e;color:#e5e7eb;font-size:13px;outline:none;
+}
+.theme-focus .demo-dark-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+
+/* 对比表格 */
+.compare-table{width:100%;border-collapse:collapse;margin:24px 0;font-size:13px}
+.compare-table th{background:#f1f5f9;padding:12px 16px;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0}
+.compare-table td{padding:12px 16px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.compare-table tr:hover td{background:#f8fafc}
+
+/* 动效清单 */
+.motion-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin:16px 0}
+.motion-item{
+  padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.motion-icon{width:36px;height:36px;border-radius:8px;background:#eff6ff;display:grid;place-items:center;flex-shrink:0}
+.motion-icon svg{width:18px;height:18px;color:#2563eb}
+.motion-text h4{font-size:13px;font-weight:600;color:#0f172a;margin-bottom:2px}
+.motion-text p{font-size:12px;color:#64748b}
+.motion-source{font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px}
+
+@media(max-width:720px){
+  .component-grid{grid-template-columns:1fr}
+  .motion-list{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>学镜 UI 概念设计方案</h1>
+<p class="subtitle">三套方向对比，每套组件均有开源实现来源。选择一个方向后我出详细界面概念图。</p>
+
+<div class="direction-tabs">
+  <button class="direction-tab active" onclick="switchDir(0)">A. 学术精致</button>
+  <button class="direction-tab" onclick="switchDir(1)">B. 现代灵动</button>
+  <button class="direction-tab" onclick="switchDir(2)">C. 暗色专注</button>
+</div>
+
+<!-- ===== 方向 A ===== -->
+<div class="direction-panel active theme-academic" id="dir-0">
+  <h2>方向 A：学术精致</h2>
+  <p class="desc">在现有基础上精雕细琢。保留学术蓝主色，加入微交互和细腻动效，整体稳重可靠。适合长期学习场景，视觉疲劳低。</p>
+
+  <h3>配色方案</h3>
+  <div class="palette">
+    <div class="swatch"><div class="swatch-color primary"></div><div class="swatch-name">主色</div><div class="swatch-hex">#2563EB</div></div>
+    <div class="swatch"><div class="swatch-color teal"></div><div class="swatch-name">辅助色</div><div class="swatch-hex">#14B8A6</div></div>
+    <div class="swatch"><div class="swatch-color bg"></div><div class="swatch-name">背景</div><div class="swatch-hex">#FAFBFC</div></div>
+    <div class="swatch"><div class="swatch-color card"></div><div class="swatch-name">卡片</div><div class="swatch-hex">#FFFFFF</div></div>
+    <div class="swatch"><div class="swatch-color text"></div><div class="swatch-name">正文</div><div class="swatch-hex">#0F172A</div></div>
+    <div class="swatch"><div class="swatch-color muted"></div><div class="swatch-name">次要</div><div class="swatch-hex">#64748B</div></div>
+  </div>
+
+  <h3>核心组件</h3>
+  <div class="component-grid">
+    <div class="component-card">
+      <div class="component-label">主按钮</div>
+      <div class="component-demo"><span class="demo-btn">开始学习</span></div>
+      <div class="component-source">shadcn/ui Button + Framer Motion spring</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">内容卡片</div>
+      <div class="component-demo">
+        <div class="demo-card">
+          <div class="demo-card-title">数学分析·第一章</div>
+          <div class="demo-card-desc">数列极限的定义与性质</div>
+        </div>
+      </div>
+      <div class="component-source">shadcn/ui Card + hover: translateY(-2px)</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">输入框</div>
+      <div class="component-demo"><input class="demo-input" placeholder="输入题目或问题…"></div>
+      <div class="component-source">shadcn/ui Input + focus ring animation</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">标签/徽章</div>
+      <div class="component-demo">
+        <span class="demo-badge blue">已掌握</span>
+        <span class="demo-badge teal">学习中</span>
+        <span class="demo-badge amber">需加强</span>
+      </div>
+      <div class="component-source">shadcn/ui Badge 三色状态</div>
+    </div>
+  </div>
+
+  <h3>动效方案</h3>
+  <div class="motion-list">
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div class="motion-text">
+        <h4>按钮 hover 微动效</h4>
+        <p>按钮上浮 1px + 阴影加深，spring 曲线 0.15s</p>
+        <div class="motion-source">Framer Motion whileHover</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div>
+      <div class="motion-text">
+        <h4>卡片 stagger 入场</h4>
+        <p>卡片逐个淡入+上移，间隔 50ms</p>
+        <div class="motion-source">Framer Motion staggerChildren</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <div class="motion-text">
+        <h4>消息打字机效果</h4>
+        <p>AI 回复逐字出现，带光标闪烁</p>
+        <div class="motion-source">流式 SSE + CSS cursor animation</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg></div>
+      <div class="motion-text">
+        <h4>Tab 弹簧滑动</h4>
+        <p>Tab 指示器用 spring 物理效果滑动</p>
+        <div class="motion-source">shadcn/ui Tabs + layoutId</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 方向 B ===== -->
+<div class="direction-panel theme-dynamic" id="dir-1">
+  <h2>方向 B：现代灵动（暗色 + 玻璃拟态）</h2>
+  <p class="desc">深色背景 + 玻璃拟态卡片 + 渐变发光。视觉冲击力强，年轻有活力。适合吸引学生注意力，但需要控制饱和度避免疲劳。</p>
+
+  <h3>配色方案</h3>
+  <div class="palette">
+    <div class="swatch"><div class="swatch-color primary"></div><div class="swatch-name">主色</div><div class="swatch-hex">#6366F1</div></div>
+    <div class="swatch"><div class="swatch-color teal"></div><div class="swatch-name">辅助色</div><div class="swatch-hex">#06B6D4</div></div>
+    <div class="swatch"><div class="swatch-color bg"></div><div class="swatch-name">背景</div><div class="swatch-hex">#0F172A</div></div>
+    <div class="swatch"><div class="swatch-color card"></div><div class="swatch-name">卡片</div><div class="swatch-hex">#1E293B</div></div>
+    <div class="swatch"><div class="swatch-color text"></div><div class="swatch-name">正文</div><div class="swatch-hex">#F1F5F9</div></div>
+    <div class="swatch"><div class="swatch-color muted"></div><div class="swatch-name">次要</div><div class="swatch-hex">#94A3B8</div></div>
+  </div>
+
+  <h3>核心组件</h3>
+  <div class="component-grid">
+    <div class="component-card">
+      <div class="component-label">玻璃拟态卡片</div>
+      <div class="component-demo">
+        <div class="demo-glass">
+          <div class="demo-glass-title">数分·一致连续</div>
+          <div class="demo-glass-desc">定义、定理与例题</div>
+        </div>
+      </div>
+      <div class="component-source">Glassmorphism: backdrop-blur + rgba bg</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">渐变发光按钮</div>
+      <div class="component-demo"><span class="demo-btn-glow">开始对话</span></div>
+      <div class="component-source">linear-gradient + box-shadow glow</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">浮动图标</div>
+      <div class="component-demo"><div class="demo-float">∑</div></div>
+      <div class="component-source">CSS animation float (3s ease-in-out)</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">3D 倾斜卡片</div>
+      <div class="component-demo">
+        <div class="demo-glass" style="transform:perspective(600px) rotateY(-5deg) rotateX(3deg)">
+          <div class="demo-glass-title">教材卡片</div>
+          <div class="demo-glass-desc">hover 跟随鼠标倾斜</div>
+        </div>
+      </div>
+      <div class="component-source">Aceternity UI 3D Card Effect</div>
+    </div>
+  </div>
+
+  <h3>动效方案</h3>
+  <div class="motion-list">
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>
+      <div class="motion-text">
+        <h4>背景网格 + 漂浮光斑</h4>
+        <p>深色背景上缓慢移动的渐变光斑，增加空间感</p>
+        <div class="motion-source">CSS radial-gradient + keyframes</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      <div class="motion-text">
+        <h4>光标跟随光斑</h4>
+        <p>鼠标移动时卡片上有跟随的高光点</p>
+        <div class="motion-source">Aceternity UI Spotlight Card</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div class="motion-text">
+        <h4>页面切换转场</h4>
+        <p>路由切换时卡片弹性飞入</p>
+        <div class="motion-source">Framer Motion AnimatePresence</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.07-7.07l4.24-4.24"/></svg></div>
+      <div class="motion-text">
+        <h4>呼吸加载动画</h4>
+        <p>AI 思考时图标呼吸缩放</p>
+        <div class="motion-source">lucide-animated (MIT 开源)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 方向 C ===== -->
+<div class="direction-panel theme-focus" id="dir-2">
+  <h2>方向 C：暗色专注（极简深色）</h2>
+  <p class="desc">深灰黑底 + 高对比蓝绿强调。减少视觉噪音，专注内容本身。类似 Linear 的设计语言，适合长时间学习。</p>
+
+  <h3>配色方案</h3>
+  <div class="palette">
+    <div class="swatch"><div class="swatch-color primary"></div><div class="swatch-name">主色</div><div class="swatch-hex">#3B82F6</div></div>
+    <div class="swatch"><div class="swatch-color teal"></div><div class="swatch-name">辅助色</div><div class="swatch-hex">#2DD4BF</div></div>
+    <div class="swatch"><div class="swatch-color bg"></div><div class="swatch-name">背景</div><div class="swatch-hex">#0A0F1E</div></div>
+    <div class="swatch"><div class="swatch-color card"></div><div class="swatch-name">卡片</div><div class="swatch-hex">#111827</div></div>
+    <div class="swatch"><div class="swatch-color text"></div><div class="swatch-name">正文</div><div class="swatch-hex">#E5E7EB</div></div>
+    <div class="swatch"><div class="swatch-color muted"></div><div class="swatch-name">次要</div><div class="swatch-hex">#6B7280</div></div>
+  </div>
+
+  <h3>核心组件</h3>
+  <div class="component-grid">
+    <div class="component-card">
+      <div class="component-label">深色卡片</div>
+      <div class="component-demo">
+        <div class="demo-dark-card">
+          <div class="demo-dark-title">数列极限定义</div>
+          <div class="demo-dark-desc">epsilon-N 语言精确描述</div>
+        </div>
+      </div>
+      <div class="component-source">shadcn/ui Card dark variant</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">深色输入框</div>
+      <div class="component-demo"><input class="demo-dark-input" placeholder="输入问题…"></div>
+      <div class="component-source">shadcn/ui Input dark focus ring</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">命令面板 (Cmd+K)</div>
+      <div class="component-demo">
+        <div class="demo-dark-card" style="text-align:center">
+          <div class="demo-dark-desc" style="font-size:11px">按 <kbd style="background:#1f2937;padding:2px 6px;border-radius:4px;color:#e5e7eb">⌘K</kbd> 快速搜索</div>
+        </div>
+      </div>
+      <div class="component-source">cmdk library (Vercel 出品)</div>
+    </div>
+    <div class="component-card">
+      <div class="component-label">侧边栏导航</div>
+      <div class="component-demo">
+        <div class="demo-dark-card" style="max-width:180px;padding:12px">
+          <div class="demo-dark-desc" style="font-size:11px;line-height:2">▸ 学习首页<br>▸ 课程学习<br>▸ 资源中心<br>▸ 学习档案</div>
+        </div>
+      </div>
+      <div class="component-source">shadcn/ui Sidebar</div>
+    </div>
+  </div>
+
+  <h3>动效方案</h3>
+  <div class="motion-list">
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M9 3v18"/></svg></div>
+      <div class="motion-text">
+        <h4>侧边栏折叠动画</h4>
+        <p>宽度平滑过渡，图标+文字渐隐渐显</p>
+        <div class="motion-source">shadcn/ui Sidebar + motion</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>
+      <div class="motion-text">
+        <h4>命令面板模糊浮现</h4>
+        <p>Cmd+K 面板从顶部模糊淡入</p>
+        <div class="motion-source">cmdk + Framer Motion overlay</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6V4m0 16v-2m6.36-10.36l1.42-1.42M4.22 19.78l1.42-1.42M20 12h-2M6 12H4m14.36 6.36l1.42 1.42M4.22 4.22l1.42 1.42"/></svg></div>
+      <div class="motion-text">
+        <h4>滚动渐入内容</h4>
+        <p>学习内容滚动到视口时淡入</p>
+        <div class="motion-source">Framer Motion useInView</div>
+      </div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div class="motion-text">
+        <h4>流式文字渲染</h4>
+        <p>AI 回复逐字打出，无闪烁</p>
+        <div class="motion-source">SSE streaming + CSS caret</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 通用组件库 ===== -->
+<h2>通用组件库选型（三套共用）</h2>
+<p class="desc">无论选哪个方向，这些底层组件库都适用：</p>
+<table class="compare-table">
+  <thead>
+    <tr><th>类别</th><th>推荐</th><th>理由</th><th>来源</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>UI 组件</td><td>shadcn/ui</td><td>copy-paste 模式，代码在你项目里，完全可控</td><td>ui.shadcn.com</td></tr>
+    <tr><td>动效引擎</td><td>Framer Motion</td><td>物理弹簧动画，React 生态标准</td><td>motion.dev</td></tr>
+    <tr><td>图标库</td><td>Lucide Icons</td><td>1600+ 线性图标，shadcn 默认，无 emoji</td><td>lucide.dev</td></tr>
+    <tr><td>动效图标</td><td>lucide-animated</td><td>467+ 动画图标，MIT 开源，基于 Lucide</td><td>lucide-animated.com</td></tr>
+    <tr><td>命令面板</td><td>cmdk</td><td>Vercel 出品，Cmd+K 快速导航</td><td>cmdk.paco.me</td></tr>
+    <tr><td>高级动效</td><td>Aceternity UI</td><td>3D 卡片、光斑跟随、堆叠卡片</td><td>ui.aceternity.com</td></tr>
+    <tr><td>图表</td><td>Recharts</td><td>学习档案数据可视化</td><td>recharts.org</td></tr>
+    <tr><td>公式渲染</td><td>KaTeX</td><td>数学公式渲染（已在用）</td><td>katex.org</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top:32px;padding:16px;background:#eff6ff;border-radius:10px;font-size:14px;color:#1e40af">
+  <strong>下一步</strong>：告诉我你倾向哪个方向（A/B/C），我会针对该方向输出详细的界面概念图（首页、对话页、资源中心、学习档案），每页标注具体组件和动效。
+</p>
+</div>
+
+<script>
+function switchDir(i){
+  document.querySelectorAll('.direction-panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+  document.querySelectorAll('.direction-tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+}
+</script>
+</body>
+</html>
