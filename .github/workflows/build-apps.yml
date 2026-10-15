@@ -56,6 +56,19 @@ jobs:
           java-version: "21"
           cache: gradle
       - uses: android-actions/setup-android@v3
+        with:
+          # 这个 action 默认要装 SDK 包 "tools"，而 Google 已经把它从仓库里删了，
+          # sdkmanager 会以 "Failed to find package 'tools'" 退出、整个 job 挂掉。
+          # 传空串就不装额外包；AGP 会自己下它需要的 platform 与 build-tools
+          # （licenses 仍由这个 action 接受）。
+          packages: ""
+      - name: 准备 Android SDK
+        run: |
+          # 本项目 compileSdk = 36。镜像自带的 SDK 里未必有这个 platform，
+          # 缺了就补一下；补不上也别在这里中断，让 gradle 自己按需下载。
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" || true
+          sdkmanager --list_installed 2>/dev/null | head -20 || true
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mirror/android sync
       - run: chmod +x apps/android/android/gradlew && cd apps/android/android && ./gradlew assembleDebug
