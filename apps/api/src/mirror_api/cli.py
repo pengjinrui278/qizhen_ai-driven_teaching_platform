@@ -40,7 +40,9 @@ from .models import (
     TextbookChunk,
     WorkspaceFinding,
 )
-from .platform_models import Account, Hypothesis, Observation, SandboxMember, SandboxPolicy, Submission
+from .note_library import Note
+from .platform_models import Account, Attempt, Hypothesis, Observation, SandboxMember, SandboxPolicy, Submission
+from .registry import load_course_profiles
 from .seed import seed_profiles
 from .textbook_ingest import ingest_textbook
 
@@ -260,22 +262,30 @@ def cmd_seed_demo_workspace(args) -> int:
                 session.add(SandboxMember(workspace_id=DEMO_WORKSPACE_ID, account_id=acct.id, role="student"))
             demo_students.append(acct)
 
-        # --- 演示学生的学习档案与诊断（观察 + 假设） ---
-        for oid, theme, text, kind in [
-            ("demo-obs-1", "quantifiers", "学生不清楚 N 可以依赖哪些量，习惯先给定 N 再补 ε。", "student_question"),
-            ("demo-obs-2", "proof_structure", "证明时量词次序容易写反，先写结论再补条件。", "hint_used"),
-            ("demo-obs-3", "boundedness", "用有界性控制乘积时，不确定上界 M 该从哪里取。", "student_question"),
+        # --- 演示学生的学习档案与诊断（观察 + 假设，覆盖多门课） ---
+        for oid, cid, theme, text, kind, days_ago in [
+            ("demo-obs-1", "mathematical_analysis", "quantifiers", "学生不清楚 N 可以依赖哪些量，习惯先给定 N 再补 ε。", "student_question", 2),
+            ("demo-obs-2", "mathematical_analysis", "proof_structure", "证明时量词次序容易写反，先写结论再补条件。", "hint_used", 3),
+            ("demo-obs-3", "mathematical_analysis", "boundedness", "用有界性控制乘积时，不确定上界 M 该从哪里取。", "student_question", 5),
+            ("demo-obs-4", "linear_algebra_analytic_geometry", "eigenvalue", "判断可对角化时，不清楚特征子空间维数与重数的关系。", "student_question", 4),
+            ("demo-obs-5", "university_physics", "modeling", "旋转参考系里常漏掉惯性力或离心力项。", "student_question", 6),
+            ("demo-obs-6", "point_set_topology", "compactness", "紧致性与序列紧致的等价性容易在非度量空间误用。", "student_question", 8),
+            ("demo-obs-7", "ordinary_differential_equations", "uniqueness", "解的存在唯一性条件与延拓容易混淆。", "hint_used", 9),
+            ("demo-obs-8", "python_programming", "recursion", "递归转迭代时，对时间复杂度的变化估计不清。", "student_question", 7),
         ]:
             if not session.get(Observation, oid):
-                session.add(Observation(id=oid, account_id=student.id, course_id=DEMO_COURSE,
+                session.add(Observation(id=oid, account_id=student.id, course_id=cid,
                     attempt_id=None, kind=kind, theme=theme, text=text,
-                    direction="support", source="interaction", strength="weak"))
-        for hid, theme, statement, supporting, status in [
-            ("demo-hyp-1", "quantifiers", "在量词次序与 N 的依赖上，需要再核对一次。", ["demo-obs-1", "demo-obs-2"], "worth_attention"),
-            ("demo-hyp-2", "boundedness", "对「有界 × 趋于零」这类估计，上界的取法还不够熟练。", ["demo-obs-3"], "emerging"),
+                    direction="support", source="interaction", strength="weak",
+                    created_at=datetime.now(UTC) - timedelta(days=days_ago)))
+        for hid, cid, theme, statement, supporting, status in [
+            ("demo-hyp-1", "mathematical_analysis", "quantifiers", "在量词次序与 N 的依赖上，需要再核对一次。", ["demo-obs-1", "demo-obs-2"], "worth_attention"),
+            ("demo-hyp-2", "mathematical_analysis", "boundedness", "对「有界 × 趋于零」这类估计，上界的取法还不够熟练。", ["demo-obs-3"], "emerging"),
+            ("demo-hyp-3", "linear_algebra_analytic_geometry", "eigenvalue", "特征子空间维数与可对角化的关系掌握尚不牢固。", ["demo-obs-4"], "emerging"),
+            ("demo-hyp-4", "university_physics", "modeling", "非惯性系建模时惯性力的引入需要更系统地训练。", ["demo-obs-5"], "emerging"),
         ]:
             if not session.get(Hypothesis, hid):
-                session.add(Hypothesis(id=hid, account_id=student.id, course_id=DEMO_COURSE,
+                session.add(Hypothesis(id=hid, account_id=student.id, course_id=cid,
                     theme=theme, statement=statement, supporting=supporting, contradicting=[],
                     status=status, sufficiency="合成示例，不代表个人能力结论"))
 
@@ -311,6 +321,57 @@ def cmd_seed_demo_workspace(args) -> int:
                 session.add(WorkspaceFinding(finding_id=fid, workspace_id=DEMO_WORKSPACE_ID,
                     phenomenon=phenomenon, basis=basis, generator="预置样例",
                     ta_status=ta_status, ta_note=ta_note, teacher_status=teacher_status, teacher_note=teacher_note))
+
+        # --- 演示学生跨科目对话记录（驱动「最近对话」「科目占比」「活动趋势」） ---
+        profiles = load_course_profiles()
+        for i, (cid, text, days_ago) in enumerate([
+            ("mathematical_analysis", "设 f_n 是 [0,1] 上的连续函数且逐点收敛于 f。逐点收敛能否保证 f 连续，以及极限与积分可交换？请以 f_n(x)=x^n 分析。", 0),
+            ("mathematical_analysis", "如何从确界原理出发，依次建立单调有界收敛、闭区间套与 Bolzano–Weierstrass 定理？", 1),
+            ("linear_algebra_analytic_geometry", "对有重特征值的实方阵，如何判断是否可对角化？给出相同特征多项式却对角化性质不同的例子。", 1),
+            ("mathematical_analysis", "设数列 {a_n} 有界且 b_n→0。证明 a_nb_n→0。", 2),
+            ("university_physics", "小珠在绕竖直直径以恒定角速度旋转的光滑圆环上运动，如何在惯性系与旋转系分别建模并分析平衡位置？", 2),
+            ("linear_algebra_analytic_geometry", "解方程组 x+2y=5, 2x+y=4，并代回检验。", 3),
+            ("point_set_topology", "比较一般拓扑空间中的紧致性、序列紧致性和可数紧致性，说明它们在度量空间中为何等价。", 3),
+            ("mathematical_analysis", "含参积分 F(t)=∫₀¹ log(1+tx)/x dx，如何确定 t 的取值范围并论证何时能在积分号下求导？", 4),
+            ("ordinary_differential_equations", "求解初值问题 y'=2t, y(0)=1 并检验。", 4),
+            ("electronic_circuits", "用节点电压法分析含两个独立源和一个受控源的电路，如何列写节点方程？", 5),
+            ("python_programming", "递归实现斐波那契时栈溢出，如何改成迭代并解释时间复杂度的变化？", 5),
+            ("mathematical_analysis", "证明收敛数列的极限唯一，并说明在哪里用到了两个收敛条件。", 6),
+            ("university_physics", "理想气体自由膨胀与可逆等温膨胀有相同初末态时，为什么熵变相同而功和热不同？", 6),
+            ("linear_algebra_analytic_geometry", "带一次项的实二次曲线如何通过平移和正交变换化为标准形？", 7),
+            ("point_set_topology", "验证 X={1,2} 上的集合族 τ={∅,{1},X} 是拓扑。", 8),
+            ("ordinary_differential_equations", "对初值问题 y'=|y|^α, y(0)=0, α>0，分类讨论局部解的唯一性。", 9),
+        ]):
+            aid = f"demo-attempt-{i:02d}"
+            if not session.get(Attempt, aid):
+                profile = profiles.get(cid)
+                session.add(Attempt(id=aid, account_id=student.id, course_id=cid,
+                    profile_id=profile.profile_id if profile else "",
+                    problem={"text": text, "problem_id": None},
+                    title="",  # 空 = 由 summarize 现算标题
+                    created_at=datetime.now(UTC) - timedelta(days=days_ago, hours=i)))
+
+        # --- 演示学生跨科目笔记（驱动「笔记产出」） ---
+        for i, (cid, folder, title, remark, source, days_ago) in enumerate([
+            ("mathematical_analysis", "第2章 数列极限", "数列极限·预习笔记", "先看量词顺序，再选 N", "student", 1),
+            ("mathematical_analysis", "第2章 数列极限", "收敛与有界的关系", "收敛必有界，反之不然", "agent", 2),
+            ("mathematical_analysis", "第3章 函数极限", "一致连续与逐点连续", "重点区分两种连续的定义", "agent", 4),
+            ("linear_algebra_analytic_geometry", "第5章 特征值", "可对角化判断清单", "最小多项式 + 特征子空间维数", "student", 3),
+            ("linear_algebra_analytic_geometry", "第6章 二次型", "主轴变换步骤", "平移 → 正交变换 → 标准形", "agent", 6),
+            ("university_physics", "第2章 转动参考系", "惯性力梳理", "惯性力、离心力、科里奥利力", "student", 5),
+            ("university_physics", "第4章 热学", "熵变的计算套路", "区分系统/环境熵变", "agent", 7),
+            ("point_set_topology", "第3章 紧致性", "紧致性等价关系图", "度量空间中三性等价", "student", 8),
+            ("ordinary_differential_equations", "第1章 初值问题", "存在唯一性条件", "连续性 + 局部 Lipschitz", "agent", 9),
+            ("python_programming", "递归", "递归转迭代模板", "栈 → 显式循环", "student", 7),
+        ]):
+            nid = f"demo-note-{i:02d}"
+            if not session.get(Note, nid):
+                session.add(Note(id=nid, account_id=student.id, course_id=cid,
+                    folder_path=folder, title=title, kind="md",
+                    content="# " + title + "\n\n" + remark,
+                    starred=(i % 3 == 0), remark=remark, source=source,
+                    created_at=datetime.now(UTC) - timedelta(days=days_ago, hours=i),
+                    updated_at=datetime.now(UTC) - timedelta(days=days_ago)))
         session.commit()
 
         events = session.execute(
@@ -324,7 +385,7 @@ def cmd_seed_demo_workspace(args) -> int:
         print(f"演示学生账号：{DEMO_STUDENT_USERNAME} / {DEMO_STUDENT_PASSWORD}")
         print(f"模拟学生：{students} 名（demo-stu-01 .. demo-stu-{students:02d}）")
         print(f"工作区事件数：{events}（模型：{model.name}）")
-        print("批改数据：4 份作业作品 + 2 条候选现象；学生诊断：3 条观察 + 2 条假设")
+        print("批改数据：4 份作业作品 + 2 条候选现象；学生端：16 段对话 + 10 篇笔记 + 8 条观察 + 4 条假设")
     return 0
 
 
