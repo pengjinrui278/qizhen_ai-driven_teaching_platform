@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>学镜演示手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&display=swap">
+<style>
+/* ── 令牌：浅色为基准，全部先在这里定义 ───────────────────────── */
+:root{
+  --bg:#eef2f7; --surface:#fff; --surface-2:#f7f9fc;
+  --border:#e2e8f0; --border-strong:#c7d2fe;
+  --ink:#0f172a; --ink-2:#334155; --muted:#64748b; --faint:#94a3b8;
+  --accent:#4f46e5; --accent-bright:#6366f1; --accent-soft:#eef2ff;
+  --cyan:#06b6d4;
+  --warn:#b45309; --warn-bg:#fffbeb; --warn-border:#fcd34d;
+  --danger:#e11d48; --danger-bg:#fff1f2; --danger-border:#fecdd3;
+  --ok:#047857; --ok-bg:#ecfdf5; --ok-border:#a7f3d0;
+  --code-bg:#f1f5f9;
+  --shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+  --shadow-lg:0 8px 24px rgba(15,23,42,.10);
+  --sans:system-ui,-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --serif:"Noto Serif SC","Songti SC",SimSun,serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --rail:236px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1220; --surface:#121c2e; --surface-2:#0f1826;
+    --border:#1e2c42; --border-strong:#31427a;
+    --ink:#e6edf7; --ink-2:#c2cfe2; --muted:#93a4bd; --faint:#6b7d99;
+    --accent:#a5b4fc; --accent-bright:#818cf8; --accent-soft:#1a2440;
+    --cyan:#22d3ee;
+    --warn:#fcd34d; --warn-bg:#231c0a; --warn-border:#5c4712;
+    --danger:#fb7185; --danger-bg:#2a1220; --danger-border:#5c2033;
+    --ok:#6ee7b7; --ok-bg:#08221b; --ok-border:#155e46;
+    --code-bg:#0d1728;
+    --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 8px 24px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1220; --surface:#121c2e; --surface-2:#0f1826;
+  --border:#1e2c42; --border-strong:#31427a;
+  --ink:#e6edf7; --ink-2:#c2cfe2; --muted:#93a4bd; --faint:#6b7d99;
+  --accent:#a5b4fc; --accent-bright:#818cf8; --accent-soft:#1a2440;
+  --cyan:#22d3ee;
+  --warn:#fcd34d; --warn-bg:#231c0a; --warn-border:#5c4712;
+  --danger:#fb7185; --danger-bg:#2a1220; --danger-border:#5c2033;
+  --ok:#6ee7b7; --ok-bg:#08221b; --ok-border:#155e46;
+  --code-bg:#0d1728;
+  --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 8px 24px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 15.5px/1.85 var(--sans);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--border-strong);outline-offset:2px;border-radius:4px}
+code,kbd{font-family:var(--mono);font-size:.87em;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:var(--ink-2)}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.75;background:var(--code-bg);border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;overflow-x:auto;margin:0;color:var(--ink-2)}
+pre code{background:none;padding:0;font-size:inherit}
+
+/* ── 骨架 ─────────────────────────────────────────────────── */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;max-width:1180px;margin:0 auto;padding:0 20px;
+  align-items:start}
+@media (max-width:900px){ .shell{grid-template-columns:minmax(0,1fr);padding:0 14px} }
+
+/* ── 左导轨（呼应产品自己的左栏） ─────────────────────────── */
+.rail{position:sticky;top:0;max-height:100vh;overflow-y:auto;padding:28px 22px 28px 0;
+  display:flex;flex-direction:column;gap:22px}
+@media (max-width:900px){
+  .rail{position:static;max-height:none;overflow:visible;padding:16px 0 0;border-bottom:1px solid var(--border)}
+}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent-bright),var(--cyan));color:#fff;
+  font:900 19px/1 var(--serif);box-shadow:0 4px 14px rgba(99,102,241,.3)}
+.brand-text strong{display:block;font:700 15px/1.3 var(--serif);letter-spacing:.01em}
+.brand-text span{font-size:11.5px;color:var(--muted);letter-spacing:.06em}
+
+.rail nav{display:flex;flex-direction:column;gap:1px}
+.rail nav a{display:block;padding:7px 11px;border-radius:8px;color:var(--muted);text-decoration:none;
+  font-size:13px;line-height:1.55;transition:background .15s,color .15s}
+.rail nav a:hover{background:var(--surface);color:var(--ink)}
+.rail nav a .n{display:inline-block;min-width:1.6em;color:var(--faint);font-family:var(--mono);font-size:11px}
+@media (max-width:900px){
+  .rail nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:12px}
+  .rail nav a{white-space:nowrap;background:var(--surface);border:1px solid var(--border)}
+}
+.rail-meta{font-size:11.5px;color:var(--faint);line-height:1.7;border-top:1px solid var(--border);padding-top:14px}
+.rail-meta code{font-size:11px}
+
+/* ── 正文 ─────────────────────────────────────────────────── */
+main{padding:28px 0 72px;min-width:0;display:flex;flex-direction:column;gap:52px}
+section{scroll-margin-top:20px;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3,h4{margin:0;text-wrap:balance}
+h1{font:900 clamp(27px,3.6vw,37px)/1.28 var(--serif);letter-spacing:-.01em}
+h2{font:700 23px/1.4 var(--serif);display:flex;align-items:baseline;gap:12px}
+h2 .n{font:600 13px/1 var(--mono);color:var(--accent-bright);letter-spacing:.06em;flex:none}
+h3{font:650 16.5px/1.5 var(--sans);color:var(--ink)}
+h4{font:650 14px/1.5 var(--sans);color:var(--ink-2)}
+p{margin:0;color:var(--ink-2);max-width:70ch}
+strong{color:var(--ink);font-weight:650}
+.lede{font-size:16.5px;color:var(--ink-2);max-width:64ch;line-height:1.8}
+.eyebrow{font:650 11.5px/1 var(--sans);letter-spacing:.14em;color:var(--faint);text-transform:none}
+
+/* ── 引用块（原文） ───────────────────────────────────────── */
+blockquote{margin:0;padding:14px 18px;border-left:3px solid var(--border-strong);background:var(--surface);
+  border-radius:0 10px 10px 0;color:var(--ink-2);font-size:15px;line-height:1.85;max-width:72ch}
+blockquote p+p{margin-top:10px}
+
+/* ── 强调块：本页最重要的三种状态 ─────────────────────────── */
+.note{display:flex;gap:12px;padding:14px 16px;border-radius:11px;border:1px solid var(--border);
+  background:var(--surface);font-size:14.5px;line-height:1.8;color:var(--ink-2);max-width:74ch}
+.note .tag{flex:none;font:650 11.5px/1.7 var(--sans);letter-spacing:.05em;padding:0 8px;border-radius:6px;height:fit-content}
+.note.warn{background:var(--warn-bg);border-color:var(--warn-border)}
+.note.warn .tag{background:var(--warn);color:var(--warn-bg)}
+.note.warn strong{color:var(--ink)}
+.note.danger{background:var(--danger-bg);border-color:var(--danger-border)}
+.note.danger .tag{background:var(--danger);color:#fff}
+.note.ok{background:var(--ok-bg);border-color:var(--ok-border)}
+.note.ok .tag{background:var(--ok);color:#fff}
+
+/* ── 三件事 ───────────────────────────────────────────────── */
+.pillars{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.pillar{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 18px 20px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px}
+.pillar .k{font:700 11.5px/1 var(--sans);letter-spacing:.1em;color:var(--accent-bright)}
+.pillar h3{font-size:15.5px;line-height:1.5}
+.pillar p{font-size:13.5px;line-height:1.78;color:var(--muted);max-width:none}
+
+/* ── 表格 ─────────────────────────────────────────────────── */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13.8px;line-height:1.7}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font:650 12.5px/1.5 var(--sans);color:var(--muted);white-space:nowrap;
+  letter-spacing:.02em;position:relative}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+td:first-child{color:var(--ink)}
+.num{font-variant-numeric:tabular-nums}
+td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ── 分镜：真时间轴 ───────────────────────────────────────── */
+.shots{display:flex;flex-direction:column;gap:0;position:relative}
+.shot{display:grid;grid-template-columns:96px minmax(0,1fr);gap:18px;padding:16px 0;
+  border-top:1px solid var(--border)}
+.shot:first-child{border-top:0}
+.shot .time{font:600 12.5px/1.5 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums;
+  display:flex;flex-direction:column;gap:5px;align-items:flex-start;position:relative;padding-left:16px}
+.shot .time::before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--accent-bright);box-shadow:0 0 0 3px var(--accent-soft)}
+.shot .time .idx{font:650 10.5px/1 var(--sans);letter-spacing:.08em;color:var(--faint)}
+.shot .body{display:flex;flex-direction:column;gap:8px;min-width:0}
+.shot h4{font-size:15px}
+.shot .screen{font-size:13px;color:var(--muted)}
+.shot .screen b{color:var(--ink-2);font-weight:600}
+.shot .vo{font-size:13.8px;line-height:1.8;color:var(--ink-2);border-left:2px solid var(--border-strong);
+  padding-left:12px;max-width:none}
+.shot.key .time::before{background:var(--cyan);box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 18%,transparent)}
+.shot.key h4::after{content:"重点镜头";margin-left:9px;font:650 10.5px/1.6 var(--sans);letter-spacing:.06em;
+  color:var(--cyan);border:1px solid currentColor;border-radius:5px;padding:0 6px;vertical-align:2px}
+@media (max-width:640px){ .shot{grid-template-columns:minmax(0,1fr);gap:8px}
+  .shot .time{flex-direction:row;align-items:center;gap:10px;padding-left:14px} }
+
+/* ── 检查清单 ─────────────────────────────────────────────── */
+.checklist{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:12px;
+  background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+.checklist label{display:flex;gap:12px;align-items:flex-start;padding:11px 15px;border-bottom:1px solid var(--border);
+  font-size:14px;line-height:1.7;color:var(--ink-2);cursor:pointer;transition:background .12s}
+.checklist label:last-child{border-bottom:0}
+.checklist label:hover{background:var(--surface-2)}
+.checklist input{margin:5px 0 0;width:16px;height:16px;flex:none;accent-color:var(--accent-bright);cursor:pointer}
+.checklist input:checked + span{color:var(--faint);text-decoration:line-through}
+
+/* ── 对照（别这么说 / 这么说） ─────────────────────────────── */
+.say{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.say .pair{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:11px;overflow:hidden;
+  background:var(--surface)}
+.say .no,.say .yes{padding:11px 14px;font-size:13.6px;line-height:1.72}
+.say .no{background:var(--danger-bg);color:var(--ink-2);border-bottom:1px solid var(--border)}
+.say .yes{background:var(--ok-bg);color:var(--ink-2)}
+.say .lbl{font:650 10.5px/1.4 var(--sans);letter-spacing:.08em;display:block;margin-bottom:4px}
+.say .no .lbl{color:var(--danger)}
+.say .yes .lbl{color:var(--ok)}
+
+/* ── PPT 分页组 ───────────────────────────────────────────── */
+.deckgroup{display:flex;flex-direction:column;gap:10px}
+.deckgroup > .hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.badge{font:650 11px/1.7 var(--sans);letter-spacing:.04em;padding:0 8px;border-radius:6px;flex:none;
+  background:var(--accent-soft);color:var(--accent);border:1px solid var(--border-strong)}
+.badge.opt{background:var(--surface-2);color:var(--muted);border-color:var(--border)}
+
+ul{margin:0;padding-left:1.15em;display:flex;flex-direction:column;gap:5px;color:var(--ink-2);max-width:72ch}
+li{font-size:14.5px;line-height:1.78}
+li::marker{color:var(--faint)}
+ol{padding-left:1.3em}
+hr{border:0;border-top:1px solid var(--border);margin:0}
+
+.footnote{font-size:12.5px;color:var(--faint);line-height:1.8;max-width:74ch}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">镜</div>
+      <div class="brand-text"><strong>演示手册</strong><span>Learning Mirror</span></div>
+    </div>
+    <nav aria-label="章节">
+      <a href="#p0"><span class="n">0</span>三件事决定成败</a>
+      <a href="#p1"><span class="n">1</span>作品定位</a>
+      <a href="#p2"><span class="n">2</span>PPT 分页要点</a>
+      <a href="#p3"><span class="n">3</span>视频分镜脚本</a>
+      <a href="#p4"><span class="n">4</span>拍摄前准备</a>
+      <a href="#p5"><span class="n">5</span>答辩防线</a>
+      <a href="#p6"><span class="n">6</span>开机检查表</a>
+      <a href="#p7"><span class="n">7</span>可引用数字</a>
+    </nav>
+    <div class="rail-meta">
+      决赛用 · 编写于 2026-10-15<br>
+      核对基准 <code>work/scissors</code>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ══ 头 ══ -->
+    <section id="top">
+      <span class="eyebrow">第二届全国高校"启真问智"教育教学人工智能大赛 · 现场决赛</span>
+      <h1>学镜演示手册</h1>
+      <p class="lede">PPT 该放什么、每页讲哪句；7 分钟演示视频的 13 个镜头怎么拍；开机前必须补上的两个数据缺口。</p>
+    </section>
+
+    <!-- ══ 0 ══ -->
+    <section id="p0">
+      <h2><span class="n">0</span>先读这一节：三件事决定成败</h2>
+      <div class="pillars">
+        <div class="pillar">
+          <span class="k">第一 · 评分维度</span>
+          <h3>重点是"师-生-机协同"，不是功能多</h3>
+          <p>大赛从<strong>创新性、教学应用价值、技术实施质量、用户体验与可推广性</strong>四个维度评价，并"特别关注<strong>落地效果</strong>及<strong>"师-生-机"协同</strong>的体现程度"。</p>
+          <p>评委最想看到的画面是一条<strong>连续的闭环</strong>：学生的求助 → 变成证据 → TA 确认 → 教师改了教学 → 学生下一次被帮得更好。散着讲功能会丢分。</p>
+        </div>
+        <div class="pillar">
+          <span class="k">第二 · 硬性要求</span>
+          <h3>五门课 + 三端，一个都不能少</h3>
+          <p>开发路线开篇写明：最终展示必须同时包含 Student Mirror、五门 Course Mirror、Assignment Workspace、三个完整角色界面，以及数据来源、Harness、Eval、隐私与生命周期治理。</p>
+          <p>视频里<strong>哪怕每门课只给 5 秒，也必须出现</strong>。数分要证明闭环真的成立，其余四门要证明架构能扩展。</p>
+        </div>
+        <div class="pillar">
+          <span class="k">第三 · 真正的差异</span>
+          <h3>最值钱的不是功能，是"克制"</h3>
+          <p>别人做的是"更会做题的 AI"；学镜做的是<strong>不替你做题、但记得你怎么卡住的 AI</strong>。</p>
+          <p>提示阶梯只给一级、反馈页不做能力评分、教师看不到私人对话、材料不够就如实说——都是这一条的体现。</p>
+          <p><strong>PPT 里至少占两页，视频里至少给一个特写。</strong></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 1 ══ -->
+    <section id="p1">
+      <h2><span class="n">1</span>作品定位：PPT 开场三页</h2>
+
+      <div class="deckgroup">
+        <div class="hd"><span class="badge">第 1 页</span><h3>封面</h3></div>
+        <ul>
+          <li>标题：<strong>学镜 Learning Mirror</strong></li>
+          <li>副标题：<strong>面向大学数理课程的个性化学习智能体</strong></li>
+          <li>一句话：不是"更会做题的 AI"，而是一套越用越懂你的教学智能体系统</li>
+          <li>底部：浙江大学 · 团队名 · 赛道（<strong>教育教学智能体</strong>赛道）</li>
+        </ul>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><span class="badge">第 2 页</span><h3>问题：这一页决定评委要不要认真听</h3></div>
+        <p>核心论点：<strong>真正没有被看见的，是"学生得到最终答案之前发生了什么"。</strong></p>
+        <pre><code>纸上做题 → 卡住 → 查教材 / 看部分解答 / 问 AI / 看视频 / 直接看答案
+        → 理解或模仿后重新组织答案 → 拍照上传 → 助教看到【最终成品】并给分
+                                                    ↑
+                                        过程信息在这一刻基本已经消失</code></pre>
+        <p>然后把这串问题抛出去（原话，直接用）：</p>
+        <blockquote><p>「学生最初有没有思路？」「是否知道该调用哪个定理？」「是否在产生关键中间对象时卡住？」「需要几级提示？」「是不是看完整答案以后才写出来？」「这次困难是不是过去已经出现过？」「是不是'看答案觉得会了'，但下一次仍然无法独立完成？」</p></blockquote>
+        <p>收尾一句：<strong>「我们要采集的最重要的数据，是学生从'不会'到'会'、从'卡住'到'继续'的过程中发生了什么。」</strong></p>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><span class="badge">第 3 页</span><h3>三个对象</h3></div>
+        <p>这张三端对照表是全场最好用的一页，<strong>建议在视频里也复现</strong>。</p>
+        <div class="tw"><table>
+          <thead><tr><th>对象</th><th>一句话职责</th><th>生命周期</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Student Mirror</strong></td><td>保存"<strong>这个学生和知识之间是什么关系</strong>"</td><td>随学生</td></tr>
+            <tr><td><strong>Course Mirror</strong></td><td>保存"<strong>这门课是什么、这道题怎么理解和处理</strong>"</td><td>跨届积累</td></tr>
+            <tr><td><strong>Assignment Workspace</strong></td><td>保存"<strong>一个班一个教学阶段的临时上下文</strong>"</td><td>用完即退出</td></tr>
+          </tbody>
+        </table></div>
+        <blockquote><p>「<strong>Course Mirror 越用越懂课；Student Mirror 越用越懂人；Workspace 用完即退出。</strong>」</p></blockquote>
+        <p>然后<strong>主动交代技术路线</strong>——这一句能挡掉"你们是不是只是套了个壳"：</p>
+        <blockquote><p>「我们<strong>不训练大模型</strong>。用国内通用大模型当大脑 + 自建课程语料当资料（RAG 检索，<strong>查资料不是训练</strong>）+ 智能体代码当工作流程 + 评测题当质检。教材数据的授权范围本来就只开了'检索'，训练权限是关闭的，正好与这条路一致。」</p></blockquote>
+        <div class="note warn"><span class="tag">口径</span><span>不要说"我们训练了模型""我们微调了五门课"。产品文档里明确写着「是否微调应由 Eval 结果决定，而不是为了'看起来训练过模型'而训练」。</span></div>
+      </div>
+    </section>
+
+    <!-- ══ 2 ══ -->
+    <section id="p2">
+      <h2><span class="n">2</span>PPT 分页要点</h2>
+      <p>建议 24–28 页。<span class="badge">必须</span> 是建议保留的硬内容，<span class="badge opt">加分</span> 视时间取舍。</p>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>A · 为什么要做</h3><span class="badge">必须 · 3 页</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>要点</th></tr></thead>
+          <tbody>
+            <tr><td class="n">A1 问题</td><td>见第 1 节第 2 页</td></tr>
+            <tr><td class="n">A2 三个对象</td><td>见第 1 节第 3 页</td></tr>
+            <tr><td class="n">A3 六个命题</td><td>命题 1 学生愿意用一个"不会立刻把答案塞给你、但又不烦人"的数学 AI；2 自然求助过程确实包含最终作业无法看到的学习证据；3 跨多次交互后这些证据能形成<strong>可解释、可修正</strong>的学习观察；4 过程证据 + 全班作业 + TA 判断 → 教师能得到比"哪道题错得多"更有价值的教学信息；5 同一个 Student Mirror 用统一协议调用五门 Course Mirror；6 五门课知识层/Harness 各不相同，但输出<strong>统一格式的 Learning Evidence</strong></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>B · 学生端</h3><span class="badge">必须 · 8 页</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>讲什么</th><th>演示时指哪</th></tr></thead>
+          <tbody>
+            <tr><td class="n">B1 学习首页</td><td>统一入口：课表、我的课程、进行中作业、最近学习、头像</td><td>首页一屏</td></tr>
+            <tr><td class="n">B2 渐进提示</td><td><strong>三级提示梯度</strong>：我卡住了 → 再深入一点 → 梳理解题框架。<strong>默认只给第一级</strong></td><td>回答下方三个按钮 +「提示 1/3」标签</td></tr>
+            <tr><td class="n">B3 可核对</td><td>每条回答都带「资料来源」（教材页码 locator）；回答前有「正在核对回答…」状态</td><td>展开「资料来源」</td></tr>
+            <tr><td class="n">B4 摘录追问</td><td>框选片段 → 拼接成<strong>并排子页面</strong> → 就这些片段继续追问 → 子页面里还能再剪（嵌套）</td><td>剪一刀、拼一个子页面</td></tr>
+            <tr><td class="n">B5 输入方式</td><td>公式所见即所得编辑（MathLive + 12 组学科符号面板）、拍照识题、拖入文档（PDF/Word/PPT/代码）、右侧 1/3 拖入 = 并排参阅不参与提问</td><td>公式面板 + 拖一个 PDF</td></tr>
+            <tr><td class="n">B6 我的笔记</td><td>Obsidian 式目录树（科目/时间两种整理）、★、备注、回收站 30 天、导出 <strong>Word/PPT/HTML/Markdown</strong>、附件多格式</td><td>笔记树 + 导出下拉</td></tr>
+            <tr><td class="n">B7 笔记模式</td><td><strong>全片最亮的一页</strong>：勾选回答 →「存为笔记」→ agent <strong>整理成一份</strong>（去重、按主题重组、不照抄）→ <strong>自动落库 + 可撤回</strong>；页边偏好面板往输入框插高亮要求；按教材章生成；<code>@</code> 引用笔记；<strong>agent 直接管理笔记库</strong></td><td>全套走一遍</td></tr>
+            <tr><td class="n">B8 学习反馈</td><td>最近进展（<strong>只讲证据变化</strong>）、学习时间线、科目占比、活动趋势、笔记产出；每张图配数据表；<strong>明写"不是能力评分"</strong>；观察可<strong>当场纠正</strong></td><td>反馈页 + 点一次「纠正记录」</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>B7 值得单独讲透的三点</h4>
+        <ul>
+          <li><strong>自动存但可撤回</strong>——系统代你落库，事后给你一条「已存到 … ›《标题》」+ 撤回按钮。</li>
+          <li><strong>agent 能直接操作你的笔记库</strong>——学生说「把散在科目根的笔记整理到第 3 章」，agent 就真的做了，并逐条回报「完成 N 项，M 项没做成」。</li>
+          <li><strong>它不许乱来</strong>——只能动本人的笔记；模型编造的 ID 会被丢掉并<strong>如实回报</strong>；agent <strong>没有"彻底删除"这个能力</strong>，只能移进回收站。</li>
+        </ul>
+
+        <h4>B8 的讲法（对抗"你们是不是在给学生打分"）</h4>
+        <blockquote><p>「这一页里没有一个数字叫'掌握度'。我们只展示<strong>证据和观察的变化</strong>：哪条判断出现了相反证据、哪条观察被更正了。活动量（多少轮对话、多少份笔记）单独标注，并写明<strong>活动量不代表掌握程度</strong>。学生本人可以<strong>当场纠正任何一条观察</strong>。」</p></blockquote>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>C · 课程建设端</h3><span class="badge">必须 · 2 页</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>讲什么</th></tr></thead>
+          <tbody>
+            <tr><td class="n">C1 建设台</td><td>打开题目 → 结构化编辑（正文、关联知识点、<strong>多种参考解法</strong>、<strong>教学要点 hint_ladder</strong>、常见错误）→ 填审校说明 → <strong>教师确认发布新版本</strong>；TA 账号此按钮<strong>禁用</strong>（现场演示权限差异）</td></tr>
+            <tr><td class="n">C2 版本与回滚</td><td>「贡献候选与版本记录」：待审核 / 待编辑 / 已发布 / 未采纳；eligible 候选可「打开编辑草稿」并自动挂上 <strong>rights 四项开关</strong>（runtime/rag/eval/training）；已发布的可「创建回滚版本」（需填回滚理由）</td></tr>
+          </tbody>
+        </table></div>
+        <p>C2 要强调：这是<strong>"课程资产是可被审校、可被回滚的"</strong>，不是聊天记录攒出来的。</p>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>D · 教师 / TA 端</h3><span class="badge">必须 · 4 页</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>讲什么</th></tr></thead>
+          <tbody>
+            <tr><td class="n">D1 教学总览</td><td>进行中作业 / 已提交 / 待批改 三个数字 + 待批改列表</td></tr>
+            <tr><td class="n">D2 作业管理</td><td>布置作业（课程/班级/人数/要求/<strong>资料保留时长</strong>/确认到期清理）；作业码；加助教；结束作业；<strong>删除作业资料（汇总报告保留）</strong></td></tr>
+            <tr><td class="n">D3 作品批改</td><td>「辅助批改」生成候选建议 → <strong>TA 先确认/忽略</strong> → <strong>教师再「纳入报告」</strong>。<strong>这是"师-生-机"最直接的画面</strong></td></tr>
+            <tr><td class="n">D4 教学报告</td><td>学习参与 / 作品提交 / 独立表现 / 确认问题 四个指标 + 已确认问题 + 教学建议 + 导出报告</td></tr>
+          </tbody>
+        </table></div>
+        <blockquote><p>「AI 只负责<strong>发现候选问题、聚合模式、减少机械工作</strong>；数学判断权始终在 TA 和教师手里。教师端输出的不是'AI 批改了多少份'，而是'<strong>本周值得教学关注的现象</strong>'。」</p></blockquote>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>E · 五门课与学科 Harness</h3><span class="badge">必须 · 2 页</span></div>
+        <p>这是<strong>技术实施质量</strong>维度最硬的一页。<strong>不要写"我们支持五门课"，把代码里真实注册的 harness 打出来</strong>：</p>
+        <div class="tw"><table>
+          <thead><tr><th>课程</th><th>学科 Harness（代码里真实注册的）</th></tr></thead>
+          <tbody>
+            <tr><td><strong>数学分析</strong><br><span class="footnote">旗舰 · 深做</span></td><td>定理条件 <code>theorem_conditions</code> · 量词边界 <code>quantifier_boundary</code> · 证明逻辑 <code>proof_logic</code> · 提示泄露 <code>answer_leakage</code></td></tr>
+            <tr><td><strong>常微分方程</strong></td><td>符号残差 <code>symbolic_residual</code> · 初边值条件 <code>initial_boundary_conditions</code> · 存在唯一性 <code>existence_uniqueness</code> · 数值交叉核对 <code>numerical_crosscheck</code></td></tr>
+            <tr><td><strong>大学物理</strong></td><td>单位量纲 <code>unit_dimension</code> · 模型假设 <code>model_assumptions</code> · 方向与符号 <code>direction_sign</code> · 数量级 <code>magnitude_check</code></td></tr>
+            <tr><td><strong>点集拓扑</strong></td><td>定义与约定 <code>definition_convention</code> · 量词逻辑 <code>quantifier_logic</code> · 反例核对 <code>counterexample_check</code> · 条件替换 <code>condition_substitution</code></td></tr>
+            <tr><td><strong>高等代数与解析几何</strong></td><td>符号矩阵核对 <code>symbolic_matrix_check</code> · 秩与维数条件 <code>rank_dimension_conditions</code> · 充要性 <code>necessity_sufficiency</code></td></tr>
+          </tbody>
+        </table></div>
+        <p>配一句原文解释 Harness 是干嘛的——<strong>注意措辞，别说"保证 100% 正确"</strong>：</p>
+        <blockquote><p>「Harness 的目标是<strong>让 Course Mirror 更容易发现自己没有足够依据</strong>，并在必要时重试、降级回答或明确表达不确定性。」</p></blockquote>
+        <p>每门课还有<strong>独立的课程教学策略</strong>，例如：</p>
+        <ul>
+          <li>数分：「明确量词顺序与变量依赖；使用定理前核对全部条件；证明必须区分直观与论证。」</li>
+          <li>大物：「先说明物理模型和假设，再检查单位、方向与极限情形；<strong>不把数学运算代替物理解释</strong>。」</li>
+          <li>心理学：「不从聊天做临床诊断或人格贴标签。」</li>
+        </ul>
+        <div class="note ok"><span class="tag">潜台词</span><span>这一页真正要证明的是：<strong>换一门课不是换一个 prompt</strong>。</span></div>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>F · 数据权利与隐私</h3><span class="badge">必须 · 3 页</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>要点</th></tr></thead>
+          <tbody>
+            <tr><td class="n">F1 六个授权字段</td><td>每个数据源<strong>分别</strong>声明 <code>allowed_for_runtime</code> / <code>allowed_for_rag</code> / <code>allowed_for_eval</code> / <code>allowed_for_training</code> / <code>retention_policy</code> / <code>license_note</code>。<strong>检索与运行时双门控，代码里逐块过滤</strong></td></tr>
+            <tr><td class="n">F2 三条不能越的线</td><td>① 私人对话与笔记<strong>默认本人可见</strong>，不因关联课程就向教师公开；② <strong>不把"求助多"解释为"能力差"</strong>，不把"看答案"作为惩罚性指标；③ 教师端<strong>不做</strong>"谁问 AI 最多"这类监控面板</td></tr>
+            <tr><td class="n">F3 生命周期</td><td>学生模型随学生生命周期结束而删除；班级临时上下文随作业周期清理；<strong>只有去身份化、聚合、人工审核过的经验</strong>才进课程长期资产</td></tr>
+          </tbody>
+        </table></div>
+        <blockquote><p>「'学生上传用于当前答疑'<strong>不自动等于</strong>'允许训练'；'购买教材'<strong>不自动等于</strong>'允许批量复制或模型训练'。」</p></blockquote>
+        <blockquote><p>「<strong>信任一旦破坏，最珍贵的数据就会变成表演数据。</strong>」</p></blockquote>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>G · 工程质量</h3><span class="badge opt">加分 · 2 页</span></div>
+        <p>评委里一定有懂工程的人，这两页专门给他们。</p>
+        <div class="tw"><table>
+          <thead><tr><th>页</th><th>要点</th></tr></thead>
+          <tbody>
+            <tr><td class="n">G1 测试与验收</td><td><strong>后端 409 项自动化测试通过</strong>；<strong>22 个浏览器端到端验收脚本</strong>（覆盖对话、摘录、笔记、反馈、教材库、课表、首页登录等）；每次改动跑全量回归</td></tr>
+            <tr><td class="n">G2 诚实边界</td><td>下面这些是"我们做不到、所以如实说出来"的地方——<strong>这一页非常加分</strong></td></tr>
+          </tbody>
+        </table></div>
+        <h4>G2 具体列这几条（都是代码里真实存在的行为）</h4>
+        <ul>
+          <li>一整章教材（300+ 块 / 5–14 万字符）<strong>塞不进模型上下文</strong>。做法是：<strong>完整章节目录必发 + 按预算节选正文 + 如实写出"本章还有 N 块未列出"</strong>，并要求模型在材料没覆盖的地方标注「（超出所给材料，待核对）」。</li>
+          <li>导出的 Word/PPT 是<strong>单向导出</strong>，不保证与网页逐像素一致；公式导出为纯文本。</li>
+          <li>扫描件抽不出文字时<strong>直接说读不到</strong>，不假装读过。</li>
+          <li>上传的文档超出额度时，回答里会说明"只看到文件名"。</li>
+          <li>「学镜<strong>不替你做作业</strong>」：习题只给思路与框架，不代写整份。</li>
+        </ul>
+      </div>
+
+      <div class="deckgroup">
+        <div class="hd"><h3>H · 收尾</h3><span class="badge">必须 · 1 页</span></div>
+        <p>十条共同原则里留这四条（最有辨识度的）：</p>
+        <ol>
+          <li><strong>先帮助学生，再观察学生。</strong></li>
+          <li><strong>诊断是学习的副产品，不是额外负担。</strong>（全程不用填任何问卷）</li>
+          <li><strong>一次行为不能定义一个学生。</strong></li>
+          <li><strong>个性化必须真正改变下一次帮助，而不只是改变展示文案。</strong></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ══ 3 ══ -->
+    <section id="p3">
+      <h2><span class="n">3</span>演示视频分镜脚本</h2>
+      <p>约 7 分钟，13 个镜头。<strong>叙事骨架直接采用产品文档里的"最终场景"</strong>——那本来就是写的验收画面：</p>
+      <blockquote>
+        <p>「周三晚上，学生小王做数分作业，在一道 ε-δ 证明上卡住。他拍题、自己先想，然后点'我卡住了'。系统结合他的历史（曾在构造辅助对象时卡住过两次）只给第一级提示，而不是答案。他做出来后，系统记下一条学习证据——<strong>全程不用填任何问卷</strong>。</p>
+        <p>同一时间，TA 收到 AI 的批改辅助……教师据此决定下周一花十分钟讲这个问题。</p>
+        <p><strong>学生的私人对话内容，教师全程看不到。</strong>」</p>
+      </blockquote>
+
+      <div class="shots">
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 00</span>0:00–0:20</div>
+          <div class="body">
+            <h4>黑底白字</h4>
+            <p class="vo">「学生得到最终答案之前，发生了什么？」「传统作业链里，这些信息在提交那一刻就消失了。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 01</span>0:20–0:45</div>
+          <div class="body">
+            <h4>学习首页</h4>
+            <p class="screen"><b>画面</b>　首页一屏</p>
+            <p class="vo">「学镜：面向大学数理课程的个性化学习智能体。五门课、三个角色界面。先看学生端。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 02</span>0:45–1:35</div>
+          <div class="body">
+            <h4>课程学习：拍题</h4>
+            <p class="screen"><b>操作</b>　选数分 → 拍一道 ε-δ 题 → 识别成文字 → 先自己写两行</p>
+            <p class="vo">「他先自己试。卡住了，点『我卡住了』。」</p>
+          </div>
+        </div>
+        <div class="shot key">
+          <div class="time"><span class="idx">镜头 03</span>1:35–2:20</div>
+          <div class="body">
+            <h4>一级提示</h4>
+            <p class="screen"><b>操作</b>　观察状态文案「寻知·正在查找教材 → 答疑·正在思考 → 正在核对回答」→ 只出现「提示 1/3」</p>
+            <p class="vo">「注意三件事：状态是分段的、提示<strong>只给一级不是答案</strong>、回答带『资料来源』可以核对到教材页码。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 04</span>2:20–3:00</div>
+          <div class="body">
+            <h4>追问与检查</h4>
+            <p class="screen"><b>操作</b>　点「再深入一点」→ 再点「梳理解题框架」</p>
+            <p class="vo">「三级提示梯度。他做出来了——<strong>这条过程被记下来了</strong>。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 05</span>3:00–3:40</div>
+          <div class="body">
+            <h4>摘录 + 并排子页面</h4>
+            <p class="screen"><b>操作</b>　框选两段回答 → 拼接成子页面 → 在子页面里继续问</p>
+            <p class="vo">「把关键片段剪下来、并排追问。所有结论都能回到原句。」</p>
+          </div>
+        </div>
+        <div class="shot key">
+          <div class="time"><span class="idx">镜头 06</span>3:40–4:40</div>
+          <div class="body">
+            <h4>笔记闭环</h4>
+            <p class="screen"><b>操作</b>　开「笔记」→ 勾选 3 处回答 → 存为笔记 → agent 整理 → <b>提示条「已存到…」+ 撤回</b> → 打开页边偏好面板点两个选项（看高亮块插进输入框）→ 说一句「把散在科目根的笔记整理到第 8 章」→ <b>操作回执</b></p>
+            <p class="vo">「学生要的笔记由他自己勾选，agent 负责整理成一份。存完给撤回。<strong>agent 还能直接管理他的笔记库</strong>——看这条回执，做了什么、哪项没做成都写清楚。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 07</span>4:40–5:10</div>
+          <div class="body">
+            <h4>我的笔记</h4>
+            <p class="screen"><b>操作</b>　打开笔记库 → 展示目录树 → 点「导出」→ 选 Word</p>
+            <p class="vo">「科目/目录树、回收站 30 天、一键导出 Word/PPT/HTML。」</p>
+          </div>
+        </div>
+        <div class="shot key">
+          <div class="time"><span class="idx">镜头 08</span>5:10–5:50</div>
+          <div class="body">
+            <h4>学习反馈</h4>
+            <p class="screen"><b>操作</b>　展示最近进展 / 时间线 / 占比 / 趋势 → 点一次「纠正记录」填理由保存</p>
+            <p class="vo">「这一页<strong>没有任何一个数字叫掌握度</strong>。只讲证据变化。学生可以<strong>当场纠正任何一条判断</strong>——这是我们对'可解释、可修正'的承诺。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 09</span>5:50–6:10</div>
+          <div class="body">
+            <h4>五门课快切</h4>
+            <p class="screen"><b>操作</b>　课程下拉依次切到高代 / 大物 / 点拓 / 常微分，<b>每门课问一句</b></p>
+            <p class="vo">「五门课不是换 prompt：每门课有自己的教材、知识层和<strong>学科 Harness</strong>——物理查量纲、常微分查残差、拓扑查反例、高代查秩与维数。」</p>
+          </div>
+        </div>
+        <div class="shot key">
+          <div class="time"><span class="idx">镜头 10</span>6:10–6:50</div>
+          <div class="body">
+            <h4>TA → 教师</h4>
+            <p class="screen"><b>操作</b>　切教师端 → 作品批改 → 点「辅助批改」→ TA 确认 → 教师「纳入报告」→ 教学报告页</p>
+            <p class="vo">「AI 只发现候选问题，<strong>判断权在 TA 和教师</strong>。教师拿到的是'本周值得教学关注的现象'，不是'AI 批改了多少份'。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 11</span>6:50–7:10</div>
+          <div class="body">
+            <h4>课程建设端</h4>
+            <p class="screen"><b>操作</b>　打开一道题的编辑 → 展示解法 / 教学要点 / 权限开关 → 「教师确认发布新版本」</p>
+            <p class="vo">「课程资产可审校、可回滚、带授权开关。」</p>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="time"><span class="idx">镜头 12</span>7:10–7:30</div>
+          <div class="body">
+            <h4>收尾</h4>
+            <p class="screen"><b>画面</b>　回学生端首页</p>
+            <p class="vo">「学生的私人对话，教师全程看不到。<strong>先帮助学生，再观察学生。</strong>」</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="note"><span class="tag">3 分钟版</span><span>保留 <strong>02 拍题</strong>、<strong>03 一级提示</strong>、<strong>06 笔记闭环</strong>、<strong>08 学习反馈</strong>、<strong>10 TA→教师</strong>，其余压成一句带过。这五个镜头是"师-生-机"闭环的最小完整集合。</span></div>
+
+      <h3>拍摄手法</h3>
+      <ul>
+        <li><strong>跟着鼠标走，不要拍人。</strong>全程屏幕录制 + 旁白，不出现真人。</li>
+        <li><strong>每个镜头前 2 秒先定格</strong>再动鼠标，观众才看得清界面。</li>
+        <li><strong>鼠标移动要慢</strong>，必要时后期 1.2–1.5× 减速。</li>
+        <li><strong>关键界面加 3 秒放大镜</strong>（3–5 处即可）：提示标签「提示 1/3」、撤回按钮、操作回执、纠正记录表单、"不是能力评分"那行小字。</li>
+        <li><strong>切换端时给明显过渡</strong>（左侧栏高亮），否则观众分不清现在是学生还是教师视角。</li>
+        <li>结尾定格 3 秒，留 Logo + 一句话总结。</li>
+      </ul>
+    </section>
+
+    <!-- ══ 4 ══ -->
+    <section id="p4">
+      <h2><span class="n">4</span>拍摄前必须做的准备</h2>
+      <p>这一节最容易翻车。<strong>逐条做完再开机。</strong></p>
+
+      <div class="note warn">
+        <span class="tag">缺口一</span>
+        <span><strong>本地库里没有任何教师/TA 账号，而且注册不了。</strong><br>
+        实测：<code>data/browser-test.sqlite</code> 里 <strong>35 个账号全是 student</strong>，而 <code>.env</code> 里 <code>MIRROR_STAFF_INVITE_CODE=</code> 是<strong>空的</strong>——教师/TA 注册需要邀请码，空值直接 403。<br>
+        <strong>解决</strong>：在 <code>.env</code> 补一行 <code>MIRROR_STAFF_INVITE_CODE=demo-team-invite</code>，<strong>重启 API</strong>，再用这个邀请码注册一个教师账号。</span>
+      </div>
+
+      <div class="note warn">
+        <span class="tag">缺口二</span>
+        <span><strong>作业空间、作品提交、课程修订全是 0 条。</strong><br>
+        实测：<code>sandbox_policies = 0</code>、<code>assignment_submissions = 0</code>、<code>course_revisions = 0</code>。<br>
+        也就是<strong>教师端和课程建设端现在拍出来全是空态</strong>。</span>
+      </div>
+
+      <h3>按这个顺序预置一遍（约 15 分钟）</h3>
+      <ol>
+        <li>教师账号登录 → <strong>作业管理</strong> → 布置作业（课程 = 数学分析，名称「数列极限 · 第一次习题」，班级人数 32，<strong>记下作业码</strong>）</li>
+        <li>换学生账号（用你已有的 <code>milkdragon</code>）→ <strong>我的作业</strong> → 输作业码加入 → <strong>提交作业</strong>（作答内容填一段真实的 ε-δ 作答，勾选"提交给教师"）</li>
+        <li>想演示"多人共性"的话，<strong>再注册 2–3 个学生账号各提交一份</strong>（批改页的学生列表才有内容）</li>
+        <li>教师端 → <strong>作品批改</strong> → 点「辅助批改」→ 保存一次批改 → 点「汇总问题」</li>
+        <li>教师端 → <strong>课程建设</strong> → 打开一道已有题目 → 改一处 → 填审校说明 → 发布一次（这样"版本记录"里才有东西）</li>
+      </ol>
+      <div class="note ok"><span class="tag">验收</span><span>教师端三个页面（总览 / 批改 / 报告）打开<strong>都不是空态</strong>；课程建设端「贡献候选与版本记录」<strong>至少有一条记录</strong>。</span></div>
+
+      <h3>学生端数据也要喂一遍</h3>
+      <p>现有演示账号只有 <strong>7 段对话、2 篇笔记</strong>，反馈页的图表会很空。至少要补：</p>
+      <ul>
+        <li><strong>8–12 篇笔记</strong>，分布在 2–3 个科目、不同目录，其中 2–3 篇标 ★</li>
+        <li><strong>至少 3 个科目的对话</strong>（这样"各科目学习占比"才有分段）</li>
+        <li><strong>几条学习观察</strong>：在对话末尾的「补充学习反馈」里点几次「仍有困难 / 这次独立完成」</li>
+        <li>想演示"观察被更正"的话，在反馈页对一条观察点一次「纠正记录」</li>
+      </ul>
+
+      <h3>环境准备</h3>
+      <div class="tw"><table>
+        <thead><tr><th>项</th><th>做法</th></tr></thead>
+        <tbody>
+          <tr><td class="n">起后端</td><td>仓库根目录：<code>apps/api/.venv/Scripts/python.exe -m uvicorn mirror_api.main:app --app-dir apps/api/src --port 8015</code></td></tr>
+          <tr><td class="n">起前端</td><td><code>cd apps/web &amp;&amp; node node_modules/next/dist/bin/next build</code>，然后仓库根 <code>node scripts/serve-static.cjs 3011</code></td></tr>
+          <tr><td class="n">为什么不用 dev</td><td>dev server 编译 mermaid 极慢（10 分钟不完成）；<code>serve-static</code> 秒开，并把 <code>/api</code> 同源反代到后端</td></tr>
+          <tr><td class="n">浏览器</td><td>Edge/Chrome，<strong>缩放 100%</strong>，窗口 1600×1000 以上；<code>F11</code> 全屏；<strong>隐藏书签栏</strong>（Ctrl+Shift+B）</td></tr>
+          <tr><td class="n">关掉干扰</td><td>浏览器通知、系统通知、微信/QQ、输入法候选窗；关掉 Windows 缩放动画</td></tr>
+          <tr><td class="n">录屏</td><td>OBS Studio（免费）：1920×1080、60fps、编码器选硬件；或 Win+G 自带录屏（简单但码率低）</td></tr>
+          <tr><td class="n">麦克风</td><td>用耳麦，别用笔记本内置麦；录之前试录 10 秒回放</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note danger">
+        <span class="tag">务必知情</span>
+        <span><strong>这是真实模型调用，不是演示桩。</strong><br>
+        <code>.env</code> 指向真实 DeepSeek 接口（<code>openai_compatible</code> / <code>deepseek-flash</code>，超时 300 秒，单次上限 32768 tokens）。走一遍全脚本约几十次调用，<strong>每次都花钱</strong>；回答<strong>有几秒到几十秒延迟且内容不确定</strong>。<br>
+        所以：关键镜头（03 一级提示、06 笔记整理、10 辅助批改）<strong>不要直播等</strong>，提前跑出来确认内容合适了再拍；等待期间切镜头或垫旁白，别拍转圈；同一句提问多跑几次，挑最好的版本。<br>
+        <strong>也不要改用 <code>MIRROR_LLM_PROVIDER=stub</code> 拍</strong>——那是离线占位回答，内容一眼假。</span>
+      </div>
+
+      <h3>脚本与彩排</h3>
+      <ol>
+        <li><strong>先把旁白写成逐字稿</strong>（按分镜表的旁白栏扩写），念一遍掐时长。</li>
+        <li><strong>按稿走两遍完整彩排</strong>，只录屏不配音，检查每步点击是否顺利、有没有空态、等待是否过长。</li>
+        <li>记录<strong>每个镜头的实际耗时</strong>，据此调整旁白长度（宁可旁白短一点，画面多停两秒）。</li>
+        <li><strong>最后一遍正式录，分镜分段录</strong>，后期拼——不要一遍到底，错一个字全废。</li>
+      </ol>
+    </section>
+
+    <!-- ══ 5 ══ -->
+    <section id="p5">
+      <h2><span class="n">5</span>绝不能说错的话</h2>
+      <p>左边是不该说的，右边是替换说法。这几处踩中任何一条，都会直接伤到创新性或可信度评分。</p>
+      <div class="say">
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「我们训练 / 微调了大模型」</div>
+          <div class="yes"><span class="lbl">这么说</span>「我们不训练大模型：通用基座 + 自建课程语料检索 + 智能体工作流 + 评测题质检。教材授权的训练权限本来就是关闭的。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「AI 能保证答案正确」</div>
+          <div class="yes"><span class="lbl">这么说</span>「Harness 让 Course Mirror <strong>更容易发现自己没有足够依据</strong>，必要时降级或明确表达不确定性。我们不宣称 100% 正确。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「系统会给学生做能力评估」</div>
+          <div class="yes"><span class="lbl">这么说</span>「我们<strong>不做能力评分</strong>。只记录证据和观察，而且允许学生质疑和纠正。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「老师在后台能看到学生的全部 AI 对话」</div>
+          <div class="yes"><span class="lbl">这么说</span>「<strong>默认不把完整私人对话暴露给教师。</strong>教师端看的是摘要、趋势和与教学相关的证据——这是设计上的边界，不是功能缺失。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「求助多的学生能力差」</div>
+          <div class="yes"><span class="lbl">这么说</span>「<strong>求助行为本身不是负面行为。</strong>我们不把'求助多'解释为'能力差'。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「五门课都已经产品化完成」</div>
+          <div class="yes"><span class="lbl">这么说</span>「<strong>1 门深做</strong>（数学分析全闭环）<strong>+ 4 门真实可用</strong>，用来证明架构可以从一门课扩展到多门课。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「拾记 / 学迹是我们训练的五个模型」</div>
+          <div class="yes"><span class="lbl">这么说</span>「这是课程内的<strong>五个逻辑角色</strong>（答疑 / 寻知 / 编题 / 拾记 / 学迹），<strong>各有工具和权限边界，不必各自微调一个模型</strong>。」</div>
+        </div>
+        <div class="pair">
+          <div class="no"><span class="lbl">别这么说</span>「已经完成了真实课堂验证」</div>
+          <div class="yes"><span class="lbl">这么说</span>目前<strong>没有</strong>真实课堂 / 真实学生实验数据，不要宣称已完成教学效果验证。（进度文档的验收表明确写着"真机 / 教学质量 ⚠️ 未完成"）</div>
+        </div>
+      </div>
+
+      <h3>评委可能追问的三个问题，准备这三句</h3>
+      <div class="tw"><table>
+        <thead><tr><th>追问</th><th>怎么答</th></tr></thead>
+        <tbody>
+          <tr><td class="n">这跟直接问 ChatGPT 有什么区别？</td><td>「ChatGPT 给你答案；学镜<strong>记得你怎么卡住的</strong>，并且下一次给的帮助不一样。而且我们的回答可以核对到教材页码，材料不够时会如实标注。」</td></tr>
+          <tr><td class="n">你们的 RAG 会不会泄露教材版权？</td><td>「教材数据的授权字段是<strong>逐条</strong>声明的，检索和运行时<strong>双门控</strong>，代码里逐块过滤。训练权限全部关闭，仓库和提交材料里不含教材原文。」</td></tr>
+          <tr><td class="n">教师端会不会变成监控工具？</td><td>「不会，而且我们在产品文档里把它写成了负面清单：不做'谁问 AI 最多''谁疑似偷懒'这类面板。教师拿到的是'本周值得教学关注的现象'。」</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 6 ══ -->
+    <section id="p6">
+      <h2><span class="n">6</span>开机前的最后一张检查表</h2>
+      <p>点一下可以勾掉。全勾完再按录制键。</p>
+      <div class="checklist">
+        <label><input type="checkbox"><span><code>.env</code> 里已设 <code>MIRROR_STAFF_INVITE_CODE</code>，API 已重启</span></label>
+        <label><input type="checkbox"><span>教师账号已注册并能登录 <code>/teacher</code></span></label>
+        <label><input type="checkbox"><span>作业已布置，作业码记在手边</span></label>
+        <label><input type="checkbox"><span>≥1 份学生作品已提交（理想 3 份）</span></label>
+        <label><input type="checkbox"><span>至少跑过一次「辅助批改」和「汇总问题」</span></label>
+        <label><input type="checkbox"><span>课程建设端「版本记录」里至少有一条</span></label>
+        <label><input type="checkbox"><span>学生账号 ≥8 篇笔记、≥3 个科目有对话、≥5 条学习观察</span></label>
+        <label><input type="checkbox"><span>后端 8015 已在跑；前端 3011 已在跑（静态导出，不是 dev）</span></label>
+        <label><input type="checkbox"><span>浏览器全屏、书签栏已隐藏、通知已关、输入法已收</span></label>
+        <label><input type="checkbox"><span>OBS 场景已建、试录 10 秒回放正常</span></label>
+        <label><input type="checkbox"><span>旁白逐字稿已打印 / 放第二屏</span></label>
+        <label><input type="checkbox"><span>关键镜头已提前跑过，回答内容已确认</span></label>
+        <label><input type="checkbox"><span>录完立刻备份原始文件（OBS 输出目录 → 移动硬盘 / 网盘）</span></label>
+      </div>
+    </section>
+
+    <!-- ══ 7 ══ -->
+    <section id="p7">
+      <h2><span class="n">7</span>可引用的真实数字</h2>
+      <p>下面这些都在当前分支实测过，可以直接写进 PPT。</p>
+      <div class="tw"><table>
+        <thead><tr><th>指标</th><th>数值</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>后端自动化测试</td><td class="n"><strong>409 项通过</strong>（1 xfailed）</td><td><code>pytest apps/api/tests</code></td></tr>
+          <tr><td>浏览器端到端验收脚本</td><td class="n"><strong>22 个</strong></td><td>当前环境 14 个全绿，其余依赖活后端或已过期。<code>scripts/verify-*.cjs</code></td></tr>
+          <tr><td>教材文本块</td><td class="n"><strong>6,319 块</strong></td><td>数分两册：上册 381 页 / 下册 442 页；逐块带 <code>allowed_for_rag</code> 门控</td></tr>
+          <tr><td>结构化知识点</td><td class="n"><strong>468 个</strong></td><td>课程包 <code>knowledge.*.jsonl</code></td></tr>
+          <tr><td>人工核验题目</td><td class="n"><strong>35 道</strong></td><td>数分 11 道，其余四门各 4–5 道</td></tr>
+          <tr><td>课程</td><td class="n"><strong>10 门 profile</strong></td><td>5 门比赛课程 + 4 门扩展 + AI 教学。<code>apps/api/src/mirror_api/profiles/</code></td></tr>
+          <tr><td>学科 Harness</td><td class="n"><strong>19 个</strong></td><td>比赛五门课合计（全部课程 20 个），见第 2 节 E</td></tr>
+          <tr><td>后端 / 前端代码量</td><td class="n">Python 9,182 行<br>TS+TSX 5,456 行 + CSS 2,768 行</td><td>不含测试与脚本</td></tr>
+          <tr><td>笔记操作种类</td><td class="n"><strong>9 种</strong></td><td>save / append / update / rename / move / star / remark / delete / restore</td></tr>
+          <tr><td>生产环境</td><td class="n"><code>learningmirror.cn</code> 在线</td><td>Let's Encrypt 证书，ICP 备案 浙ICP备2026075928号-1；演示可用本地，也可开线上</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note warn"><span class="tag">口径</span><span><code>docs/项目概况总览.md</code> 里有更早的快照写着"111 项后端测试""21 个静态路由"——<strong>那些是旧数字</strong>。以本文档的实测值为准，或者演示前自己再跑一次 <code>pytest</code> 和 <code>next build</code> 取最新值。</span></div>
+    </section>
+  </main>
+</div>
+
+</head>
+<body>
+</body>
+</html>
