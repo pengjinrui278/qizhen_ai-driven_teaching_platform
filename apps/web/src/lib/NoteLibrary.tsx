@@ -87,8 +87,7 @@ export default function NoteLibrary({courses}:{courses:Record<string,any>[];user
 
  return <div className="noteLibrary">
   <div className="pageHeading nmHeading">
-   <div><h1>我的笔记</h1>
-    <p>按科目整理的知识库：自己写的、AI 按章节整理的，都放这里；每条都能看到来源与时间。</p></div>
+   <div><h1>我的笔记</h1></div>
    <div className="nmHeadingActions">
     <button type="button" className="nmPrimary" disabled={busy} onClick={()=>setDialog({kind:"new"})}>新建笔记</button>
    </div>

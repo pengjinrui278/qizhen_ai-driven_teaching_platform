@@ -97,7 +97,7 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
  if(loadState==="loading")return <section className="learningFeedback"><p role="status">正在加载学习记录…</p></section>;
  if(loadState==="error")return <section className="learningFeedback"><p role="alert">学习记录加载失败：{loadError}</p><button onClick={onRetry}>重新加载</button></section>;
  return <section className="learningFeedback" ref={root} aria-label="学习档案与诊断">
-  <header className="lf-heading"><div><h1>学习档案与诊断</h1><p>基于学习证据的持续观察，可核对、可更正。</p></div><div className="lf-filters">
+  <header className="lf-heading"><div><h1>学习档案与诊断</h1></div><div className="lf-filters">
    <label><span className="lf-sr">反馈课程</span><select aria-label="反馈课程" value={course} disabled={busy} onChange={e => setCourse(e.target.value)}><option value="all">全部课程</option>{courses.map(c => <option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>
    <label><span className="lf-sr">反馈时间</span><select aria-label="反馈时间" value={days} disabled={busy} onChange={e => setDays(e.target.value)}><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="all">全部时间</option></select></label>
   </div></header>
@@ -105,7 +105,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
   <section className="lf-panel" aria-labelledby="lf-progress-title">
    <div className="lf-panel-head"><h2 id="lf-progress-title"><Icon kind="pulse"/>最近进展</h2>
     <span className="lf-badge lf-info">证据变化 {changedHypotheses.length + corrected.length} 处</span></div>
-   <p className="lf-note">这里只说证据和观察本身变了什么，<strong>不是能力评分</strong>。提问次数、学习时长、自报完成都不计为掌握。</p>
    {changedHypotheses.length || corrected.length ? <ul className="lf-progress-list">
     {corrected.map(o => <li key={"c" + o.id} data-kind="corrected">
      <span className="lf-badge lf-info">观察被更正</span>
@@ -122,7 +121,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
   <section className="lf-panel" aria-labelledby="lf-share-title">
    <div className="lf-panel-head"><h2 id="lf-share-title"><Icon kind="chart"/>各科目学习占比</h2>
     <span className="lf-meta">按对话轮次 + 笔记份数计</span></div>
-   <p className="lf-note">反映精力花在哪里，不反映学得怎么样。</p>
    {shareRows.length ? <>
     <ShareBar rows={shareRows}/>
     <ChartTable caption="各科目学习占比" head={["科目", "条数", "占比"]}
@@ -133,7 +131,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
 
   <section className="lf-panel" aria-labelledby="lf-trend-title">
    <div className="lf-panel-head"><h2 id="lf-trend-title"><Icon kind="chart"/>活动趋势（近 8 周）</h2></div>
-   <p className="lf-note">两张图共用一套刻度，可以横向对比；刻意不做双 Y 轴，避免把两种量纲叠在一起造出假相关。这张图自带 8 周窗口，只受课程筛选影响。</p>
    <TrendColumns weeks={weeks} series={trendSeries}/>
    <ChartTable caption="活动趋势" head={["周", "对话轮次", "笔记产出"]}
     rows={weeks.map((w, i) => [w.full, trendSeries[0].values[i], trendSeries[1].values[i]])}/>
@@ -142,7 +139,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
   <section className="lf-panel" aria-labelledby="lf-notes-title">
    <div className="lf-panel-head"><h2 id="lf-notes-title"><Icon kind="file"/>笔记产出</h2>
     <a href={"/student/notes"}>打开我的笔记</a></div>
-   <p className="lf-note">笔记同样是学习证据的一部分：agent 存进笔记库的每份笔记都会计入这里。</p>
    {notesError && <p className="lf-error" role="alert">{notesError}</p>}
    <ul className="lf-kpis">
     {[["笔记总数", scopedNotes.length, "所选范围"], ["近 7 天新增", freshNotes.length, "按创建时间"],
@@ -158,7 +154,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
   <section className="lf-panel" aria-labelledby="lf-timeline-title">
    <div className="lf-panel-head"><h2 id="lf-timeline-title"><Icon kind="clock"/>学习时间线</h2>
     <span className="lf-meta">对话与笔记合并</span></div>
-   <p className="lf-note">按天记录你在课程里做过什么。这是活动流水，不是能力判断。</p>
    {timeline.length ? <ol className="lf-timeline">{timeline.map(([day, items]) =>
     <li key={day}><h3>{dayLabel(items[0].at)}</h3><ul>{items.slice(0, 12).map(item =>
      <li key={item.id} data-type={item.type}><span className="lf-badge">{item.type === "note" ? "笔记" : "对话"}</span>
@@ -169,7 +164,6 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
 
   <section className="lf-panel" aria-labelledby="lf-observations-title">
    <div className="lf-panel-head"><h2 id="lf-observations-title"><Icon kind="pulse"/>持续学习观察</h2><span className="lf-badge lf-info">{hypotheses.length} 项候选观察</span></div>
-   <p className="lf-note">不是能力评分或已确认诊断。以下依据所选课程的历史有效证据；时间筛选仅影响活动图表和记录。</p>
    {hypotheses.length ? <div className="lf-diagnoses">{(showAllObservations?hypotheses:hypotheses.slice(0,3)).map(h => {
     const status = statuses[h.status] ? h.status : "emerging", support: string[] = h.supporting || [], contra: string[] = h.contradicting || [];
     return <article key={h.id} className="lf-diagnosis" data-status={status}>
@@ -185,7 +179,7 @@ export default function LearningFeedback({memory, courses, notes = [], notesErro
   {hypotheses.length>3&&<button onClick={()=>setShowAllObservations(v=>!v)}>{showAllObservations?"收起观察":"查看更多观察"}</button>}
 
   <details className="lf-feedback-details"><summary>反馈统计与原始记录</summary>
-  <section className="lf-panel" aria-labelledby="lf-outcome-title"><h2 id="lf-outcome-title"><Icon kind="clock"/>主动反馈分布</h2><p className="lf-note">所选时段共 {feedback.length} 条自述，独立性与正确性尚需验证。</p>
+  <section className="lf-panel" aria-labelledby="lf-outcome-title"><h2 id="lf-outcome-title"><Icon kind="clock"/>主动反馈分布</h2>
    {feedback.length ? <ul className="lf-outcomes">{Object.entries(outcomes).map(([key, label]) => {const count = feedback.filter(o => o.kind === key).length; return <li key={key} data-kind={key}><span>{label}</span><div className="lf-track" aria-hidden="true"><span style={{width: `${count / feedback.length * 100}%`}}/></div><strong>{count}<span className="lf-sr"> 条</span></strong></li>;})}</ul> : <div className="lf-empty"><p>暂无主动反馈</p><p>只展示实际记录，不生成示例比例。</p></div>}
   </section>
   <section className="lf-panel" aria-labelledby="lf-records-title"><div className="lf-panel-head"><h2 id="lf-records-title"><Icon kind="file"/>学习记录与更正</h2><span className="lf-meta">所选时段 {rows.length} 条</span></div>

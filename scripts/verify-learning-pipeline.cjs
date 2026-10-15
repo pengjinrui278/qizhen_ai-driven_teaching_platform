@@ -95,7 +95,9 @@ const notes = [
 
     // 3. 最近进展只讲证据变化，并明说不算能力
     const progress = page.locator('.lf-panel').filter({has: page.getByRole('heading', {name: '最近进展'})});
-    assert.match(await progress.innerText(), /不是能力评分/, '必须写明不是能力评分');
+    // 用户明确要求：不要把「不把活动量当能力」这类设计原则复述到界面上
+    assert.ok(!(await progress.innerText()).includes('不是能力评分'),
+      '界面不该出现「不是能力评分」这类复述需求的说明文字');
     assert.match(await progress.innerText(), /出现相反证据/, '应列出状态变化的观察');
     assert.match(await progress.innerText(), /观察被更正/, '应列出被更正的观察');
 

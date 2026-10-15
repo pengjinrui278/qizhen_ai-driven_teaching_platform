@@ -164,6 +164,7 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
     await page.keyboard.type('这是我补充的要求：');
     await page.waitForTimeout(200);
 
+    if (!(await page.locator('.chatToolPanel').count())) { await page.locator('.chatToolToggle').click(); await page.waitForTimeout(300); }
     await page.locator('.chatDocUpload input[type=file]').setInputFiles([
       {name: '第8章讲义.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test')},
     ]);
@@ -224,6 +225,7 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
     // 12. 页边抽出：拖进文件之后才出现，点开抽出偏好，按钮把高亮要求插进输入框
     const edge = page.locator('.noteEdge');
     assert.equal(await edge.count(), 0, '没有来源时不该有页边');
+    if (!(await page.locator('.chatToolPanel').count())) { await page.locator('.chatToolToggle').click(); await page.waitForTimeout(300); }
     await page.locator('.chatDocUpload input[type=file]').setInputFiles([
       {name: '第9章讲义.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test')},
     ]);
@@ -254,6 +256,7 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
       '.formulaMessageInput .fileChip, .formulaMessageInput .noteRefChip').forEach(c => c.click()));
     await page.waitForTimeout(600);
     assert.equal((await probe()).present, false, '没有来源时不该有页边');
+    if (!(await page.locator('.chatToolPanel').count())) { await page.locator('.chatToolToggle').click(); await page.waitForTimeout(300); }
     await page.locator('.chatDocUpload input[type=file]').setInputFiles([
       {name: '第9章讲义.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test')},
     ]);

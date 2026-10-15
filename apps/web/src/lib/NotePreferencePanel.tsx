@@ -76,8 +76,7 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
  return <div className="npBackdrop" role="presentation" onClick={onClose}>
   <section className="npPanel" role="dialog" aria-label="笔记偏好" onClick={e=>e.stopPropagation()}>
    <header className="npHead">
-    <div><h2>想要一份什么样的笔记？</h2>
-     <p>都可以不选。不选就按内容自动组织；也可以直接写要求。</p></div>
+    <div><h2>想要一份什么样的笔记？</h2></div>
     <button type="button" onClick={onClose} aria-label="跳过，我自己写">跳过</button>
    </header>
 
@@ -85,7 +84,7 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
    {!schema?.groups?.length?<p className="npLoading" role="status">{schema?"暂时取不到偏好选项，可以直接在输入框里写要求。":"正在加载选项…"}</p>:<>
     <div className="npGroups">{schema.groups.map(group=>
      <fieldset className="npGroup" key={group.id}>
-      <legend>{group.label}<span className="npHint">{group.hint}</span></legend>
+      <legend>{group.label}</legend>
       <div className="npChips">{group.options.map(option=>
        <button type="button" key={option.id} title={option.hint} aria-pressed={picks[group.id]===option.id}
         onClick={()=>toggle(group.id,option.id)}>{option.label}</button>)}
@@ -94,7 +93,7 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
     </div>
 
     <fieldset className="npGroup">
-     <legend>笔记的来源<span className="npHint">决定 agent 依据什么写</span></legend>
+     <legend>笔记的来源</legend>
      <div className="npChips">{schema.source_kinds.filter(k=>k.id!=="upload"&&(!allowedSources||allowedSources.includes(k.id))).map(kind=>
       <button type="button" key={kind.id} title={kind.hint} aria-pressed={sourceKind===kind.id}
        onClick={()=>setSourceKind(kind.id)}>{kind.label}</button>)}
@@ -112,7 +111,7 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
     </fieldset>
 
     <fieldset className="npGroup">
-     <legend>存在哪里<span className="npHint">默认按科目分目录；存之前还会再确认一次</span></legend>
+     <legend>存在哪里</legend>
      <div className="npSource">
       <label>科目<select value={course} onChange={e=>setCourse(e.target.value)} aria-label="存放科目">
        {courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}
@@ -123,7 +122,7 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
       <label>文件名<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={200}
        placeholder="留空自动按章节起名"/></label>
      </div>
-     <label className="npCheck"><input type="checkbox" checked={starred} onChange={e=>setStarred(e.target.checked)}/>标为重要（复习时优先看到）</label>
+     <label className="npCheck"><input type="checkbox" checked={starred} onChange={e=>setStarred(e.target.checked)}/>标为重要</label>
     </fieldset>
 
     <label className="npFree">还想补充什么要求？
@@ -139,7 +138,6 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
     <div className="npActions">
      <button type="button" className="npPrimary" disabled={busy} onClick={()=>void compose()}>生成提示词并填入输入框</button>
      <button type="button" disabled={busy} onClick={onClose}>取消</button>
-     <span className="npNote">填入后不会自动发送，你可以先改再发。</span>
     </div>
    </>}
   </section>

@@ -38,24 +38,35 @@
 /* 2) 工具库按钮跟面板里的按钮同尺寸 */
 .chatToolToggle{width:auto;height:auto;min-height:36px;padding:8px 12px;border-radius:10px;}
 
-/* 3) 对话界面的功能按钮：描边透明，保留判定域/图标/内边距/文字与 hover 动效。
-     用 :not(:hover) 让各自的 hover 规则仍然生效；输入框与对话气泡不动。 */
-.portal .chatWorkspace button:not(.primary):not(:hover),
-.aiLearning .aiChat button:not(:hover),
-.aiLearning .aiChat .aiFile:not(:hover),
-.chatToolPanel button:not(:hover),
-.formulaPanel button:not(:hover),
-.quoteToolbar button:not(:hover),
-.materialToolbar button:not(:hover),
-.portal .chatHeader>button:not(:hover){border-color:transparent;}
-.portal .chatWorkspace button:not(.primary),
+/* 3) 对话界面的功能按钮：一律不要描边（含 hover），保留判定域、图标、内边距、文字与
+      hover 的背景/阴影动效。既有样式里按钮边框有五处同权重规则互相覆盖
+     （实测诊断：.portal button:hover:not(:disabled) 与我的规则同为 (0,3,1)、靠源码顺序胜出），
+     所以这里用 !important 定死，而不是继续堆权重。 */
+.portal .chatHeader button,
+.portal .chatWorkspace button,
+.portal .chatComposerActions button,
 .aiLearning .aiChat button,
-.portal .chatHeader>button{border-color:transparent;}
-
-/* 4) 笔记模式：按钮持续紫色高亮 */
-/* 权重必须压过头部按钮的既有样式，否则紫色高亮显示不出来（实测过） */
+.aiLearning .aiChat .aiFile,
+.formulaPanel button,
+.chatToolPanel button,
+.quoteToolbar button,
+.materialToolbar button{border-color:transparent !important;}
+/* 例外：笔记模式开启时该按钮持续紫色高亮（必须比上面那条更具体才压得住 !important） */
 .portal .chatHeader button.noteModeToggle.isOn,
-.aiLearning button.noteModeToggle.isOn{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.22);color:#4f46e5;font-weight:600;background:#eef2ff;}
+.aiLearning .aiChatHead button.noteModeToggle.isOn{border-color:#6366f1 !important;box-shadow:0 0 0 2px rgba(99,102,241,.22) !important;color:#4f46e5 !important;background:#eef2ff !important;font-weight:600;}
+
+/* 3b) 输入行改成显式网格：按钮各占一列并留 8px 间距，判定域不再互相压住。
+      两个对话页统一，避免一处是块级一处是网格导致按键重叠。 */
+/* 列宽用 auto：既有样式把第一列写死成 36px，而工具库按钮实际 52px，会溢出压住公式键。
+   既有规则权重更高，这里用 !important 覆盖列定义。 */
+.portal .chatComposer,.aiComposer{display:grid !important;grid-template-columns:auto auto minmax(0,1fr) auto !important;align-items:end !important;gap:8px !important;}
+.portal .chatComposerActions,.aiComposer .aiActions{display:contents;}
+.portal .chatComposer .chatToolMenu,.aiComposer .chatToolMenu{grid-column:1 !important;grid-row:1 !important;}
+.portal .chatComposer .formulaToggle,.aiComposer .formulaToggle{grid-column:2 !important;grid-row:1 !important;width:38px;min-width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;}
+.portal .chatComposer .formulaInputWrap,.aiComposer .formulaInputWrap{grid-column:3 !important;grid-row:1 !important;min-width:0;}
+.portal .chatComposer .chatComposerActions>button.primary,.aiComposer .aiPrimary{grid-column:4 !important;grid-row:1 !important;}
+.portal .chatComposer .chatComposerActions>button.primary,.aiComposer .aiPrimary{grid-column:4 !important;grid-row:1 !important;}
+.aiComposer .aiPrivacy,.aiComposer .aiAttachment{grid-column:1/-1;}
 
 /* 5) 笔记模式：聊天区背景变灰，回答气泡保持白色以突出；输入区与页边面板保持白色 */
 .portal .chatWorkspace[data-note-mode] .chatMessages{background:#eef1f6;border-radius:12px;padding:16px;}
