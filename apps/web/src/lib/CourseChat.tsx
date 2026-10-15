@@ -22,7 +22,6 @@ import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
 import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
 import ChatToolMenu from "./ChatToolMenu";
-import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
 import {composeRepliesMarker,decodeNoteMarker,freeNoteMarker,noteRefsInDraft,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
 import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
 import "./note-prefs.css";
@@ -50,7 +49,6 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const noteComposed=useRef<{prompt:string;ids?:string[];marker?:string}|null>(null);
  // 「并入哪一篇」：面板里显式选，没选就是新建（默认永远是新建）
  const [mergeId,setMergeId]=useState("");
- const [noteTarget,setNoteTarget]=useState<{requestId:string;target:SaveTarget}|null>(null);
  const [organizing,setOrganizing]=useState(false);
  // 笔记模式：关着的时候笔记相关交互一概不出现（人为调用，不做常驻引导）
  const [noteMode,setNoteMode]=useState(false);
@@ -456,6 +454,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
  {(noteMode||/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft))&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
   targets={refNotes} mergeId={mergeId} onMerge={id=>setMergeId(id)}
+  onOpenPanel={()=>setNotePanel({})} onOrganize={()=>setOrganizing(true)}
   onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
  {mentionQuery!==null&&<div className="noteMention" role="listbox" aria-label="引用我的笔记">
   {(()=>{

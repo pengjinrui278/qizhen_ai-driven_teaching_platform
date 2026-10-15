@@ -147,11 +147,15 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
 // 页边式的笔记偏好：拖进文件、引用教材或笔记之后，输入框上方冒出一条窄边；
 // 点它像抽页一样**上下**抽出面板（子页面是左右，这里是上下）。
 // 每个选项按钮点一下就往输入框插一段高亮要求，再点输入框里那块就撤销。
-export function NoteEdgePanel({open,onToggle,onPick,targets,mergeId,onMerge}:{
+export function NoteEdgePanel({open,onToggle,onPick,targets,mergeId,onMerge,onOpenPanel,onOrganize}:{
  open:boolean;onToggle:()=>void;onPick:(fragment:string,label:string)=>void;
  // 草稿里引用到的笔记：不只是依据，也可以当「并入」的目标
  targets?:{id:string;name:string}[];
  mergeId?:string;onMerge?:(id:string)=>void;
+ // 窄边下面这排提示词管的是「写法」；来源（教材章节）与存放位置在完整面板里。
+ // 这两件事没有别的入口，所以这里给两个明确入口——不是推荐问法，是这两件事的开关。
+ onOpenPanel?:()=>void;   // 打开完整偏好：选教材章节、指定科目/目录/文件名
+ onOrganize?:()=>void;    // 整理我的笔记：把散在科目根的笔记归位
 }){
  const [schema,setSchema]=useState<Schema|null>(null);
  const [busy,setBusy]=useState("");
@@ -162,10 +166,16 @@ export function NoteEdgePanel({open,onToggle,onPick,targets,mergeId,onMerge}:{
  },[open,schema]);
 
  return <div className={"noteEdge"+(open?" isOpen":"")}>
-  <button type="button" className="noteEdgeTab" aria-expanded={open} onClick={onToggle}>
-   <span className="noteEdgeGrip" aria-hidden="true"/>
-   {open?"收起笔记偏好":"笔记偏好"}
-  </button>
+  <div className="noteEdgeBar">
+   <button type="button" className="noteEdgeTab" aria-expanded={open} onClick={onToggle}>
+    <span className="noteEdgeGrip" aria-hidden="true"/>
+    {open?"收起笔记偏好":"笔记偏好"}
+   </button>
+   {onOpenPanel&&<button type="button" className="noteEdgeMore" onClick={onOpenPanel}
+    title="选教材章节作为来源，并指定存到哪个科目、哪个目录、叫什么名字">按教材章生成…</button>}
+   {onOrganize&&<button type="button" className="noteEdgeMore" onClick={onOrganize}
+    title="把散在科目根的笔记整批归到指定目录">整理我的笔记…</button>}
+  </div>
   <div className="noteEdgeBody" role="region" aria-label="笔记偏好" aria-hidden={!open}>
    {/* 必须容忍接口没按预期返回：schema 可能是 []、缺 groups，直接 .map 会把整块界面搞崩 */}
    {!schema?.groups?.length?<p className="npLoading">{schema?"暂时取不到偏好选项。":"正在加载选项…"}</p>:

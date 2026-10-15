@@ -156,10 +156,16 @@
 .noteEdge{margin:0;width:100%;max-width:none;position:relative;}
 /* 面板出现后，停靠区里排在它后面的（@ 列表、已选条、输入框）一起撑满，别一宽一窄 */
 .chatDock>.noteEdge~*{max-width:none;}
-.noteEdgeTab{display:flex;align-items:center;gap:8px;width:100%;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-bottom:0;border-radius:10px 10px 0 0;color:var(--lm-muted,#64748b);cursor:pointer;font:inherit;font-size:12px;padding:5px 12px;}
+/* 窄边这一排：左端是「抽出面板」的把手，右端是两件没有别处可做的事（来源、整理） */
+.noteEdgeBar{display:flex;align-items:stretch;gap:0;}
+.noteEdgeTab{display:flex;align-items:center;gap:8px;flex:1;min-width:0;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-bottom:0;border-radius:10px 10px 0 0;color:var(--lm-muted,#64748b);cursor:pointer;font:inherit;font-size:12px;padding:5px 12px;}
+.noteEdgeMore{flex:none;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-bottom:0;border-left:0;color:var(--lm-muted,#64748b);cursor:pointer;font:inherit;font-size:12px;padding:5px 10px;}
+.noteEdgeMore:last-child{border-radius:0 10px 0 0;}
+.noteEdgeMore:hover{color:var(--lm-primary-deep,#4f46e5);background:#f8faff;}
+.noteEdge.isOpen .noteEdgeBar .noteEdgeTab,.noteEdge.isOpen .noteEdgeBar .noteEdgeMore{border-bottom:1px solid var(--lm-border,#e2e8f0);}
+.noteEdge.isOpen .noteEdgeBar .noteEdgeTab,.noteEdge.isOpen .noteEdgeBar .noteEdgeMore{border-radius:0;}
 .noteEdgeTab:hover{color:var(--lm-primary-deep,#4f46e5);border-color:var(--lm-border-hover,#a5b4fc);}
 .noteEdgeGrip{width:26px;height:3px;border-radius:99px;background:#cbd5e1;}
-.noteEdge.isOpen .noteEdgeTab{border-radius:0;border-bottom:1px solid var(--lm-border,#e2e8f0);}
 /* 抽出：用 max-height 过渡，收起时高度归零、不可聚焦 */
 .noteEdgeBody{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease,opacity .2s ease;
   background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:0 0 10px 10px;}

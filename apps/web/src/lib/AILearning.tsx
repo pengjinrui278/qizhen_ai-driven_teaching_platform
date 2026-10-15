@@ -23,7 +23,7 @@ import "./student-ai-chat.css";
 import "katex/dist/katex.min.css";
 import "./ai-learning.css";
 import "./ai-prompts.css";
-import NotePreferencePanel,{NoteModeToggle} from "./NotePreferencePanel";
+import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
 import ChatToolMenu from "./ChatToolMenu";
 import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
@@ -60,6 +60,7 @@ export default function AILearning({section=""}:{section?:string}){
  const [organizing,setOrganizing]=useState(false);
  // 笔记模式：关着时笔记相关交互一概不出现
  const [noteMode,setNoteMode]=useState(false);
+ const [edgeOpen,setEdgeOpen]=useState(false);
  // 文档上传：抽正文交给后端，前端只留一个高亮块
  const [uploading,setUploading]=useState(false);
  async function addDocuments(files:File[]){
@@ -249,11 +250,16 @@ export default function AILearning({section=""}:{section?:string}){
  {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={aiMessagesRef} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(x=>x.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
+ {/* 与课程对话页同一个页边面板：窄边上给「来源/存放位置」和「整理笔记」两个入口，
+     它们在别处没有入口——不是推荐问法，是这两件事的开关 */}
+ {noteMode&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
+  onOpenPanel={()=>setNotePanel({})} onOrganize={()=>setOrganizing(true)}
+  onPick={fragment=>{aiInput.current?.addPrompt(fragment);aiInput.current?.focus();}}/>}
  <form className="aiComposer" onSubmit={e=>{e.preventDefault();void send();}}>
  {picture&&<div className="aiAttachment"><img src={picture} alt="待发送图片"/><button type="button" onClick={()=>setPicture("")} disabled={busy}>移除图片</button></div>}
  {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
  <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}
-  placeholder={noteMode?"笔记模式：让我整理或查找你已有的笔记，也可以拖入文件、用 @ 引用笔记":undefined}/>
+  placeholder={noteMode?"笔记模式：让我整理或查找你已有的笔记，也可以拖入文件让我读":undefined}/>
  <div className="aiActions">
   <ChatToolMenu label="工具库" disabled={busy}>
     <label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label>
