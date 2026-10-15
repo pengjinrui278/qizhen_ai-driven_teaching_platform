@@ -182,3 +182,24 @@ def test_find_mode_prompt_and_decision_payload():
     payload = note_prefs.decision_payload(note_prefs.parse_marker(made["marker"]), hits=[Hit()])
     assert payload["note_hits"][0]["title"] == "预习笔记"
     assert payload["note_hits"][0]["folder_path"] == "第8章 反常积分"
+
+
+def test_note_ref_name_may_be_plain_base64():
+    """引用块里的名字过去用普通 btoa 编码，会带 + 和 /，而正则只收 base64url 字符集——
+    于是整个标记两端都匹配不到：服务端取不到被引用的笔记，标记还会原样漏进给模型的消息里。
+    现在编码统一走 base64url，同时把名字那一组放宽，旧草稿也认得出、剥得掉。"""
+    import base64
+
+    from mirror_api.note_prefs import parse_note_refs, strip_note_refs
+
+    name = "第8章 反常积分·预习笔记"
+    plain = base64.b64encode(name.encode()).decode().rstrip("=")   # 含 + 或 /
+    assert "+" in plain or "/" in plain, "这个名字的普通 base64 必须真的带 +//，否则测不到点子上"
+    url = base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
+
+    for token in (plain, url):
+        text = f"帮我看看 [[MIRROR-REF1 note-alpha {token}]] 这篇"
+        assert parse_note_refs(text) == ["note-alpha"], token
+        stripped = strip_note_refs(text)
+        assert "MIRROR-REF1" not in stripped, "引用标记不能留在给模型看的消息里"
+        assert "帮我看看" in stripped and "这篇" in stripped, "剥掉标记不该伤到正文"

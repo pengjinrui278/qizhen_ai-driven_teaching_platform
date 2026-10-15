@@ -188,3 +188,220 @@ def test_chapter_material_is_not_duplicated_into_knowledge(note_db):
     context = model.contexts[0]
     assert not [node for node in context.knowledge if node["knowledge_id"].startswith("c")], \
         "教材块不应同时出现在 knowledge 里"
+
+
+def _seed_note(db, nid, title, content, account="student", folder="", starred=False):
+    from mirror_api.note_library import Note
+    row = Note(id=nid, account_id=account, course_id="mathematical_analysis",
+               folder_path=folder, title=title, kind="md", content=content, starred=starred,
+               remark="", source="student", source_meta={})
+    db.add(row)
+    db.commit()
+    return row
+
+
+def test_free_note_request_retrieves_material_and_saves(note_db):
+    """笔记模式下直接提要求（没走面板、没指定教材章）：也要能做出笔记并自动存库。"""
+    from mirror_api.note_library import Note
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"}})
+    model = CapturingModel()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=7, message="帮我整理一份关于反常积分的笔记"))
+
+    material = model.contexts[0].note_material
+    assert "反常积分" in material, "要按这次的要求去教材里现找材料"
+    assert "比较判别法" in material, "取到的应当是门控后的教材正文"
+    assert "未授权正文" not in material, "没授权 RAG 的块不能进材料"
+
+    saved = response.decision.get("note_saved")
+    assert saved, "笔记模式下直接提要求也要落库，不能只回一条普通回答"
+    assert note_db.get(Note, saved["id"]) is not None
+
+
+def test_free_note_request_without_material_does_not_save(note_db):
+    """取不到材料就别硬装成笔记任务：既不套笔记规则，也不落库。"""
+    from mirror_api.note_library import Note
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"}})
+    model = CapturingModel()
+    before = note_db.query(Note).count()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=8, message="完全无关的zqxjw关键词"))
+    assert not model.contexts[0].note_material, "没有材料就不该塞 note_material"
+    assert "note_saved" not in response.decision
+    assert note_db.query(Note).count() == before
+
+
+def test_merge_target_gets_appended_instead_of_a_new_note(note_db):
+    """学生显式选了「并入这一篇」：由服务端追加，agent 不需要自己去写学生的笔记。"""
+    from mirror_api.note_library import Note
+    _seed_note(note_db, "note-a", "第8章 反常积分", "# 第8章\n\n旧的比较判别法笔记。")
+
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"},
+                           "d": {"mg": "note-a"}})
+    model = CapturingModel()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=9, message="补一份反常积分的笔记"))
+
+    material = model.contexts[0].note_material
+    assert "要并入的笔记" in material, "要把目标笔记的现有内容交给模型去重"
+    assert "旧的比较判别法笔记" in material
+    assert "不要再重复" in material
+
+    saved = response.decision["note_saved"]
+    assert saved["merged"] is True, "应当并入而不是新建"
+    assert saved["id"] == "note-a"
+    assert note_db.query(Note).count() == 1, "并入不产生新行"
+
+    row = note_db.get(Note, "note-a")
+    assert "旧的比较判别法笔记" in row.content, "原有正文必须保留"
+    assert "第8章 反常积分 · 预习笔记" in row.content, "新内容要追加在后面"
+    assert "由助手整理" in row.content, "追加段要留一行出处"
+    merged = row.source_meta["merged"]
+    assert merged and merged[-1]["note_id"] == "note-a", "并入要留下来源记录"
+
+
+def test_merge_never_touches_someone_elses_note(note_db):
+    """目标 id 不是本人的：当作没选，另存新的，绝不动别人的笔记。"""
+    from mirror_api.note_library import Note
+    _seed_note(note_db, "note-b", "别人的笔记", "别人的正文", account="someone-else")
+
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"},
+                           "d": {"mg": "note-b"}})
+    model = CapturingModel()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=10, message="补一份反常积分的笔记"))
+
+    assert "要并入的笔记" not in model.contexts[0].note_material, "别人的笔记不进材料"
+    saved = response.decision["note_saved"]
+    assert saved["merged"] is False and saved["id"] != "note-b"
+    assert note_db.get(Note, "note-b").content == "别人的正文", "别人的笔记一个字都不能动"
+    assert note_db.query(Note).count() == 2
+
+
+def test_selected_replies_keep_whole_long_answers(note_db):
+    """长回答不能被拦腰截断：早先单处只给 6000 字节，笔记覆盖范围就错了。"""
+    from mirror_api.models import MirrorEvent
+    long_answer = "一致收敛的判别。" + "补充说明。" * 1200   # 远超 300 字
+    note_db.add(MirrorEvent(request_id="r-long", course_id="mathematical_analysis",
+                            profile_id="v1", participant_code="student", interaction_mode="chat",
+                            request_payload={"message": "什么是一致收敛？"},
+                            response_json={"answer": long_answer}))
+    note_db.commit()
+
+    marker = build_marker({"v": 1, "mode": "compose", "src": {"k": "replies", "ids": ["r-long"]}})
+    model = CapturingModel()
+    MirrorPipeline(model).handle(note_db, request_with(marker, number=11, message="整理成笔记"))
+
+    material = model.contexts[0].note_material
+    tail = "补充说明。" * 1200
+    assert tail[:600] in material, "长回答应当整段进来，而不是只剩开头几句"
+
+
+class OpsModel:
+    """模拟模型在回答末尾附上操作块。"""
+
+    name = "ops"
+    dynamic_hints = False
+    deep_max_tokens = None
+
+    def __init__(self, answer):
+        self.answer = answer
+        self.contexts = []
+
+    def generate(self, context):
+        self.contexts.append(context)
+        return self.answer
+
+
+def test_agent_mode_executes_note_operations_and_hides_the_block(note_db):
+    """agent 模式下模型可以真的改学生的笔记库：服务端执行，操作块不进可见正文。"""
+    import json
+
+    from mirror_api.note_library import Note
+    from mirror_api.note_ops import OPS_FENCE
+
+    _seed_note(note_db, "n1", "散着的笔记", "正文", folder="")
+    _seed_note(note_db, "n2", "另一篇散的", "正文", folder="")
+
+    block = ("```" + OPS_FENCE + "\n" + json.dumps({"ops": [
+        {"op": "move", "ids": ["n1", "n2"], "folder": "第3章 级数"},
+        {"op": "rename", "id": "n1", "title": "第3章 级数·复习笔记"},
+    ]}, ensure_ascii=False) + "\n```")
+    model = OpsModel("已经帮你把散在科目根的两篇归到第3章了。\n\n" + block)
+
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=12, message="把我散在根目录的笔记整理一下"))
+
+    context = model.contexts[0]
+    assert context.note_ops_enabled is True, "要在 system 里告诉模型它有权管理笔记库"
+    assert "id=n1" in context.note_material, "要把本人笔记的索引交给它，它才有 id 可用"
+
+    assert OPS_FENCE not in response.answer, "操作块不能留在学生看得到的正文里"
+    assert response.answer.startswith("已经帮你把散在科目根")
+
+    receipt = response.decision["note_ops"]
+    assert receipt["done"] == 2 and receipt["failed"] == 0
+    assert note_db.get(Note, "n1").folder_path == "第3章 级数"
+    assert note_db.get(Note, "n1").title == "第3章 级数·复习笔记"
+    assert note_db.get(Note, "n2").folder_path == "第3章 级数"
+    assert "note_saved" not in response.decision, "模型自己发过操作块就不该再自动新建一份"
+
+
+def test_agent_mode_reports_ops_it_could_not_do(note_db):
+    """模型编了一个不存在的 id：不能假装做成了。"""
+    import json
+
+    from mirror_api.note_library import Note
+    from mirror_api.note_ops import OPS_FENCE
+
+    _seed_note(note_db, "n1", "真的", "正文")
+    model = OpsModel("改好了。\n\n```" + OPS_FENCE + "\n" + json.dumps(
+        {"ops": [{"op": "rename", "id": "n-编造的", "title": "x"}]}, ensure_ascii=False) + "\n```")
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=13, message="帮我改个标题"))
+
+    receipt = response.decision["note_ops"]
+    assert receipt["done"] == 0 and receipt["failed"] == 1
+    assert "找不到" in receipt["results"][0]["detail"]
+    assert note_db.get(Note, "n1").title == "真的"
+
+
+def test_agent_mode_without_ops_still_saves_the_note(note_db):
+    """笔记模式下直接提要求要能直接存进笔记库 —— 不能只回一条普通回答。"""
+    from mirror_api.note_library import Note
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    model = CapturingModel()   # 不带操作块
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=14, message="整理一份反常积分的笔记"))
+    assert "比较判别法" in model.contexts[0].note_material
+    saved = response.decision.get("note_saved")
+    assert saved and note_db.get(Note, saved["id"]) is not None
+
+
+def test_agent_mode_managing_only_does_not_create_a_note(note_db):
+    """只是想整理笔记库、没取到课程正文时，不该顺手存一份新笔记。"""
+    import json
+
+    from mirror_api.note_library import Note
+    from mirror_api.note_ops import OPS_FENCE
+
+    _seed_note(note_db, "n1", "散着的", "正文", folder="")
+    model = OpsModel("已经归好了。\n\n```" + OPS_FENCE + "\n" + json.dumps(
+        {"ops": [{"op": "move", "ids": ["n1"], "folder": "第3章"}]}, ensure_ascii=False) + "\n```")
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    before = note_db.query(Note).count()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=15, message="把 zqxjw 那篇挪个位置"))
+
+    assert note_db.query(Note).count() == before, "整理笔记库不该产生新笔记"
+    assert "note_saved" not in response.decision
+    assert response.decision["note_ops"]["done"] == 1
+
+
+def test_plain_chat_has_no_note_ops_ability(note_db):
+    """只有笔记模式下才把管理笔记库的权限交出去。"""
+    model = CapturingModel()
+    MirrorPipeline(model).handle(note_db, request_with("", number=16, message="什么是极限"))
+    assert model.contexts[0].note_ops_enabled is False

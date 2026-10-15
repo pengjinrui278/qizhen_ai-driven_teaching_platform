@@ -70,11 +70,18 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
         answerCount += 1;
         // 第二轮的作答是「整理成笔记」的结果，服务端会自动落库并回传 note_saved
         const saving = body.message.includes('MIRROR-NOTE1') && body.message.includes('整理成一份笔记');
+        // agent 直接管理笔记库的那一轮：服务端执行完回传逐条回执
+        const managing = body.message.includes('整理一下');
         const response = {
-          answer: saving ? '# 一致收敛与逐点收敛\n\n（整理后的笔记正文）' : ANSWER,
+          answer: saving ? '# 一致收敛与逐点收敛\n\n（整理后的笔记正文）'
+                : managing ? '已经把你散在科目根的笔记归好了。' : ANSWER,
           citations: [], hint_level: 1,
           decision: saving ? {note_saved: {id: 'saved-note-1', title: '一致收敛与逐点收敛 · 复习笔记',
-                                          course_id: COURSE.course_id, folder_path: '第8章 反常积分'}} : {},
+                                          course_id: COURSE.course_id, folder_path: '第8章 反常积分'}}
+            : managing ? {note_ops: {done: 1, failed: 1, results: [
+                {op: 'move', ok: true, detail: '移动到 第3章 级数：《随手记：极限的坑》'},
+                {op: 'rename', ok: false, detail: '找不到要改的那篇笔记，这一项没做。'}]}}
+            : {},
         };
         session.events = [...session.events,
           {request_id: body.request_id, message: body.message, response}];
@@ -334,8 +341,103 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
       `页边要跟输入框同宽（自适应页面宽度），实际 ${dock.edge.width}px vs 输入框 ${dock.composer.width}px`);
     await page.screenshot({path: 'data/preview/note-edge-docked.png'});
 
+    // 14. 悬停与选中都要整框亮起来。原来的 inset 投影被
+    //     chat-tool-menu.css 里 [data-note-mode] .chatAssistant 的卡片样式整个盖掉了，
+    //     所以「整个外框高亮」从来没显示出来过——这里按计算样式验，不看类名。
+    const ringOf = () => page.evaluate(() => {
+      const el = document.querySelector('.chatAssistant');
+      return el ? getComputedStyle(el).boxShadow : '';
+    });
+    await page.evaluate(() => document.querySelector('.formulaMessageInput .fileChip')?.click());
+    await page.waitForTimeout(400);
+    // 第 9 段退出过笔记模式，这里要重新打开：可点选与整框高亮只在笔记模式下存在
+    if (await toggle.getAttribute('aria-pressed') === 'false') { await toggle.click(); await page.waitForTimeout(400); }
+    assert.equal(await toggle.getAttribute('aria-pressed'), 'true', '这一段要在笔记模式下跑');
+    await page.mouse.move(4, 4);
+    await page.waitForTimeout(250);
+    const ringIdle = await ringOf();
+    await page.locator('.chatAssistant').first().hover();
+    await page.waitForTimeout(300);
+    const ringHover = await ringOf();
+    assert.notEqual(ringHover, ringIdle, '悬停时整个外框要亮起来');
+    assert.match(ringHover, /0px 0px 0px 2px/, `悬停应加一圈外环，实际 ${ringHover}`);
+    await page.locator('.chatAssistant').first().click();
+    await page.waitForTimeout(300);
+    await page.mouse.move(4, 4);
+    await page.waitForTimeout(300);
+    const ringPicked = await ringOf();
+    assert.match(ringPicked, /rgba?\(99, 102, 241/, `选中后要持续显示紫色外环，实际 ${ringPicked}`);
+    await page.evaluate(() => document.querySelector('.notePickBar') &&
+      [...document.querySelectorAll('.notePickBar button')].find(b => b.textContent === '清除')?.click());
+    await page.waitForTimeout(300);
+
+    // 15. 笔记模式下直接提要求：要带 agent 标记出门，否则学生只能把回答复制粘贴进笔记
+    const freeDraft = '帮我把散在科目根的笔记整理一下';
+    await page.locator('.formulaMessageInput').click();
+    await page.keyboard.type(freeDraft);
+    await page.getByRole('button', {name: '发送'}).click();
+    await page.waitForTimeout(800);
+    const freeWire = sent[sent.length - 1] || '';
+    const freeMarker = JSON.parse(Buffer.from(
+      /\[\[MIRROR-NOTE1 ([A-Za-z0-9_-]+)\]\]/.exec(freeWire)[1].replace(/-/g, '+').replace(/_/g, '/'),
+      'base64').toString('utf8'));
+    assert.equal(freeMarker.mode, 'agent', '自由请求要走 agent 模式，agent 才有管理笔记库的权限');
+    assert.ok(!(await page.locator('.formulaMessageInput').innerText()).includes('MIRROR'),
+      '标记不能在输入框里露出来');
+
+    // 16. agent 动过笔记库之后要逐条回执，做没做成都说清楚
+    const opsNotice = page.locator('.noteOpsNotice');
+    await opsNotice.waitFor({timeout: 10000});
+    const opsText = await opsNotice.innerText();
+    assert.match(opsText, /完成 1 项/, '要报做了几项');
+    assert.match(opsText, /1 项没做成/, '没做成的也要如实说');
+    assert.match(opsText, /移动到 第3章 级数/, '要逐条列出做了什么');
+    assert.ok(await opsNotice.getByRole('link', {name: '去我的笔记'}).count() === 1, '要给一条去笔记库的路');
+
+    // 17. 选中回答整理的指令里不能再夹带截断的正文副本——
+    //     模型会照着那份残缺清单写，笔记的覆盖范围就错了。正文由服务端按 id 取全文。
+    await page.locator('.chatAssistant').last().click();
+    await page.locator('.notePickBar').waitFor({timeout: 5000});
+    await page.locator('.notePickBar').getByRole('button', {name: '存为笔记'}).click();
+    await page.waitForTimeout(400);
+    const composedDraft = await page.locator('.formulaMessageInput').innerText();
+    assert.match(composedDraft, /整理成一份笔记/, '指令要留下');
+    assert.ok(!composedDraft.includes(ANSWER.split('\n')[2] || '一致收敛的 N'),
+      '输入框里不该再出现被截断的回答正文');
+
+    // 18. 引用笔记之后，「存到」要能显式选「并入哪一篇」——写入由服务端做，agent 不用自己动手
+    await page.locator('.formulaMessageInput').click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' @');
+    await page.locator('.noteMention').waitFor({timeout: 5000});
+    await page.locator('.noteMention').getByRole('option').first().click();
+    await page.waitForTimeout(400);
+    if (!(await page.locator('.noteEdgeBody').count())) { await clickEdgeTab(); await page.waitForTimeout(700); }
+    const mergeRow = await page.evaluate(() => {
+      const group = [...document.querySelectorAll('.noteEdgeGroup')]
+        .find(g => g.textContent.includes('存到'));
+      return group ? [...group.querySelectorAll('button')].map(b => ({text: b.textContent,
+        on: b.getAttribute('aria-pressed')})) : null;
+    });
+    assert.ok(mergeRow, '引用了笔记之后应当出现「存到」这一行');
+    assert.ok(mergeRow.some(b => b.text === '新建一份' && b.on === 'true'), '默认必须是新建一份');
+    assert.ok(mergeRow.some(b => b.text.includes('并入《')), '要能显式选并入被引用的那一篇');
+    await page.evaluate(() => {
+      const group = [...document.querySelectorAll('.noteEdgeGroup')]
+        .find(g => g.textContent.includes('存到'));
+      [...group.querySelectorAll('button')].find(b => b.textContent.includes('并入')).click();
+    });
+    await page.waitForTimeout(300);
+    await page.getByRole('button', {name: '发送'}).click();
+    await page.waitForTimeout(800);
+    const mergeWire = sent[sent.length - 1] || '';
+    const mergeMarker = JSON.parse(Buffer.from(
+      /\[\[MIRROR-NOTE1 ([A-Za-z0-9_-]+)\]\]/.exec(mergeWire)[1].replace(/-/g, '+').replace(/_/g, '/'),
+      'base64').toString('utf8'));
+    assert.equal(mergeMarker.d && mergeMarker.d.mg, 'note-alpha', '并入目标要随标记带给服务端');
+
     assert.deepEqual(errors, [], '不应有页面错误');
-    console.log('PASS: 笔记入口只在笔记模式；选回答→存为笔记→整理指令入框→发送带 compose 标记→自动存库并回显位置→可撤回；文档上传成块且钉在最前；输入 @ 弹笔记目录、过滤、插入引用块并随消息带出；页边抽出偏好、选项插高亮要求、可撤销；页边贴着输入框且长对话滚到顶端仍可见');
+    console.log('PASS: 笔记入口只在笔记模式；选回答→存为笔记→整理指令入框（不再夹带截断副本）→发送带 compose 标记→自动存库并回显位置→可撤回；文档上传成块且钉在最前；输入 @ 弹笔记目录、过滤、插入引用块并随消息带出；页边抽出偏好、选项插高亮要求、可撤销；页边贴着输入框且长对话滚到顶端仍可见；悬停与选中整框高亮；笔记模式自由请求带 agent 标记；引用后可显式选并入目标；操作回执逐条列出成败');
   } finally {
     await browser.close();
   }
