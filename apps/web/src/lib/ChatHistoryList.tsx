@@ -53,7 +53,7 @@ export default function ChatHistoryList({sessions,activeId,onOpen,followUpOf,onR
     </form>:<>
      <button title={stamp} aria-description={stamp} aria-current={activeId===item.id?"true":undefined} onClick={()=>onOpen(item)}>
       {isFollowUp(item)&&<span className="chatHistoryBadge">追问</span>}
-      <span className="chatHistoryTitle">{displayTitle(item)}</span>
+      <span className="chatHistoryTitle" style={{flex:"1 1 auto",minWidth:0,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{displayTitle(item)}</span>
      </button>
      {manage&&<button type="button" className="chatHistoryMore" aria-haspopup="menu"
       aria-expanded={menu===item.id} aria-label={"管理对话："+displayTitle(item)}

@@ -4,7 +4,7 @@
 .portal.lmStudentShell .lmCourseChat .chatHistory {padding:16px;background:#fff;border:1px solid var(--lm-border);border-radius:14px;box-shadow:var(--lm-shadow);min-width:0;}
 .portal.lmStudentShell .lmCourseChat .chatHistory .chatNew {background:var(--lm-primary-deep)!important;border-color:var(--lm-primary-deep)!important;box-shadow:var(--lm-shadow);min-height:44px;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList {max-height:440px;}
-.portal.lmStudentShell .lmCourseChat .chatSessionList button {min-height:44px;white-space:normal;overflow-wrap:anywhere;}
+.portal.lmStudentShell .lmCourseChat .chatSessionList button {min-height:44px;white-space:nowrap;overflow-wrap:anywhere;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button[aria-current] {background:#eef2ff;color:var(--lm-primary-deep);}
 .portal.lmStudentShell .lmCourseChat .chatWorkspace {background:transparent;padding:0;min-width:0;}
 .portal.lmStudentShell .lmCourseChat .chatHeader {padding:0 0 14px;border:0;flex-wrap:wrap;}
