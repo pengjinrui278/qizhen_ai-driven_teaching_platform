@@ -104,10 +104,38 @@ class NoteInput(BaseModel):
     message_id: str | None = None
 
 
+def _session_title(db, row):
+    """会话标题：优先用存下来的；存的是空白的（老数据里出现过空 title）就按首条提问补一个，
+    再不行才回到「新对话」——列表里不能出现一行没有标题的对话。"""
+    stored = (row.title or "").strip()
+    if stored:
+        return stored
+    from .note_prefs import strip_marker
+    first = db.scalars(select(AIMessage).where(
+        AIMessage.session_id == row.id, AIMessage.account_id == row.account_id)
+        .order_by(AIMessage.created_at, AIMessage.id)).first()
+    text = strip_marker((first.question if first else "") or "").strip()
+    return text[:60] or "新对话"
+
+
 @router.get("/sessions")
 def sessions(db=Depends(db_for), user=Depends(user_for)):
-    return [public(r) for r in db.scalars(select(AISession).where(
-        AISession.account_id == user.id).order_by(AISession.created_at.desc())).all()]
+    rows = db.scalars(select(AISession).where(
+        AISession.account_id == user.id).order_by(AISession.created_at.desc())).all()
+    return [{**public(r), "title": _session_title(db, r)} for r in rows]
+
+
+class SessionPatch(BaseModel):
+    title: str = Field(default="", max_length=120)
+
+
+@router.patch("/sessions/{sid}")
+def rename_session(sid: str, body: SessionPatch, db=Depends(db_for), user=Depends(user_for)):
+    """给 AI 对话改名字。清空就退回按首条提问自动生成的标题。"""
+    row = own(db, AISession, sid, user)
+    row.title = body.title.strip()[:120] or "新对话"
+    db.commit()
+    return {**public(row), "title": _session_title(db, row)}
 
 
 @router.post("/sessions")
@@ -243,8 +271,8 @@ def answer_chat(sid, body, db, user):
                     answer=answer, has_image=bool(body.image), citations=citations,
                     note_ops=ops_receipt or {})
     db.add(row)
-    if session.title == "新对话":
-        session.title = visible[:60]
+    if session.title == "新对话" and visible.strip():
+        session.title = visible.strip()[:60]
     db.commit()
     return public(row)
 
