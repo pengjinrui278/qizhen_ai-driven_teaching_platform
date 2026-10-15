@@ -38,7 +38,7 @@ async function main(){
  try{
   if(!before){failList=true;await page.goto(url);await page.getByRole('alert').filter({hasText:'历史加载失败'}).waitFor();assert.equal(await page.getByText('暂无对话',{exact:true}).count(),0);assert.ok(await page.getByLabel('聊天课程').locator('option').count()>0);failList=false;await page.getByRole('button',{name:'重新加载历史'}).click();}
   else await page.goto(url);await page.locator('.chatAssistant').last().waitFor();
-  const baseline={};for(const [name,sel] of [['text','.chatAssistant p'],['formula','.katex-display'],['input','.chatComposer textarea']])baseline[name]=await wheel(sel,-350);
+  const baseline={};for(const [name,sel] of [['text','.chatAssistant p'],['formula','.katex-display'],['input','.chatComposer .formulaMessageInput']])baseline[name]=await wheel(sel,-350);
   const box=await scroll().boundingBox();await page.mouse.move(box.x+box.width-24,box.y+box.height/2);const blankStart=await top();await page.mouse.wheel(0,-350);await page.waitForTimeout(250);baseline.blank={before:blankStart,after:await top()};
   fs.writeFileSync(out+(before?'/wheel-before.json':'/wheel-after.json'),JSON.stringify(baseline,null,2));
   if(before){console.log(baseline);return;}
@@ -49,8 +49,8 @@ async function main(){
   assert.equal(await page.locator('.hintButtons').count(),0);await page.locator('.hintButtons').waitFor();assert.ok(Date.now()-await finished>=2900,'real completion delay');await page.screenshot({path:out+'/actions-desktop.png',fullPage:true});
   const saved=page.url();await page.reload();await page.locator('.chatAssistant').waitFor();assert.equal(page.url(),saved);assert.equal(await page.locator('.hintButtons').count(),0);
   await page.goto(base+'/student?mode=live');await page.goBack();await page.locator('.chatAssistant').waitFor();assert.equal(page.url(),saved);
-  await page.getByLabel('聊天课程').selectOption('university_physics');assert.equal(await page.locator('.chatAssistant').count(),0);assert.equal(await page.locator('.chatSessionList button').count(),0);
-  await page.getByLabel('聊天课程').selectOption('mathematical_analysis');assert.equal(await page.locator('.chatSessionList button').count(),2);
+  await page.getByLabel('聊天课程').selectOption('university_physics');assert.equal(await page.locator('.chatAssistant').count(),0);assert.equal(await page.locator('.chatHistoryRow').count(),0);
+  await page.getByLabel('聊天课程').selectOption('mathematical_analysis');assert.equal(await page.locator('.chatHistoryRow').count(),2);
   failList=true;await send('列表独立失败');await page.getByRole('alert').filter({hasText:'历史加载失败'}).waitFor();assert.equal(await page.getByText('暂无对话',{exact:true}).count(),0);failList=false;await page.getByRole('button',{name:'重新加载历史'}).click();await page.getByRole('alert').filter({hasText:'历史加载失败'}).waitFor({state:'hidden'});
   failStream=true;await send('失败请求');await page.getByRole('alert').filter({hasText:'合成回复失败'}).waitFor();await page.waitForTimeout(3100);assert.equal(await page.locator('.hintButtons').count(),0);
   failStream=false;await page.getByRole('button',{name:'重试',exact:true}).click();await page.locator('.chatThinking').waitFor({state:'hidden'});assert.equal(writes.at(-1).request_id,writes.at(-2).request_id);
@@ -60,7 +60,7 @@ async function main(){
   await send('切历史取消');await page.locator('.chatSessionList button').first().click();await page.clock.runFor(4000);assert.equal(await page.locator('.hintButtons').count(),0);
   await send('卸载取消');await page.goto(base+'/student?mode=live');await page.clock.runFor(4000);await page.goBack();await page.locator('.chatAssistant').last().waitFor();assert.equal(await page.locator('.hintButtons').count(),0);
   await page.clock.resume();await page.goto(url);await page.locator('.chatAssistant').last().waitFor();
-  let release;delayStream=new Promise(r=>release=r);await page.getByLabel('发送消息',{exact:true}).fill('不要拉回底部');await page.getByRole('button',{name:'发送',exact:true}).click();await page.locator('.chatThinking').waitFor();await wheel('.chatComposer textarea',-600);const reading=await top();release();delayStream=null;await page.locator('.chatThinking').waitFor({state:'hidden'});assert.ok(Math.abs(await top()-reading)<2,'reply must preserve reading position');
+  let release;delayStream=new Promise(r=>release=r);await page.getByLabel('发送消息',{exact:true}).fill('不要拉回底部');await page.getByRole('button',{name:'发送',exact:true}).click();await page.locator('.chatThinking').waitFor();await wheel('.chatComposer .formulaMessageInput',-600);const reading=await top();release();delayStream=null;await page.locator('.chatThinking').waitFor({state:'hidden'});assert.ok(Math.abs(await top()-reading)<2,'reply must preserve reading position');
   for(const [width,height] of [[1440,900],[768,1024],[390,844]]){await page.setViewportSize({width,height});await page.screenshot({path:out+'/chat-'+width+'.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
   // Restored history now opens at the beginning; establish a scrollable position with real wheel input.
   await page.mouse.move(220,380);await page.mouse.wheel(0,650);await page.waitForTimeout(300);

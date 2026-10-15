@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const prompts=require('../apps/web/src/lib/course-prompts.json');
 async function main(){
- const base='http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
+ const base=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -41,9 +41,10 @@ async function main(){
   await page.screenshot({path:'data/ai-preview/home-mobile.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:'data/ai-preview/home-desktop.png',fullPage:true});
+  // 课表只在学习首页（资源中心已改为教材库，不再放课表入口）
   await page.goto(base+'/student/resources');
   assert.equal(await page.locator('.zjuSchedule').count(),0);
-  await page.getByRole('link',{name:'查看首页课表 →'}).click();
+  await page.goto(base+'/student');
   await page.getByRole('heading',{name:'课表验收示例'}).waitFor();
   await page.getByRole('button',{name:'清除本机课表'}).click();
   for(const [course,items] of Object.entries(prompts)){

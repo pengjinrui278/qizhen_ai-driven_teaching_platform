@@ -1,4 +1,9 @@
 .env
+# 密钥备份同样不能进仓库（.env 那条只挡住确切文件名）
+.env.bak*
+# 教材原件：只在本机只读使用，不提交、不公开分发（docs/parallel/dispatch/R3-pdf-library.md）。
+# 里面还有两个 >100MB 的压缩包，GitHub 单文件上限 100MB 也传不上去。
+materials/
 data/
 artifacts/
 .venv/

@@ -22,12 +22,24 @@ def topics(text):
     return [word for word in TOPICS if word.casefold() in text.casefold()][:5]
 
 
+# 引用追问的首行标记，与前端 chat-quote.mjs 的 QUOTE_HEADER 是同一个串。
+# 会话列表靠它在标题里认出「这是某条主对话分出来的追问」，从而折叠到父词条下。
+# 早先没带这个标记，前端那条识别通道形同虚设：父对话一删，游离的追问就带着
+# 一个通用标题（好几个还重名）挤在侧栏顶层。
+QUOTE_HEADER = '【引用追问】'
+
+
 def summarize(text, course):
+    text = text or ''
+    following_up = text.lstrip().startswith(QUOTE_HEADER)
     matched = topics(text)
     intent = next((label for pattern,label in [(r'证明|prove','证明思路'),(r'比较|区别|difference','概念比较'),(r'计算|求解|求导','求解方法'),(r'调试|报错|debug','代码调试'),(r'写作|作文|邮件|essay','表达练习')] if re.search(pattern,text,re.I)), '概念讨论')
     name = load_course_profiles().get(course)
     subject = '与'.join(matched[:2]) if matched else (name.display_name if name else '课程')
-    return (subject+' · '+intent)[:60]
+    # 追问的标题带上标记：前端据此把它折到父词条下，而不是当成一条独立对话。
+    # 标记会占掉标题长度，所以给正文留的额度相应减少，别把「· 意图」截没了。
+    head = QUOTE_HEADER if following_up else ''
+    return (head + subject + ' · ' + intent)[:60 + len(head)]
 
 
 def activity_key(user, request_id):

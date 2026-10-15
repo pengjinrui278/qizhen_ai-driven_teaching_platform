@@ -85,6 +85,10 @@ from .platform_api import router
 app.include_router(router)
 from .ai_learning import router as ai_router
 app.include_router(ai_router)
+from .note_library import router as note_router
+app.include_router(note_router)
+from .chat_upload import router as upload_router
+app.include_router(upload_router)
 _auth_attempts=defaultdict(deque)
 
 

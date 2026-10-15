@@ -130,14 +130,6 @@
 }
 .portal .chatComposer textarea:focus{box-shadow:none}
 .portal .chatComposerActions{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
-.portal .chatAttachments{margin:0;padding:0;border:0;flex:1}
-.portal .chatAttachments summary{
-  width:fit-content;padding:6px 10px;min-height:36px;
-  display:flex;align-items:center;color:#475569;font-size:12.5px;font-weight:550;
-  cursor:pointer;border-radius:8px;transition:background .15s;
-}
-.portal .chatAttachments summary:hover{background:#f1f5f9}
-.portal .chatAttachments .photoPreview{grid-template-columns:minmax(0,120px) 1fr}
 .portal .chatComposer .primary{
   background:#2563eb;color:#fff;border-color:#2563eb;
   min-width:72px;border-radius:9px;font-weight:600;min-height:38px;
@@ -236,7 +228,51 @@
   .portal .chatMessages{padding:16px 0}
   .portal .chatUser{max-width:92%}
   .portal .chatComposer{padding:8px}
-  .portal .chatAttachments .photoPreview{grid-template-columns:1fr}
   .portal .chatComposer textarea{font-size:16px}
   .portal .chatWelcome h2{font-size:18px}
 }
+
+/* 历史记录管理：每行右侧的「⋯」菜单、就地改名、删除确认。
+   对话是要长期攒的东西，得能自己收拾——改名与删除都只在悬停/聚焦时露出来，平时不占视线。 */
+.portal .chatHistoryRow{gap:2px}
+.portal .chatHistoryMore{
+  flex:none;border:0;background:transparent;color:#94a3b8;cursor:pointer;
+  border-radius:8px;padding:0 6px;min-height:auto;line-height:1;font-size:16px;
+  opacity:0;transition:opacity .15s,background .15s,color .15s;
+}
+.portal .chatHistoryRow:hover .chatHistoryMore,
+.portal .chatHistoryMore:focus-visible,
+.portal .chatHistoryMore[aria-expanded="true"]{opacity:1}
+.portal .chatHistoryMore:hover:not(:disabled){background:#e2e8f0;color:#475569;transform:none}
+.portal .chatHistoryMenu{
+  display:flex;flex-direction:column;gap:2px;margin:2px 0 4px 10px;padding:4px;
+  background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);
+}
+.portal .chatHistoryMenu button{
+  border:0;background:transparent;text-align:left;width:100%;padding:6px 10px;
+  border-radius:7px;font-size:12.5px;color:#475569;min-height:auto;
+}
+.portal .chatHistoryMenu button:hover:not(:disabled){background:#f1f5f9;transform:none}
+.portal .chatHistoryMenu button.isDanger{color:#b91c1c}
+.portal .chatHistoryMenu button.isDanger:hover:not(:disabled){background:#fef2f2}
+.portal .chatHistoryRename{display:flex;gap:4px;align-items:center;flex:1;min-width:0}
+.portal .chatHistoryRename input{
+  flex:1;min-width:0;font-size:12.5px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;
+}
+.portal .chatHistoryRename button{
+  flex:none;font-size:12px;padding:5px 9px;min-height:auto;border:1px solid #e2e8f0;
+  background:#fff;border-radius:8px;color:#475569;
+}
+.portal .chatHistoryConfirmBackdrop{
+  position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(15,23,42,.32);
+}
+.portal .chatHistoryConfirm{
+  width:min(380px,100%);background:#fff;border-radius:14px;padding:20px;
+  box-shadow:0 20px 50px rgba(15,23,42,.24);
+}
+.portal .chatHistoryConfirm h3{margin:0 0 8px;font-size:15px;color:#0f172a}
+.portal .chatHistoryConfirm p{margin:0;font-size:13px;line-height:1.7;color:#475569;overflow-wrap:anywhere}
+.portal .chatHistoryConfirmActions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.portal .chatHistoryConfirmActions button{min-height:34px;padding:6px 14px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer}
+.portal .chatHistoryConfirmActions button.isDanger{background:#dc2626;border-color:#dc2626;color:#fff;font-weight:600}

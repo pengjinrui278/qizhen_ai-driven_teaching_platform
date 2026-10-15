@@ -11,11 +11,17 @@ from .platform_models import Account, Attempt, Audit, CourseRevision, Hypothesis
 
 def export_account(db, user):
     from .ai_learning import AISession, AIMessage, AINote, public
+    from .note_library import Note, NoteAttachment, public_note, public_attachment
+    # 必须起别名：ai_learning 也导出了 public，同名会把上面那个覆盖掉
+    from .chat_upload import ChatUpload, public as public_upload
     attempts=db.execute(select(Attempt).where(Attempt.account_id==user.id)).scalars().all()
     events=db.execute(select(MirrorEvent).where(MirrorEvent.participant_code==user.id)).scalars().all()
     return {"format":"mathmirror-personal-v1","exported_at":datetime.now(UTC).isoformat(),
             "account":{"username":user.username,"nickname":user.nickname,"status":user.status},
             "ai_learning":{model.__tablename__:[public(r) for r in db.scalars(select(model).where(model.account_id==user.id)).all()] for model in (AISession,AIMessage,AINote)},
+            "notes":[public_note(r) for r in db.scalars(select(Note).where(Note.account_id==user.id)).all()],
+            "note_attachments":[public_attachment(r) for r in db.scalars(select(NoteAttachment).where(NoteAttachment.account_id==user.id)).all()],
+            "chat_uploads":[public_upload(r) for r in db.scalars(select(ChatUpload).where(ChatUpload.account_id==user.id)).all()],
             "memory":memory_view(db,user.id),
             "attempts":[{"id":a.id,"course_id":a.course_id,"problem":a.problem} for a in attempts],
             "interactions":[{"request":e.request_payload,"response":e.response_json,
@@ -26,8 +32,18 @@ def export_account(db, user):
 
 def delete_personal(db, user):
     from .ai_learning import AISession, AIMessage, AINote
+    from .note_library import Note, NoteAttachment, _attachment_path
+    from .chat_upload import purge_uploads
     for model in (AIMessage,AINote,AISession):
         db.query(model).filter_by(account_id=user.id).delete(synchronize_session=False)
+    for att in db.execute(select(NoteAttachment).where(NoteAttachment.account_id==user.id)).scalars().all():
+        path=_attachment_path(att.storage_key)
+        if path:
+            try: path.unlink()
+            except OSError: pass
+    for model in (NoteAttachment,Note):
+        db.query(model).filter_by(account_id=user.id).delete(synchronize_session=False)
+    purge_uploads(db,user.id)
     submission_ids=set(db.execute(select(Submission.id).where(Submission.account_id==user.id)).scalars())
     for row in db.execute(select(Audit)).scalars():
         if row.detail.get("submission_id") in submission_ids:
@@ -57,9 +73,28 @@ def delete_personal(db, user):
 
 def expire_personal(db, now=None):
     from .ai_learning import AISession, AIMessage, AINote
+    from .note_library import Note, TRASH_RETENTION_DAYS, purge_note
+    from .chat_upload import ChatUpload, _upload_path, purge_uploads
     now=now or datetime.now(UTC)
     for user in db.execute(select(Account).where(Account.status!="deleted")).scalars():
         cutoff=now-timedelta(days=user.retention_days)
+        # 上传的文档随账号保留期过期（与 AI 对话内容同一口径）：连磁盘原件一起清
+        old_uploads=[r.id for r in db.execute(select(ChatUpload).where(
+            ChatUpload.account_id==user.id, ChatUpload.created_at<cutoff)).scalars().all()]
+        if old_uploads:
+            for stale in db.execute(select(ChatUpload).where(ChatUpload.id.in_(old_uploads))).scalars().all():
+                path=_upload_path(stale.storage_key)
+                if path:
+                    try: path.unlink()
+                    except OSError: pass
+                db.delete(stale)
+        # 回收站里的笔记满 30 天彻底清理（连磁盘附件）。
+        # 未删除的笔记不随账号保留期过期：学生笔记是长期复习资料，
+        # 静默过期等于销毁个人成果；是否纳入账号保留期需产品明确后再改。
+        for row in db.execute(select(Note).where(
+                Note.account_id==user.id, Note.deleted_at.is_not(None),
+                Note.deleted_at<now-timedelta(days=TRASH_RETENTION_DAYS))).scalars().all():
+            purge_note(db,row)
         db.query(Audit).filter(Audit.actor_id==user.id,Audit.action=="course_activity",Audit.created_at<cutoff).delete(synchronize_session=False)
         for model in (AIMessage,AINote):
             db.query(model).filter(model.account_id==user.id,model.created_at<cutoff).delete(synchronize_session=False)

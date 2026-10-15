@@ -40,7 +40,10 @@ function seed(){
  text:n?"样例记录：我不知道 N 可以依赖哪些量。":"样例记录：我不明白为什么先给定 ε 再选择 N。",direction:"support",source:"合成样例",strength:"weak",disputed:false,created_at:now()}));
  return {users:{student:{id:"demo-student",nickname:"学习者 · 演示",role:"student",status:"active",retention_days:180},teacher:{id:"demo-teacher",nickname:"教学团队 · 演示",role:"teacher",status:"active",retention_days:180}},
  attempts:[{id:"sample-attempt",course_id:"mathematical_analysis",problem:{text:demoProblems[0].statement,problem_id:demoProblems[0].id},created_at:now(),events:[]}],
- observations,boxes:[{id:"sample-sandbox",course_id:"mathematical_analysis",title:"数列极限 · 第一次习题",assignment:"证明 1/n 趋于0，并说明 N 的选取依赖。",class_label:"数分研讨班 · 合成",class_size:3,status:"open",join_code:"REVIEW26",retention_hours:3,created_at:now(),expires_at:new Date(Date.now()+10800000).toISOString(),purged:false}],
+ observations,
+ notes:[{id:"sample-note-1",course_id:"mathematical_analysis",folder_path:"第2章 数列极限",title:"数列极限·预习笔记",kind:"md",starred:true,remark:"先看量词顺序",source:"agent",source_meta:{},deleted_at:null,deleted_from:"",has_content:true,created_at:now(),updated_at:now()},
+  {id:"sample-note-2",course_id:"mathematical_analysis",folder_path:"",title:"自己记的两条疑问",kind:"md",starred:false,remark:"",source:"student",source_meta:{},deleted_at:null,deleted_from:"",has_content:true,created_at:now(),updated_at:now()}],
+ boxes:[{id:"sample-sandbox",course_id:"mathematical_analysis",title:"数列极限 · 第一次习题",assignment:"证明 1/n 趋于0，并说明 N 的选取依赖。",class_label:"数分研讨班 · 合成",class_size:3,status:"open",join_code:"REVIEW26",retention_hours:3,created_at:now(),expires_at:new Date(Date.now()+10800000).toISOString(),purged:false}],
  submissions:[{id:"sample-work-1",workspace_id:"sample-sandbox",participant:"样例 A",source:"artifact",synthetic:true,text:"任意 ε>0，取 N=10。当 n>N 时，1/n<ε。所以极限为零。",review:{candidate:{text:"固定的 N=10 无法对应任意小的 ε，请核对 N 与 ε 的依赖。",model:"预置样例"}}},
  {id:"sample-work-2",workspace_id:"sample-sandbox",participant:"样例 B",source:"artifact",synthetic:true,text:"任给 ε>0，取 N=⌈1/ε⌉。当 n>N 时，1/n<ε。因此极限为0。",review:{}},
  {id:"sample-work-3",workspace_id:"sample-sandbox",participant:"样例 C",source:"independent",synthetic:true,text:"独立任务样例：对 2/n，给定 ε 后选 N=⌈2/ε⌉，则 n>N 时误差小于 ε。",review:{}}],
@@ -62,6 +65,7 @@ export async function demoApi(role:PortalRole,path:string,method="GET",body:any=
  if(path==="/courses")return demoCourses;
  if(path.startsWith("/problems")){const course=new URLSearchParams(path.split("?")[1]).get("course_id");return demoProblems.filter(p=>p.course_id===course);}
  if(path==="/memory")return memory(s);
+ if(path==="/notes")return {items:(s.notes||[]).filter((n:any)=>!n.deleted_at),total:(s.notes||[]).length};
  if(parts[0]==="observations"){const o=s.observations.find((o:any)=>o.id===decodeURIComponent(uid));if(!o)throw Error("观察不存在");Object.assign(o,body,{correction:body.note});result=memory(s);}
  else if(path==="/attempts"&&method==="GET")return s.attempts;
  else if(path==="/attempts"&&method==="POST"){

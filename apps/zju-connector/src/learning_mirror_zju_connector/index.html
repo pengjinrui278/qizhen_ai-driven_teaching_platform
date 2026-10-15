@@ -70,11 +70,13 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const headers = {"Content-Type":"application/json","X-Learning-Mirror-Local":"1"};
-  const allowedReturnOrigins=new Set(["https://learningmirror.cn","https://www.learningmirror.cn","http://localhost:3000","http://127.0.0.1:3000"]);
+  const allowedReturnOrigins=new Set(["https://learningmirror.cn","https://www.learningmirror.cn","http://localhost:3000","http://127.0.0.1:3000","http://localhost:3010","http://127.0.0.1:3010","http://localhost:3011","http://127.0.0.1:3011"]);
   const requestedReturnOrigin=new URLSearchParams(location.search).get("return_origin");
   const returnOrigin=requestedReturnOrigin&&allowedReturnOrigins.has(requestedReturnOrigin)?requestedReturnOrigin:null;
   let snapshot = null;
   if(!returnOrigin) $("send").style.display="none";
+  // 打开即向父页面报到：父页面据此把"正在等待连接器"换成"已连接，请登录"
+  if(returnOrigin&&window.opener){ try{ window.opener.postMessage({type:"learning-mirror-zju-ready"},returnOrigin); }catch(e){} }
   const now = new Date(); $("year").value = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
   async function request(path, body) {
     const response = await fetch(path,{method:"POST",headers,body:body ? JSON.stringify(body) : undefined});

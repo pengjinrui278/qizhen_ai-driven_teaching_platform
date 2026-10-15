@@ -31,3 +31,40 @@ def test_inventory_does_not_read_incomplete_or_outside_files(tmp_path):
         inspect_original(tmp_path / "unfinished.downloading", tmp_path)
     with pytest.raises(ValueError):
         inspect_original(Path(tmp_path.parent / "outside.pdf"), tmp_path)
+
+
+def test_analysis_volumes_are_intake_allowlisted_with_real_covers():
+    """陈纪修《数学分析》第三版上下册的入库登记。
+
+    封面必须是**真实 PDF 封面**抽出来的（R3 的规矩：不生图伪造书封），
+    而原件在 data/ 下（不进 Git）。这里只断言登记本身是完整的、且不越权：
+    没把「下载得到」当成公开许可。
+    """
+    from mirror_api.resource_library import INTAKE_ALLOWLIST
+
+    for rid in ("chen-jixiu-3e-vol1", "chen-jixiu-3e-vol2"):
+        assert rid in INTAKE_ALLOWLIST, "白名单是显式的：清单里出现不等于可以展示"
+
+
+def test_analysis_catalog_entry_is_honest_about_what_was_checked():
+    import json
+
+    from mirror_api.config import REPO_ROOT
+
+    path = REPO_ROOT / "data" / "resource-intake" / "R3" / "catalog.json"
+    if not path.exists():
+        pytest.skip("本机没有教材清单（data/ 不进 Git，清单是服务端本地文件）")
+    items = {row["resource_id"]: row for row in json.loads(path.read_text(encoding="utf-8"))["items"]}
+    for rid, volume, isbn in (("chen-jixiu-3e-vol1", "上册", "978-7-04-051571-8"),
+                              ("chen-jixiu-3e-vol2", "下册", "978-7-04-051630-2")):
+        row = items.get(rid)
+        if row is None:
+            pytest.skip("本机清单里还没有这条")
+        assert row["course_id"] == "mathematical_analysis"
+        assert row["volume"] == volume and row["edition"] == "第三版"
+        assert row["authors"] == ["陈纪修", "於崇华", "金路"]
+        assert row["isbn"] == isbn, "书目信息取自课程 profile 已登记的 source_refs"
+        assert row["pdf_filename"] == rid + ".pdf" and row["cover_filename"] == rid + ".png"
+        assert row["completeness"] == "unverified", \
+            "封面与书名页核对过不等于逐页核对过，不能标 complete"
+        assert len(row["sha256"]) == 64

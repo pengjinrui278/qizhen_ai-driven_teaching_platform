@@ -21,8 +21,12 @@
 .portal .lmMaterialLibrary .mlCount {font-size:12px;color:var(--lm-muted);}
 .portal .lmMaterialLibrary .mlGrid {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
 .portal .lmMaterialLibrary .mlCard {min-width:0;overflow:hidden;background:white;border:1px solid var(--lm-border);border-radius:12px;box-shadow:var(--lm-shadow);}
-.portal .lmMaterialLibrary .mlCover {height:190px;overflow:hidden;background:#f1f5f9;display:grid;place-items:center;border-bottom:1px solid var(--lm-border);}
-.portal .lmMaterialLibrary .mlCover img {display:block;height:100%;max-height:none;width:100%;object-fit:cover;object-position:center;}
+/* 封面区固定 190px 高，图片绝对定位撑满它再按 cover 裁。
+   原来是给 img 写 height:100%，但那是 grid 行里的百分比高度、解析不出 190px，
+   图片就按自身比例长到 414px 高，被 overflow 从**顶部**裁掉——只露出上 46%，
+   竖版封面的书名正好落在被裁掉的那一半里。改成绝对定位撑满再居中裁。 */
+.portal .lmMaterialLibrary .mlCover {position:relative;height:190px;overflow:hidden;background:#f1f5f9;display:grid;place-items:center;border-bottom:1px solid var(--lm-border);}
+.portal .lmMaterialLibrary .mlCover img {position:absolute;inset:0;display:block;height:100%;max-height:none;width:100%;object-fit:cover;object-position:center;}
 .portal .lmMaterialLibrary .mlCoverMissing {display:flex;align-items:center;flex-direction:column;gap:10px;color:var(--lm-muted);font-size:12px;}
 .portal .lmMaterialLibrary .mlCoverMissing .lmIcon {width:32px;height:32px;}
 .portal .lmMaterialLibrary .mlCardBody {padding:14px;overflow-wrap:anywhere;}

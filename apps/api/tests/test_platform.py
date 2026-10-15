@@ -314,3 +314,58 @@ def test_harness_failure_is_blocked(pilot):
     assert result["harness"]["status"]=="failed"
     assert leaked not in result["answer"]
     app.state.pipeline.model=StubMirrorModel()
+
+
+def test_attempt_rename_delete_and_followup_title(pilot):
+    """对话管理：学生能给自己起的名字、也能删掉；追问的标题要带标记。
+
+    追问标记是会话列表折叠的依据——服务端早先不产出它，前端那条识别通道形同虚设，
+    父对话一删，游离的追问就带着通用标题挤在侧栏顶层（好几个还重名）。
+    """
+    _,cookies=register(pilot,"attempt_manager")
+    client=account_client(cookies)
+    aid=attempt(client,"证明数列 1/n 收敛于0。")
+
+    # 默认标题是按首条消息现算的
+    row=next(r for r in client.get("/api/v2/attempts").json() if r["id"]==aid)
+    assert row["title_source"]=="topic_extraction"
+    assert row["title"]
+
+    # 改名之后用学生自己起的
+    assert client.patch("/api/v2/attempts/"+aid,json={"title":"我的第一次证明"}).status_code==200
+    row=next(r for r in client.get("/api/v2/attempts").json() if r["id"]==aid)
+    assert row["title"]=="我的第一次证明" and row["title_source"]=="custom"
+
+    # 清空就退回现算
+    client.patch("/api/v2/attempts/"+aid,json={"title":""})
+    row=next(r for r in client.get("/api/v2/attempts").json() if r["id"]==aid)
+    assert row["title_source"]=="topic_extraction"
+
+    # 追问的标题要带【引用追问】标记，前端才认得出
+    from mirror_api.learning_activity import QUOTE_HEADER,summarize
+    assert summarize(QUOTE_HEADER+"\n⟦引用 1 · 主页面 · 第 1 轮回答⟧\n在 x","mathematical_analysis").startswith(QUOTE_HEADER)
+    assert not summarize("普通提问：什么是极限","mathematical_analysis").startswith(QUOTE_HEADER)
+
+    # 删掉：连带消息与这条对话的学习活动
+    client.post("/api/v2/attempts/"+aid+"/messages",
+                json={"request_id":"msg-1","mode":"chat","message":"再讲讲"})
+    assert client.get("/api/v2/memory?include_activities=true").json()["activities"]
+    deleted=client.delete("/api/v2/attempts/"+aid)
+    assert deleted.status_code==200 and deleted.json()["deleted"] is True
+    assert all(r["id"]!=aid for r in client.get("/api/v2/attempts").json())
+    assert client.get("/api/v2/attempts/"+aid).status_code==404
+    assert client.get("/api/v2/memory?include_activities=true").json()["activities"]==[],\
+        "删了对话不该还留一条活动记录"
+
+
+def test_attempt_management_is_owner_scoped(pilot):
+    """别人的对话不能改名也不能删。"""
+    _,cookies=register(pilot,"attempt_owner")
+    owner=account_client(cookies)
+    aid=attempt(owner,"证明数列 1/n 收敛于0。")
+
+    _,other=register(pilot,"attempt_intruder")
+    intruder=account_client(other)
+    assert intruder.patch("/api/v2/attempts/"+aid,json={"title":"改掉"}).status_code==404
+    assert intruder.delete("/api/v2/attempts/"+aid).status_code==404
+    assert any(r["id"]==aid for r in owner.get("/api/v2/attempts").json()),"别人的对话一个字都没动"

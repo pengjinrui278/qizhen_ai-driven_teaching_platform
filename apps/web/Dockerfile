@@ -14,9 +14,7 @@ RUN pnpm install --frozen-lockfile
 # 再复制源码并静态导出到 apps/web/dist
 COPY apps/web ./apps/web
 COPY apps/windows-helper ./apps/windows-helper
-COPY apps/zju-connector ./apps/zju-connector
 COPY scripts/build-windows-helper.cjs ./scripts/build-windows-helper.cjs
-COPY scripts/build-zju-connector.cjs ./scripts/build-zju-connector.cjs
 ARG NEXT_PUBLIC_ICP_NUMBER=""
 ARG NEXT_PUBLIC_PUBLIC_SECURITY_NUMBER=""
 ARG NEXT_PUBLIC_PUBLIC_SECURITY_URL=""

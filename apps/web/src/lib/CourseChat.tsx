@@ -1,33 +1,74 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import PhotoInput from "./PhotoInput";
 import StudentIcon from "./StudentIcon";
 import ChatHistoryList from "./ChatHistoryList";
 import "./student-chat.css";
 import coursePrompts from "./course-prompts.json";
-import {normalizeMath} from "./math-markdown.mjs";
 import {streamCourseMessage} from "./course-stream";
 import "./course-chat.css";
 import "./chat-refinement.css";
+import "./chat-quote.css";
 import {courseIntro} from "./course-intro";
+import FormulaComposer,{type FormulaComposerHandle} from "./FormulaComposer";
+import ChatMarkdown,{messageSource} from "./ChatMarkdown";
+import QuoteSurface from "./QuoteSurface";
+import QuotePanes from "./QuotePanes";
+import type {QuoteUi,PaneTransport} from "./QuotePanes";
+import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
+import {buildTurnLabel,collectUnitsWithin,isFollowUpText,quoteKeyOf} from "./chat-quote.mjs";
+import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
+import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
+import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
+import NoteOrganizeDialog from "./NoteOrganizeDialog";
+import ChatToolMenu from "./ChatToolMenu";
+import {composeRepliesMarker,decodeNoteMarker,freeNoteMarker,noteRefsInDraft,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
+import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
+import "./note-prefs.css";
+import {fileToDataUrl,inputFromFile,isImageFile,isTextFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
+import type {MaterialPane} from "./material-store";
+import type {PaneState,QuotePiece} from "./quote-store";
 type Row=Record<string,any>;
 type Api=(path:string,method?:string,body?:any)=>Promise<any>;
+type SourceMeta={source:string;label:string;paneId:string;attemptId?:string|null;requestId:string};
 function sessionTime(value?:string){if(!value)return "创建时间未记录";const d=new Date(value);return Number.isNaN(d.getTime())?"创建时间未记录":"创建于 "+d.toLocaleString("zh-CN");}
-function MessageText({text}:{text:string}){return <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex,{throwOnError:false}]]}>{normalizeMath(text)}</ReactMarkdown>;}
+function MessageText({text}:{text:string}){return <ChatMarkdown text={text}/>;}
 export default function CourseChat({api,courses,user,sandboxes=[],streaming=false}:{api:Api;courses:Row[];user:Row;sandboxes?:Row[];streaming?:boolean}){
  const [stage,setStage]=useState("");
  const [assignment,setAssignment]=useState(""),[theme,setTheme]=useState("conditions");
  const [course,setCourse]=useState("mathematical_analysis"),[sessions,setSessions]=useState<Row[]>([]),[active,setActive]=useState<Row|null>(null),[events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[pending,setPending]=useState<Row|null>(null),[copied,setCopied]=useState(""),[historyOpen,setHistoryOpen]=useState(false),[feedback,setFeedback]=useState("");
  const [relatedChunks,setRelatedChunks]=useState<Row[]>([]),[relatedLoading,setRelatedLoading]=useState(false),[showRelated,setShowRelated]=useState(false);
- const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<HTMLTextAreaElement>(null);
+ const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<FormulaComposerHandle>(null);
  const [historyLoading,setHistoryLoading]=useState(true),[historyError,setHistoryError]=useState("");
  const [failedSession,setFailedSession]=useState<Row|null>(null);
  const historyPanel=useRef<HTMLElement>(null),historyToggle=useRef<HTMLButtonElement>(null);
  const [actionId,setActionId]=useState<string|null>(null);
+ // 笔记：面板打开状态、本次待发送的标记、以及「存为笔记」确认卡指向哪一条回答
+ const [notePanel,setNotePanel]=useState<{purpose?:string;source?:string}|null>(null);
+ const noteComposed=useRef<{prompt:string;ids?:string[];marker?:string}|null>(null);
+ // 「并入哪一篇」：面板里显式选，没选就是新建（默认永远是新建）
+ const [mergeId,setMergeId]=useState("");
+ const [organizing,setOrganizing]=useState(false);
+ // 笔记模式：关着的时候笔记相关交互一概不出现（人为调用，不做常驻引导）
+ const [noteMode,setNoteMode]=useState(false);
+ const [pickedReplies,setPickedReplies]=useState<string[]>([]);
+ const [undoneNotes,setUndoneNotes]=useState<string[]>([]);   // 已撤回的自动存笔记
+ // 输入 @ 时的笔记目录：拉本人的笔记，按关键词过滤后供选择
+ const [edgeOpen,setEdgeOpen]=useState(false);
+ // 草稿里引用到的笔记。引用既可以当依据，也可以当「并入」的目标，
+ // 所以目标撤掉之后要把 mergeId 一起清掉，免得并进一篇已经不在草稿里的笔记。
+ const refNotes=useMemo(()=>noteRefsInDraft(draft),[draft]);
+ useEffect(()=>{if(mergeId&&!refNotes.some(n=>n.id===mergeId))setMergeId("");},[refNotes,mergeId]);
+ const [mentionQuery,setMentionQuery]=useState<string|null>(null);
+ const [mentionNotes,setMentionNotes]=useState<Row[]>([]);
+ useEffect(()=>{
+  if(mentionQuery===null||mentionNotes.length)return;
+  let live=true;
+  api("/notes").then((data:Row)=>{if(live)setMentionNotes(data.items||[]);}).catch(()=>{if(live)setMentionNotes([]);});
+  return()=>{live=false;};
+ },[mentionQuery,mentionNotes.length]);
+ const messagesRef=useRef<HTMLDivElement>(null);
  const actionTimer=useRef<ReturnType<typeof setTimeout>|null>(null),historyEpoch=useRef(0);
  const workspace=useRef<HTMLElement>(null),followBottom=useRef(true);
  const pendingRef=useRef<Row|null>(null);
@@ -35,8 +76,214 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  function leaveRequest(){epoch.current++;streamAbort.current?.abort();streamAbort.current=null;lock.current=false;setBusy(false);setStage("" );}
  const [historyEnd,setHistoryEnd]=useState(false);
  const [historyCollapsed,setHistoryCollapsed]=useState(false);
+ // 摘录：引用片段 → 拼接 → 并行子页面。状态与持久化都集中在这里，不改既有会话逻辑。
+ const [quotingPaneId,setQuotingPaneId]=useState<string|null>(null);
+ // 剪贴托盘按面板隔离：trays["main"] 是主页面的，trays[paneId] 是各子页面的
+ const [trays,setTrays]=useState<Record<string,QuotePiece[]>>({});
+ const piecesOf=(paneId:string):QuotePiece[]=>trays[paneId]??[];
+ const setPiecesOf=(paneId:string,next:QuotePiece[])=>setTrays(cur=>{
+  if(next.length)return {...cur,[paneId]:next};
+  const copy={...cur};delete copy[paneId];return copy;
+ });
+ const [panes,setPanes]=useState<PaneState[]>([]);
+ const [links,setLinks]=useState<Record<string,string>>({});
+ const [mainWeight,setMainWeight]=useState(1);
+ const [quoteError,setQuoteError]=useState("");
+ const sourcesRef=useRef<Record<string,SourceMeta>>({});
+ const mainSourcesRef=useRef<Record<string,SourceMeta>>({});
+ const subSourcesRef=useRef<Record<string,SourceMeta>>({});
+ const mainSources=useMemo(()=>{
+  const map:Record<string,SourceMeta>={};
+  events.forEach((e:Row,i:number)=>{
+   const label=buildTurnLabel("主页面",i+1);
+   if(e.message)map["e:"+e.request_id+":user"]={source:messageSource(e.message),label:label+"（提问）",paneId:"main",attemptId:active?.id??null,requestId:e.request_id};
+   if(e.response?.answer)map["e:"+e.request_id+":ai"]={source:messageSource(e.response.answer),label,paneId:"main",attemptId:active?.id??null,requestId:e.request_id};
+  });
+  return map;
+ },[events,active?.id]);
+ useEffect(()=>{mainSourcesRef.current=mainSources;sourcesRef.current={...mainSources,...subSourcesRef.current};},[mainSources]);
+ const registerSources=useCallback((paneId:string,map:Record<string,SourceMeta>|null)=>{
+  if(map)Object.assign(subSourcesRef.current,map);
+  else for(const k of Object.keys(subSourcesRef.current))if(k.startsWith("q:"+paneId+":"))delete subSourcesRef.current[k];
+  sourcesRef.current={...mainSourcesRef.current,...subSourcesRef.current};
+ },[]);
+ useEffect(()=>{ // 子页面绑定在主会话上：换会话即整套作废（不清 localStorage，回看旧会话仍可恢复）
+  setQuotingPaneId(null);setTrays({});setQuoteError("");
+  if(!active?.id){setPanes([]);return;}
+  // 追问链路是全用户级、跨会话的：先取本地账本，再并入本次工作区里记录的链路
+  const stored=loadWorkspace(user.id,active.id);
+  setLinks({...loadLinks(user.id),...(stored?.links||{})});
+  if(stored){setPanes(stored.panes);setMainWeight(stored.mainWeight??1);}
+  else{setPanes([]);setMainWeight(1);}
+ },[active?.id,user.id]);
+ useEffect(()=>{ // 持久化 pane 树、追问链路与剪贴片段；会话未建立时不写
+  if(!user?.id||!active?.id)return;
+  saveWorkspace({v:1,userId:user.id,mainAttemptId:active.id,course,panes,links,mainWeight,updatedAt:Date.now()});
+ },[panes,links,mainWeight,user?.id,active?.id,course]);
+ // M2 布局：权重拖动、换位、抽页收纳、抽出定格（都落在 pane 树上，随上面的 effect 持久化）
+ function resizePanes(patch:Record<string,number>){setPanes(prev=>prev.map(p=>patch[p.id]!==undefined?{...p,weight:patch[p.id]}:p));if(patch.main!==undefined)setMainWeight(patch.main);}
+ function movePane(id:string,insertIndex:number){setPanes(prev=>reorderPane(prev,id,insertIndex));}
+ function collapsePanes(ids:string[]){if(!ids.length)return;setPanes(prev=>collapseWithSubtree(prev,ids));}
+ function collapseOnePane(id:string){setPanes(prev=>prev.map(p=>p.id===id?{...p,state:"tab",pinned:false}:p));}
+ function pinPane(id:string){
+  setPanes(prev=>prev.map(p=>p.id===id?{...p,state:"open",pinned:true}:p));
+  // 抽出后把它滚到可见位置，动效才有落点
+  setTimeout(()=>document.querySelector<HTMLElement>(`[data-pane-id="${id}"]`)?.scrollIntoView({block:"nearest",inline:"nearest",behavior:"smooth"}),60);
+ }
+ function toggleScissors(paneId:string){setQuoteError("");setQuotingPaneId(cur=>cur===paneId?null:paneId);}
+ function exitScissors(){setQuotingPaneId(null);setQuoteError("");}
+ function addPieces(paneId:string,incoming:QuotePiece[]){
+  setTrays(cur=>{
+   const now=cur[paneId]??[];
+   const byKey=new Map(now.map(p=>[p.key,p]));
+   incoming.forEach(p=>{if(!byKey.has(p.key))byKey.set(p.key,p);});
+   const next=[...byKey.values()];
+   if(next.length>pieceLimit)setQuoteError(`一次最多引用 ${pieceLimit} 处，请先拼接或清理。`);
+   return {...cur,[paneId]:next.slice(0,pieceLimit)};
+  });
+ }
+ function assemble(parentPaneId:string){
+  const pieces=piecesOf(parentPaneId);
+  if(!pieces.length)return;
+  if(!canAddPane(panes)){setQuoteError(`同时最多保留 ${paneLimit} 个子页面，请先关闭一些。`);return;}
+  if(pieces.reduce((n,p)=>n+p.source.length,0)>9000){setQuoteError("摘下的片段过长，请减少或缩短后再拼接。");return;}
+  const parent=panes.some(p=>p.id===parentPaneId)?parentPaneId:"main";
+  const pane:PaneState={id:newPaneId(),parentId:parent,attemptId:null,quotes:pieces.slice(),question:"",weight:1,state:"open",pinned:false,createdAt:Date.now()};
+  setPanes(prev=>{const next=[...prev];next.splice(subtreeEnd(prev,parent),0,pane);return next;});
+  setPiecesOf(parentPaneId,[]);exitScissors();
+ }
+ function closePane(id:string){
+  const kids=descendantIds(panes,id);
+  if(kids.length&&!window.confirm(`关闭将同时关闭其下 ${kids.length} 个子页面，继续？`))return;
+  setPanes(prev=>prev.filter(p=>p.id!==id&&!kids.includes(p.id)));
+  setTrays(cur=>{const copy={...cur};[id,...kids].forEach(x=>delete copy[x]);return copy;});
+ }
+ function bindAttempt(paneId:string,attemptId:string,question:string){
+  const pane=panes.find(p=>p.id===paneId);
+  const parentAttempt=pane?(pane.parentId==="main"?active?.id??null:panes.find(p=>p.id===pane.parentId)?.attemptId??null):null;
+  if(parentAttempt){
+   setLinks(cur=>{const next={...cur,[attemptId]:parentAttempt};saveLinks(user.id,next);return next;});
+  }
+  setPanes(prev=>prev.map(p=>p.id===paneId?{...p,attemptId,question}:p));
+ }
+ function removePaneQuote(paneId:string,pieceId:string){setPanes(prev=>prev.map(p=>p.id===paneId?{...p,quotes:p.quotes.filter(q=>q.id!==pieceId)}:p));}
+ async function copyPieces(paneId:string){const pieces=piecesOf(paneId);try{await navigator.clipboard.writeText(pieces.map(p=>p.source).join("\n\n---\n\n"));setQuoteError(`已复制 ${pieces.length} 处`);setTimeout(()=>setQuoteError(""),1600);}catch{setQuoteError("复制失败，请手动选择文字。");}}
+ function locatePiece(piece:QuotePiece){
+  const container=piece.paneId==="main"?workspace.current:document.querySelector<HTMLElement>(`[data-pane-id="${piece.paneId}"] .chatPaneScroll`);
+  if(!container)return;
+  const target=[...container.querySelectorAll<HTMLElement>("[data-quote-unit]")].find(el=>quoteKeyOf(el)===piece.key);
+  if(!target)return;
+  target.scrollIntoView({block:"center",behavior:"smooth"});
+  target.classList.add("quoteFlash");setTimeout(()=>target.classList.remove("quoteFlash"),1600);
+ }
+ function quoteAnswer(requestId:string){
+  const host=workspace.current?.querySelector<HTMLElement>(`[data-quote-src="e:${requestId}:ai"]`);
+  if(!host)return;
+  const found=collectUnitsWithin(host,mainSourcesRef.current).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
+  if(found.length)addPieces("main",found as QuotePiece[]);
+ }
+ // 参阅区：拖入本地文件或网址 → 停靠在对话卡片右侧，只作阅读用，不含 agent 对话
+ const [materials,setMaterials]=useState<MaterialPane[]>([]);
+ const [dropping,setDropping]=useState(false);
+ const [dropZone,setDropZone]=useState<"ask"|"board"|null>(null);
+ const [boardWidth,setBoardWidth]=useState(360);
+ const materialsRef=useRef<MaterialPane[]>([]);materialsRef.current=materials;
+ useEffect(()=>()=>{materialsRef.current.forEach(releaseMaterial);},[]);
+ async function addFiles(files:FileList|File[]){
+  const room=materialLimit()-materials.length;
+  if(room<=0){setError(`参阅区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
+  const list=Array.from(files).slice(0,room);
+  const paneList:MaterialPane[]=[];
+  for(const file of list){
+   const input=inputFromFile(file);
+   if(input.kind==="text"){try{input.source=await file.text();}catch{input.source="（读取失败）";}}
+   paneList.push(newMaterialPane(input,materials.length+paneList.length));
+  }
+  setMaterials(cur=>[...cur,...paneList]);
+  if(Array.from(files).length>room)setError(`参阅区最多停靠 ${materialLimit()} 个页面，多余的未加入。`);
+ }
+ function addUrl(value:string){
+  const url=urlOf(value);
+  if(!url){setError("请粘贴以 http:// 或 https:// 开头的网址。");return;}
+  if(materials.length>=materialLimit()){setError(`参阅区最多停靠 ${materialLimit()} 个页面，请先关闭一些。`);return;}
+  setMaterials(cur=>[...cur,newMaterialPane({kind:"url",title:url.replace(/^https?:\/\//,"").replace(/\/$/,""),source:url},cur.length)]);
+ }
+ function closeMaterial(id:string){setMaterials(cur=>{const pane=cur.find(p=>p.id===id);if(pane)releaseMaterial(pane);return cur.filter(p=>p.id!==id);});}
+ function moveMaterial(id:string,delta:number){setMaterials(cur=>{const i=cur.findIndex(p=>p.id===id),j=i+delta;if(i<0||j<0||j>=cur.length)return cur;const next=[...cur];[next[i],next[j]]=[next[j],next[i]];return next;});}
+ function clearMaterials(){setMaterials(cur=>{cur.forEach(releaseMaterial);return [];});}
+ // 拖入分区：右侧 1/3 = 并排查看（参阅页），其余 = 上传文件向 AI 提问
+ function zoneOf(clientX:number){return clientX>=window.innerWidth*2/3?"board":"ask";}
+ function onDragOver(e:React.DragEvent){
+  const types=e.dataTransfer?.types||[];
+  const hasFile=Array.from(types).includes("Files");
+  const hasText=Array.from(types).some(t=>t==="text/uri-list"||t==="text/plain");
+  if(!hasFile&&!hasText)return;
+  e.preventDefault();e.dataTransfer.dropEffect="copy";
+  const zone=zoneOf(e.clientX);
+  if(!dropping)setDropping(true);
+  if(dropZone!==zone)setDropZone(zone);
+ }
+ function onDragLeave(e:React.DragEvent){if(e.currentTarget.contains(e.relatedTarget as Node))return;setDropping(false);setDropZone(null);}
+ function onDrop(e:React.DragEvent){
+  e.preventDefault();
+  const zone=zoneOf(e.clientX);
+  setDropping(false);setDropZone(null);
+  const files=e.dataTransfer?.files;
+  // 网址只能并排查看（浏览器无法抓取外部网页正文），不论落在哪边都进参阅区
+  if(!files?.length){
+   const url=e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain");
+   if(url)addUrl(url);
+   return;
+  }
+  if(zone==="board")void addFiles(files);
+  else void attachToQuestion(files);
+ }
+ // 左侧分区：把文件作为提问附件——文本类直接读入输入框，图片走既有识别链路
+ async function attachToQuestion(files:FileList|File[]){
+  const list=Array.from(files);
+  let appended="";
+  for(const file of list){
+   if(isTextFile(file)){
+    let text="";
+    try{text=await file.text();}catch{text="";}
+    appended+=`\n\n【文件：${file.name}】\n${text.slice(0,4000)}`;
+   }else if(isImageFile(file)){
+    try{
+     const dataUrl=await fileToDataUrl(file);
+     const result=await api("/recognize","POST",{data_url:dataUrl});
+     appended+=`\n\n【图片识别：${file.name}】\n${(result?.text||"").slice(0,4000)}`;
+    }catch{
+     setError(`${file.name} 识别失败，可以先存成图片再拖进来，或改用相机入口。`);
+     return;
+    }
+   }else{
+    setError(`暂不支持把 ${file.name} 作为提问附件（浏览器无法读取该格式正文）。拖到右侧可并排查看。`);
+    return;
+   }
+  }
+  if(!appended)return;
+  setDraft(cur=>cur+appended);
+  setError("");
+  window.setTimeout(()=>input.current?.focus(),0);
+ }
+ function startBoardResize(e:React.PointerEvent){
+  e.preventDefault();
+  const startX=e.clientX,width=boardWidth;
+  const move=(ev:PointerEvent)=>setBoardWidth(Math.min(760,Math.max(280,width-(ev.clientX-startX))));
+  const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
+ }
+ // 课程对话的传输层：创建 attempt + SSE 流式 + 读取 events
+ const paneTransport:PaneTransport=useMemo(()=>({
+  create:async(text:string)=>{const a=await api("/attempts","POST",{course_id:course,text,sandbox_id:null});return {id:String(a.id)};},
+  send:async(id,request,onStage,signal)=>{if(streaming)await streamCourseMessage(id,request,onStage,signal);else await api("/attempts/"+id+"/messages","POST",request);},
+  load:async(id:string)=>{const d=await api("/attempts/"+id);return d.events||[];},
+ }),[api,course,streaming]);
+ function quoteUi():QuoteUi{
+  return {piecesOf,setPieces:setPiecesOf,quotingPaneId,error:quoteError,busy:busy||loading,onToggle:toggleScissors,onAssemble:assemble,onCopy:paneId=>void copyPieces(paneId),onClear:paneId=>setPiecesOf(paneId,[]),onExit:exitScissors,onAddPieces:addPieces,onSent:()=>void loadHistory(),onRemoveQuote:removePaneQuote,onLocate:locatePiece};
+ }
  async function loadOlder(){const serial=++historyEpoch.current;setHistoryLoading(true);setHistoryError("");try{const rows=await api("/attempts?offset="+sessions.length+"&limit=100");if(serial===historyEpoch.current){setSessions(old=>[...old,...rows.filter((r:Row)=>!old.some(o=>o.id===r.id))]);setHistoryEnd(rows.length<100);}}catch(e){if(serial===historyEpoch.current)setHistoryError((e as Error).message);}finally{if(serial===historyEpoch.current)setHistoryLoading(false);}}
- useEffect(()=>{const box=input.current;if(!box)return;const resize=()=>{box.style.height="auto";const style=getComputedStyle(box);const border=parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);box.style.height=Math.min(140,Math.max(44,Math.ceil(box.scrollHeight+border)))+"px";};resize();window.addEventListener("resize",resize);return()=>window.removeEventListener("resize",resize);},[draft]);
+
  useEffect(()=>{if(historyOpen)historyPanel.current?.querySelector<HTMLButtonElement>("button")?.focus();},[historyOpen]);
  function cancelActions(){if(actionTimer.current)clearTimeout(actionTimer.current);actionTimer.current=null;setActionId(null);}
  async function retryHistory(){const token=epoch.current;const rows=await loadHistory();if(token!==epoch.current||!rows||active)return;const id=new URLSearchParams(location.search).get("attempt");if(id)await resume(rows.find((row:Row)=>row.id===id)||{id});}
@@ -49,12 +296,74 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  useEffect(()=>{const el=workspace.current;if(el&&followBottom.current)el.scrollTop=el.scrollHeight;},[events,pending,busy,actionId]);
  useEffect(()=>{if(loading||!active)return;let hash;try{hash=decodeURIComponent(location.hash.slice(1));}catch{return;}if(!hash.startsWith("turn-"))return;const frame=requestAnimationFrame(()=>{const target=document.getElementById(hash);if(target){followBottom.current=false;target.scrollIntoView({block:"start"});}});return()=>cancelAnimationFrame(frame);},[active?.id,loading]);
  function resetRelated(){setRelatedChunks([]);setRelatedLoading(false);setShowRelated(false);setCopied("");setFeedback("");}
- function clear(c=course){leaveRequest();cancelActions();followBottom.current=true;updateUrl(c);setLoading(false);setFailedSession(null);resetRelated();setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setHistoryOpen(false);input.current?.focus();}
- async function resume(a:Row){leaveRequest();setFailedSession(null);const token=++epoch.current;cancelActions();followBottom.current=false;if(workspace.current)workspace.current.scrollTop=0;resetRelated();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){updateUrl(d.course_id,a.id);setCourse(d.course_id);setActive(d);setAssignment(d.sandbox_id||"");setEvents(d.events);setPending(null);pendingRef.current=null;setDraft(d.events.length===0?(d.problem?.text||""):"");setHistoryOpen(false);}}catch(e){if(token===epoch.current){setError("无法打开对话："+(e as Error).message);setFailedSession(a);}}finally{if(token===epoch.current)setLoading(false);}}
+ function clear(c=course){if(panes.length&&!window.confirm("开始新对话将关闭全部子页面，继续？"))return;leaveRequest();cancelActions();followBottom.current=true;updateUrl(c);setLoading(false);setFailedSession(null);resetRelated();setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setHistoryOpen(false);input.current?.focus();}
+ // 历史记录自己管：改名 / 删除。删掉的若是当前这段，就顺手回到空状态。
+ async function renameSession(row:Row,title:string){
+  setError("");
+  try{
+   const saved=await api("/attempts/"+row.id,"PATCH",{title});
+   setSessions(cur=>cur.map(s=>s.id===row.id?{...s,title:saved.title,title_source:saved.title_source}:s));
+  }catch(e){setError("改不了名字："+(e as Error).message);}
+ }
+ async function deleteSession(row:Row){
+  setError("");setFeedback("");
+  try{
+   await api("/attempts/"+row.id,"DELETE");
+   setSessions(cur=>cur.filter(s=>s.id!==row.id));
+   // 删除的对话留下的追问也不会再挂得上，本地链路一并清掉
+   setLinks(cur=>{const next={...cur};for(const key of Object.keys(next))if(next[key]===row.id||key===row.id)delete next[key];return next;});
+   if(active?.id===row.id){leaveRequest();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");updateUrl(course,"");}
+   setFeedback("已删除这段对话");
+  }catch(e){setError("删除失败："+(e as Error).message);}
+ }
+ async function resume(a:Row){if(panes.length&&!window.confirm("打开其它对话将关闭全部子页面，继续？"))return;leaveRequest();setFailedSession(null);const token=++epoch.current;cancelActions();followBottom.current=false;if(workspace.current)workspace.current.scrollTop=0;resetRelated();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){updateUrl(d.course_id,a.id);setCourse(d.course_id);setActive(d);setAssignment(d.sandbox_id||"");setEvents(d.events);setPending(null);pendingRef.current=null;setDraft(d.events.length===0?(d.problem?.text||""):"");setHistoryOpen(false);}}catch(e){if(token===epoch.current){setError("无法打开对话："+(e as Error).message);setFailedSession(a);}}finally{if(token===epoch.current)setLoading(false);}}
+ // 拖入/选择的文档：上传抽文本，成功后作为高亮块钉在输入框最前面（不管光标在哪）
+ const [uploading,setUploading]=useState(false);
+ const [dragging,setDragging]=useState(false);
+ async function addDocuments(files:File[]){
+  const docs=files.filter(isDocFile);
+  if(!docs.length){setError("只支持 PDF、Word、PPT、txt/md 与常见代码文件；图片请用左边的「图片」。");return;}
+  setUploading(true);setError("");
+  try{
+   for(const file of docs){
+    const saved=await uploadDocument(file);
+    input.current?.addFile({id:saved.id,name:saved.filename,kind:saved.kind_label});
+    if(saved.note)setError(saved.note);   // 抽不出正文时如实说明，不假装读到了
+   }
+  }catch(e){setError(e instanceof Error?e.message:"文档上传失败");}
+  finally{setUploading(false);}
+ }
+ // 选中的回答 → 交给 agent 整理成「一份」笔记（不是按顺序照抄），发送后由服务端自动存库
+ function composeFromPicked(){
+  if(!pickedReplies.length)return;
+  // 输入框里只放指令，不放回答正文：正文由服务端按 request_id 取回完整原文当素材。
+  // 早先这里贴了每处 300 字的预览，模型会照着那份残缺清单写，笔记覆盖范围就错了。
+  const prompt=`请把选中的 ${pickedReplies.length} 处回答整理成一份笔记：去掉重复、按主题重新组织、补上必要的结构，不要按原顺序照抄。`;
+  noteComposed.current={prompt,ids:[...pickedReplies]};
+  setDraft(prompt);
+  setPickedReplies([]);
+  input.current?.focus();
+ }
  async function send(retry=false,mode="chat"){
   if(lock.current||loading||user.status!=="active")return;
   const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"请梳理大致解题流程、主要步骤、条件检查和验证方法，保留核心计算或论证让我完成":draft.trim());
-  const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:msg};
+  // 笔记偏好面板拼好的提示词：发送时把来源标记追加到末尾（输入框里不显示），
+  // 用户改过内容就不再加标记，退化成一次普通提问。
+  // 笔记模式下的标记只有三种来路：面板拼好的、选中回答整理的、以及这里现补的自由请求。
+  // 没有第三种的话，学生在笔记模式下直接提要求只会得到一条普通回答，还得自己复制粘贴。
+  const pendingMarker=(()=>{
+   if(retry)return "";
+   const note=noteComposed.current;
+   if(note&&note.prompt.trim()===msg){
+    if(note.ids)return composeRepliesMarker(note.ids,mergeId||undefined);
+    return note.marker||"";
+   }
+   if(noteMode&&mode==="chat"&&msg)return freeNoteMarker(mergeId||undefined);
+   return "";
+  })();
+  const wire=pendingMarker?withNoteMarker(msg,pendingMarker):msg;
+  noteComposed.current=null;
+  const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:wire};
   if(!request?.message)return;
   cancelActions();lock.current=true;setDraft("");setBusy(true);setError("");setFeedback("");setPending(request);pendingRef.current=request;
   const token=epoch.current;
@@ -96,25 +405,117 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const isInitial=(e:Row,i:number)=>i===0&&e.message===active?.problem?.text;
  const courseSymbol:Record<string,string>={mathematical_analysis:"ε",linear_algebra_analytic_geometry:"⟨⟩",university_physics:"ω",point_set_topology:"τ",ordinary_differential_equations:"y′"};
  const suggestionList=(coursePrompts as Record<string,{title:string;question:string}[]>)[course]||[{title:"从一个问题开始",question:"请帮我拆解这个问题，并引导我检查自己的思路。"}];
- return <section className={"courseChat lmCourseChat"+(showRelated?" hasRelated":"")+(historyCollapsed?" historyCollapsed":"")}>
+ return <section className={"courseChat lmCourseChat"+(showRelated?" hasRelated":"")+(historyCollapsed?" historyCollapsed":"")} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+ {dropping&&<div className={"dropOverlay"+(dropZone?" is"+dropZone:"")} aria-hidden="true">
+  <div className="dropZone dropZoneAsk">
+   <StudentIcon name="file"/>
+   <strong>上传文件 · 向 AI 提问</strong>
+   <span>文本/Markdown 直接读入输入框；图片先识别成文字再提问</span>
+  </div>
+  <div className="dropZoneLine" aria-hidden="true"/>
+  <div className="dropZone dropZoneBoard">
+   <StudentIcon name="library"/>
+   <strong>并排查看 · 不参与提问</strong>
+   <span>作为参阅页停在右侧，只看不聊（文件不出本机）</span>
+  </div>
+ </div>}
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
- <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
- <section className="chatWorkspace" ref={workspace} onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><button onClick={()=>clear()}>新对话</button></header>
+ <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}
+  onRename={renameSession} onDelete={deleteSession} busy={busy}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
+ <QuotePanes panes={panes} quote={quoteUi()} board={materials.length>0?<>
+   <div className="paneResizer" role="separator" aria-orientation="vertical" aria-label="调整参阅区宽度" onPointerDown={startBoardResize}/>
+   <div className="materialSlot" style={{flexBasis:boardWidth}}>
+    <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(p=>p.id===id?{...p,height:h}:p))} onMove={moveMaterial} onClear={clearMaterials}/>
+   </div>
+ </>:null} dropping={dropping} transport={paneTransport} user={user} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
+ <section className="chatWorkspace" ref={workspace}
+  onDragOver={e=>{if(Array.from(e.dataTransfer?.items||[]).some(i=>i.kind==="file")){e.preventDefault();setDragging(true);}}}
+  onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setDragging(false);}}
+  onDrop={e=>{e.preventDefault();setDragging(false);void addDocuments(Array.from(e.dataTransfer?.files||[]));}}
+  data-quoting={quotingPaneId==="main"?"":undefined} data-note-mode={noteMode?"":undefined}
+  data-dragging={dragging?"true":undefined}
+  onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><NoteModeToggle on={noteMode} disabled={busy||loading||user.status!=="active"} toggle={()=>{setNoteMode(v=>!v);setPickedReplies([]);}}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
  {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>{courseIntro(course)}</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}
  {loading&&<p role="status">正在打开对话…</p>}
- {active&&(!pending||pending.message!==active.problem.text)&&(events.length===0||!isInitial(events[0],0))&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={active.problem.text||"课程问题"}/></article></div></div>}
+ {active&&(!pending||pending.message!==active.problem.text)&&(events.length===0||!isInitial(events[0],0))&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser">{isFollowUpText(active.problem.text||"")?<FollowUpMessage text={active.problem.text}/>:<MessageText text={active.problem.text||"课程问题"}/>}</article></div></div>}
  {active&&!loading&&events.length===0&&!busy&&<p role="status">这段对话尚无已完成的回答。原问题已保留在下方，可直接发送继续。</p>}
- {events.map((e,i)=><div className="chatExchange" id={"turn-"+e.request_id} key={e.request_id}><div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={e.message||active?.problem?.text||"继续"}/></article></div></div><div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {name}</div><article className="chatAssistant">{e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
+ {events.map((e,i)=><div className="chatExchange" id={"turn-"+e.request_id} key={e.request_id}><div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser" data-quote-src={"e:"+e.request_id+":user"}>{isFollowUpText(stripNoteMarker(e.message||""))?<FollowUpMessage text={stripNoteMarker(e.message||"")}/>:<MessageText text={stripNoteMarker(e.message||"")||active?.problem?.text||"继续"}/>}</article></div></div><div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {name}</div><article className={"chatAssistant"+(noteMode?" isPickable":"")+(pickedReplies.includes(e.request_id)?" isPicked":"")} data-quote-src={"e:"+e.request_id+":ai"} data-pick-id={e.request_id}
+   onClick={noteMode?(ev=>{const el=ev.target as HTMLElement;if(el.closest("button,a,details,summary"))return;setPickedReplies(cur=>cur.includes(e.request_id)?cur.filter(x=>x!==e.request_id):[...cur,e.request_id]);}):undefined}>
+   {noteMode&&<span className="pickMark" aria-hidden="true">{pickedReplies.includes(e.request_id)?"✓ 已选中":"选中这处"}</span>}
+   {e.response?.decision?.note_saved&&<div className="noteSavedNotice" role="status">
+    {undoneNotes.includes(e.response.decision.note_saved.id)
+     ? <span>已撤回，这份笔记已移入回收站。</span>
+     : <>
+       <span>{e.response.decision.note_saved.merged?"已并入":"已存到"} 我的笔记 › {courses.find(c=>c.course_id===e.response.decision.note_saved.course_id)?.display_name||e.response.decision.note_saved.course_id}
+        {e.response.decision.note_saved.folder_path?` › ${e.response.decision.note_saved.folder_path}`:""} › 《{e.response.decision.note_saved.title}》</span>
+       {e.response.decision.note_saved.merge_overflow&&<span>目标笔记已经写满，这次另存成了一份新的。</span>}
+       <a href={"/student/notes?note="+encodeURIComponent(e.response.decision.note_saved.id)}>查看</a>
+       <button type="button" onClick={()=>{const id=e.response.decision.note_saved.id;
+         void api("/notes/"+id,"DELETE").then(()=>setUndoneNotes(cur=>[...cur,id])).catch(()=>setError("撤回失败，请到「我的笔记」里手动删除。"));}}>撤回</button>
+      </>}
+   </div>}
+   {/* agent 直接动过笔记库：逐条说清做了什么、哪几项没做成，并给一条去笔记库的路 */}
+   {e.response?.decision?.note_ops&&<div className="noteSavedNotice noteOpsNotice" role="status">
+    <span>助手改动了你的笔记：完成 {e.response.decision.note_ops.done} 项
+     {e.response.decision.note_ops.failed>0?`，${e.response.decision.note_ops.failed} 项没做成`:""}</span>
+    <ul>{e.response.decision.note_ops.results.map((r:Row,i:number)=>
+     <li key={i} className={r.ok?"":"isFailed"}>{r.detail}</li>)}</ul>
+    <a href="/student/notes">去我的笔记</a>
+   </div>}
+   {e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button><button onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
  {pending&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={pending.message}/></article></div></div>}
- {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}<div ref={bottom}/></div>
+ {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
- <form className="chatComposer" onSubmit={e=>{e.preventDefault();void send();}}>
- <textarea ref={input} aria-label="发送消息" placeholder="输入消息，或上传题目图片…（支持 LaTeX 公式）" value={draft} maxLength={6000} rows={1} disabled={busy||loading||user.status!=="active"} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/>
- <div className="chatComposerActions"><details className="chatAttachments"><summary><StudentIcon name="camera"/>图片</summary><PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/></details><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
+ <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(p=>p.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
+ {/* 底部停靠区：这一层 .chatWorkspace 是整块滚动的，只有头部与输入框各自 sticky。
+     面板若留在普通流里，消息一长就被滚出视野、非滑到底看不见，所以和输入框绑成一块一起粘住。 */}
+ <div className="chatDock">
+ {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
+ {(noteMode||/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft))&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
+  targets={refNotes} mergeId={mergeId} onMerge={id=>setMergeId(id)}
+  onOpenPanel={()=>setNotePanel({})} onOrganize={()=>setOrganizing(true)}
+  onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
+ {mentionQuery!==null&&<div className="noteMention" role="listbox" aria-label="引用我的笔记">
+  {(()=>{
+   const keyword=mentionQuery.trim().toLowerCase();
+   const hits=(keyword?mentionNotes.filter(n=>((n.title||"")+(n.folder_path||"")+(n.remark||"")).toLowerCase().includes(keyword)):mentionNotes).slice(0,8);
+   if(!mentionNotes.length)return <p className="noteMentionEmpty">还没有笔记可以引用。</p>;
+   if(!hits.length)return <p className="noteMentionEmpty">没有匹配的笔记。</p>;
+   return hits.map(row=><button type="button" role="option" aria-selected="false" key={row.id}
+     onClick={()=>{input.current?.insertNoteRef({id:row.id,name:row.title});setMentionQuery(null);}}>
+    <span className="noteMentionTitle">{row.starred?"★ ":""}{row.title}</span>
+    <span className="noteMentionMeta">{courses.find(c=>c.course_id===row.course_id)?.display_name||row.course_id} › {row.folder_path||"科目根"}</span>
+   </button>);
+  })()}
+ </div>}
+ {noteMode&&pickedReplies.length>0&&<div className="notePickBar" role="group" aria-label="已选中的回答">
+  <span>已选 {pickedReplies.length} 处回答</span>
+  <button type="button" className="notePickGo" onClick={composeFromPicked}>存为笔记</button>
+  <button type="button" onClick={()=>setPickedReplies([])}>清除</button>
+ </div>}
+ <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
+ <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}
+  placeholder={noteMode?"笔记模式：点选回答后按「存为笔记」整理入库；也可以让我整理已有笔记、找一篇笔记，或拖入文件、用 @ 引用笔记":undefined}
+  onMention={query=>setMentionQuery(query)}/>
+ <div className="chatComposerActions">
+  <ChatToolMenu label="工具库" disabled={busy||loading||user.status!=="active"}>
+    <PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/>
+    <label className="chatDocUpload"><StudentIcon name="file"/>{uploading?"上传中…":"选择文件"}<input type="file" multiple accept={DOC_ACCEPT} aria-label="上传文档" disabled={busy||loading||uploading||user.status!=="active"} onChange={e=>{void addDocuments(Array.from(e.target.files||[]));e.target.value="";}}/></label>
+    <QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/>
+    <MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/>
+  </ChatToolMenu>
+  <button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
  </form>
+ </div>
  {events.length>0&&<details><summary>补充学习反馈</summary><label>反馈环节<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="conditions">定理条件</option><option value="quantifiers">量词与依赖</option><option value="construction">辅助对象</option></select></label><button disabled={busy} onClick={()=>report("still_stuck")}>仍有困难</button><button disabled={busy} onClick={()=>report("independent_success")}>这次独立完成</button>{feedback&&<p role="status">{feedback}</p>}</details>}
  </section>
+ <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={workspace} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
+ </QuotePanes>
+ {notePanel&&<NotePreferencePanel courseId={course} courses={courses} preset={notePanel} onClose={()=>setNotePanel(null)}
+  onComposed={(prompt,marker)=>{noteComposed.current={prompt,marker};setDraft(prompt);setNotePanel(null);input.current?.focus();}}/>}
+ {organizing&&<NoteOrganizeDialog courses={courses} onClose={()=>setOrganizing(false)}
+  onDone={count=>{setOrganizing(false);setError("");setFeedback(`已移动 ${count} 份笔记`);}}/>}
  {showRelated&&<div className="relatedPanel">
   <div className="relatedHeader">
    <span className="relatedTitle"><StudentIcon name="library"/>相关教材内容</span>

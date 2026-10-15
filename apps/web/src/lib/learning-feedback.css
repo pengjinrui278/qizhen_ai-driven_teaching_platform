@@ -76,12 +76,63 @@
 .learningFeedback .lf-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:900px){.learningFeedback .lf-charts{grid-template-columns:1fr}.learningFeedback .lf-heading{flex-direction:column;gap:14px}}
 @media(max-width:480px){.learningFeedback .lf-panel{padding:16px}.learningFeedback .lf-diagnoses{grid-template-columns:1fr}.learningFeedback .lf-filters{width:100%;flex-wrap:wrap}.learningFeedback .lf-filters label{flex:1}.learningFeedback select{width:100%;max-width:100%}.learningFeedback .lf-record{padding:12px}.learningFeedback .lf-record-head time{flex-basis:100%;margin-left:0}.learningFeedback .lf-outcomes li{grid-template-columns:84px minmax(0,1fr) 24px;gap:8px}.learningFeedback .lf-activity{gap:6px}.learningFeedback .lf-card-head{flex-wrap:wrap}}
-.learningFeedback .lf-session {border:0;border-top:1px solid #e3ebf4;padding:14px 0;margin-top:8px;}
-.learningFeedback .lf-session > summary {display:flex;justify-content:space-between;gap:12px;cursor:pointer;font-size:14px;}
-.learningFeedback .lf-session > summary span {color:#64748b;font-size:12px;}
-.learningFeedback .lf-session ol {list-style:none;padding:0;}
-.learningFeedback .lf-session li {margin:14px 0;padding:12px;background:#f5f9fe;border-radius:8px;}
-.learningFeedback .lf-question {white-space:pre-wrap;overflow-wrap:anywhere;}
-.learningFeedback .lf-session a {display:inline-block;margin-top:10px;color:#2464a0;}
 .learningFeedback .lf-feedback-details > summary {padding:16px 0;color:#42628c;cursor:pointer;font-size:14px;}
-.learningFeedback .lf-progress-summary a {color:#1d4ed8;font-size:13px;}
+
+/* 最近进展：只列证据与观察的变化 */
+.learningFeedback .lf-progress-list {list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px;}
+.learningFeedback .lf-progress-list li {border:1px solid #e2e8f0;border-left:3px solid #6366f1;border-radius:10px;padding:10px 12px;}
+.learningFeedback .lf-progress-list li[data-kind="corrected"] {border-left-color:#06b6d4;}
+.learningFeedback .lf-progress-list li[data-kind="worth_attention"] {border-left-color:#f43f5e;}
+.learningFeedback .lf-progress-list li[data-kind="improving"] {border-left-color:#10b981;}
+.learningFeedback .lf-progress-list li[data-kind="weakened"] {border-left-color:#f59e0b;}
+.learningFeedback .lf-progress-list p {margin:6px 0 0;font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
+
+/* 学习时间线：对话与笔记合并成一条按天分组的流 */
+.learningFeedback .lf-timeline {list-style:none;margin:12px 0 0;padding:0;display:grid;gap:18px;}
+.learningFeedback .lf-timeline > li > h3 {font-size:12px;font-weight:600;color:#64748b;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
+.learningFeedback .lf-timeline ul {list-style:none;margin:0;padding:0;display:grid;gap:8px;}
+.learningFeedback .lf-timeline ul li {display:grid;gap:3px;padding-left:10px;border-left:2px solid #e2e8f0;}
+.learningFeedback .lf-timeline ul li[data-type="note"] {border-left-color:#10b981;}
+.learningFeedback .lf-timeline ul li[data-type="chat"] {border-left-color:#6366f1;}
+.learningFeedback .lf-timeline p {margin:0;font-size:13px;line-height:1.65;overflow-wrap:anywhere;}
+.learningFeedback .lf-timeline .lf-badge {justify-self:start;font-size:10px;padding:2px 7px;}
+
+/* 笔记产出：KPI 一排 */
+.learningFeedback .lf-kpis {list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:12px;}
+.learningFeedback .lf-kpis li {border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;display:grid;gap:2px;}
+.learningFeedback .lf-kpis span:first-child {font-size:12px;color:#64748b;}
+/* 展示用数字用比例数字，不要 tabular-nums（等宽会让大号数字显得松） */
+.learningFeedback .lf-kpis strong {font-size:24px;font-weight:700;line-height:1.2;color:#0f172a;}
+.learningFeedback .lf-kpis .lf-meta {margin:0;font-size:11px;}
+.learningFeedback .lf-note-list {list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px;}
+.learningFeedback .lf-note-list li {display:grid;gap:2px;font-size:13px;}
+.learningFeedback .lf-note-list a {color:#1d4ed8;overflow-wrap:anywhere;}
+.learningFeedback .lf-note-list .lf-meta {margin:0;font-size:11px;}
+
+/* 图表层：手写 SVG。配色经 dataviz 校验脚本验证；对比度 WARN → 每张图都配可见标签 + 数据表。 */
+.learningFeedback .lcShare {margin-top:14px;}
+/* 段与段之间留 2px 表面缝隙，用描边而不是给标记加边框 */
+.learningFeedback .lcStack {display:flex;height:34px;border-radius:8px;overflow:hidden;gap:2px;background:#fff;}
+.learningFeedback .lcSeg {display:flex;align-items:center;justify-content:center;min-width:3px;transition:filter .15s;}
+.learningFeedback .lcSeg:hover {filter:brightness(1.06);}
+.learningFeedback .lcSegLabel {font-size:11px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;}
+/* 图例用 flex 换行：用 grid 的 1fr 会把两项撑到整行两端，中间空一大片 */
+.learningFeedback .lcLegend {list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 22px;}
+.learningFeedback .lcLegend li {display:flex;align-items:center;gap:8px;font-size:12px;color:#0f172a;min-width:0;}
+.learningFeedback .lcLegend li[data-hover] {font-weight:600;}
+.learningFeedback .lcSwatch {width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+.learningFeedback .lcLegendLabel {overflow-wrap:anywhere;}
+.learningFeedback .lcLegend strong {font-variant-numeric:tabular-nums;}
+.learningFeedback .lcMuted {color:#64748b;font-size:11px;}
+.learningFeedback .lcTrend {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:14px;}
+.learningFeedback .lcTrendFigure {margin:0;min-width:0;}
+.learningFeedback .lcTrendFigure figcaption {font-size:12px;font-weight:600;color:#0f172a;margin-bottom:4px;}
+.learningFeedback .lcTrendFigure svg {width:100%;height:auto;display:block;}
+.learningFeedback .lcTick {font-size:10px;fill:#94a3b8;font-variant-numeric:tabular-nums;}
+.learningFeedback .lcTip {grid-column:1/-1;font-size:11px;color:#64748b;margin:0;min-height:16px;}
+.learningFeedback .lcTable {margin-top:12px;}
+.learningFeedback .lcTable > summary {cursor:pointer;font-size:12px;color:#42628c;padding:6px 0;}
+.learningFeedback .lcTable table {width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
+.learningFeedback .lcTable th,.learningFeedback .lcTable td {border-bottom:1px solid #e2e8f0;padding:6px 8px;text-align:left;}
+.learningFeedback .lcTable thead th {color:#64748b;font-weight:600;}
+.learningFeedback .lcTable td {font-variant-numeric:tabular-nums;}

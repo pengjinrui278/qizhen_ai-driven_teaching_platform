@@ -120,3 +120,31 @@
 }
 
 .portal.lmStudentShell .lmCourseCard .lmCourseIntro {font-size:12px;line-height:1.6;color:var(--lm-muted);margin:4px 0 12px;}
+
+/* 左侧导航折叠（用户可手动收起以释放空间）：网格列改为 auto，由侧栏自身宽度驱动 */
+.portal.lmStudentShell {grid-template-columns:auto minmax(0,1fr);}
+.lmStudentShell .lmStudentSidebar .lmSidebarHead {position:relative;}
+.lmStudentShell .lmStudentSidebar .lmSidebarToggle {position:absolute;top:6px;right:0;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid var(--lm-border);border-radius:9px;background:#fff;color:var(--lm-muted);cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+.lmStudentShell .lmStudentSidebar .lmSidebarToggle:hover {background:#eef2ff;color:var(--lm-primary-deep);border-color:var(--lm-border-hover);}
+.lmStudentShell .lmStudentSidebar .lmSidebarToggle .lmIcon {width:15px;height:15px;}
+.lmStudentShell .lmStudentSidebar.isCollapsed {width:76px;padding:20px 10px;}
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmSidebarLabel {display:none;}
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmStudentLogo {justify-content:center;padding:6px 0 18px;}
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmSidebarHead {display:flex;flex-direction:column;align-items:center;}
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmSidebarToggle {position:static;margin:0 0 8px;order:-1;}
+.lmStudentShell .lmStudentSidebar.isCollapsed nav a,
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmSidebarFooter a,
+.lmStudentShell .lmStudentSidebar.isCollapsed .lmSidebarFooter button {justify-content:center;padding:9px 0;}
+@media(max-width:900px){
+ .lmStudentShell .lmStudentSidebar .lmSidebarToggle {display:none;}
+}
+
+/* 课表：等待连接器状态与 DDL 列表 */
+.lmStudentHome .zjuScheduleNotice.zjuWaiting {background:#eef2ff;color:var(--lm-primary-deep);border-color:#c7d2fe;}
+.lmStudentHome .zjuDeadlines {margin-top:14px;border:1px solid var(--lm-border);border-radius:14px;background:#fff;padding:14px 16px;}
+.lmStudentHome .zjuDeadlines h3 {margin:0 0 8px;font:600 13.5px/1.5 var(--lm-font);color:var(--lm-text);}
+.lmStudentHome .zjuDeadlines ul {list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.lmStudentHome .zjuDeadlines li {display:flex;align-items:baseline;gap:10px;font-size:13px;line-height:1.6;min-width:0;}
+.lmStudentHome .zjuDueWhen {flex:none;font-weight:600;color:#b45309;background:#fef3c7;border-radius:6px;padding:1px 7px;font-size:12px;}
+.lmStudentHome .zjuDueTitle {min-width:0;overflow-wrap:anywhere;color:var(--lm-text);}
+.lmStudentHome .zjuDueCourse {flex:none;color:var(--lm-muted);font-size:12px;}

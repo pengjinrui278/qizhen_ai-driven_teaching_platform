@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 async function main(){
- const base='http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
+ const base=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:1000},permissions:['clipboard-read','clipboard-write']});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -12,18 +12,29 @@ async function main(){
   assert.equal(reg.status(),200);registered=true;
   await page.goto(base+'/student/ai/tools');
   await page.locator('[data-tool]').first().waitFor();
-  assert.equal(await page.locator('[data-tool]').count(),30);
+  assert.equal(await page.locator('[data-tool]').count(),42);
   await page.getByRole('button',{name:/^音乐 ·/}).click();
   assert.equal(await page.locator('[data-tool]').count(),4);
   await page.getByRole('textbox',{name:'搜索工具'}).fill('suno');
   assert.equal(await page.locator('[data-tool]').count(),1);
+  // 每个工具要有自己的标记图标；「基本介绍 >>」是文字按钮，点开展示介绍
+  assert.equal(await page.locator('.aiToolMark').count()>0,true,'每个工具应有标记图标');
+  await page.getByRole('button',{name:/^基本介绍/}).first().click();
+  assert.equal(await page.locator('.aiIntro').count(),1,'点击基本介绍应展开介绍文本');
+  const introText=await page.locator('.aiIntro').innerText();
+  assert.ok(introText.length>10,'介绍内容应有实质文字');
+  await page.getByRole('button',{name:/^基本介绍/}).first().click();
+  assert.equal(await page.locator('.aiIntro').count(),0,'再次点击应收起介绍');
   await page.getByRole('button',{name:'复制 Suno 链接'}).click();
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),'https://suno.com/');
   await page.getByRole('button',{name:'打不开？',exact:true}).click();
   await page.getByRole('link',{name:'海绵音乐 ↗',exact:true}).waitFor();
   const popupPromise=context.waitForEvent('page');
   await page.getByRole('link',{name:'打开 Suno 官网'}).click();
-  const popup=await popupPromise;await popup.waitForLoadState('domcontentloaded');
+  const popup=await popupPromise;
+  // 新开的弹窗起始是 about:blank 且已触发过 domcontentloaded，waitForLoadState 会立刻返回、
+  // url() 还是空的。要等它真的导航过去。
+  await popup.waitForURL(/suno\.com/,{timeout:30000});
   assert.equal(new URL(popup.url()).hostname,'suno.com');await popup.close();
   await page.screenshot({path:'data/ai-preview/tools-suno-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
