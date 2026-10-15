@@ -233,3 +233,37 @@ def test_init_db_heals_columns_missing_from_an_older_database(tmp_path):
 
     init_db(engine)   # 幂等：再跑一次不该出错
     engine.dispose()
+
+
+def test_update_keeps_a_snapshot_of_what_it_replaced(ops_db):
+    """整篇覆盖是 agent 能做的最狠的一件事，学生手写的笔记没有别处可还原。
+
+    改之前要把旧正文留一份快照（只留最近三次），而且覆盖成同样的内容不该留空快照。
+    """
+    add_note(ops_db, "n1", title="我手写的", content="第一版：我自己写的正文。")
+    apply_ops(ops_db, "student", [{"op": "update", "id": "n1", "body": "第二版"}])
+    apply_ops(ops_db, "student", [{"op": "update", "id": "n1", "body": "第三版"}])
+    apply_ops(ops_db, "student", [{"op": "update", "id": "n1", "body": "第四版"}])
+    apply_ops(ops_db, "student", [{"op": "update", "id": "n1", "body": "第五版"}])
+
+    row = ops_db.get(Note, "n1")
+    assert row.content == "第五版"
+    replaced = row.source_meta["replaced"]
+    assert len(replaced) == 3, "只留最近三次，不能无限膨胀"
+    assert [item["content"] for item in replaced] == ["第二版", "第三版", "第四版"]
+    assert all(item["at"] for item in replaced), "每条快照要有时间"
+
+
+def test_update_to_the_same_text_leaves_no_snapshot(ops_db):
+    add_note(ops_db, "n1", content="一模一样的正文")
+    apply_ops(ops_db, "student", [{"op": "update", "id": "n1", "body": "一模一样的正文"}])
+    assert "replaced" not in (ops_db.get(Note, "n1").source_meta or {}), "没改动就不该留快照"
+
+
+def test_append_overflow_asks_for_a_new_note_instead_of_truncating(ops_db):
+    """目标笔记写满时不能静默截断学生的笔记，要如实说另存一份。"""
+    add_note(ops_db, "n1", title="快满的", content="正文。" * 19000)
+    results = apply_ops(ops_db, "student", [{"op": "append", "id": "n1", "body": "补一段。" * 5000}])
+    assert results[0]["ok"] is False
+    assert "已经写满" in results[0]["detail"]
+    assert len(ops_db.get(Note, "n1").content) == len("正文。" * 19000), "一个字都不许被砍掉"

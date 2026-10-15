@@ -225,6 +225,15 @@ def _apply_one(db, account_id, name, op, default_course, default_folder, default
             body = _text(op.get("body"), NOTE_CONTENT_LIMIT)
             if not body:
                 return {"op": name, "ok": False, "detail": "新的正文是空的，没改。"}
+            # 整篇覆盖是这里最狠的一手，而且学生手写的笔记没有别的地方可还原。
+            # 改之前把旧正文留一份快照（只留最近三次），事后能捞回来。
+            if row.content and row.content.strip() != body.strip():
+                meta = dict(row.source_meta or {})
+                history = list(meta.get("replaced") or [])
+                from datetime import UTC, datetime
+                history.append({"at": datetime.now(UTC).isoformat(), "content": row.content})
+                meta["replaced"] = history[-3:]
+                row.source_meta = meta
             row.content = body
         elif name == "rename":
             title = _text(op.get("title"), TITLE_MAX)
