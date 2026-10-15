@@ -17,7 +17,15 @@ from pypdf import PdfReader
 from .config import REPO_ROOT
 
 LIBRARY_ROOT = REPO_ROOT / "data" / "resource-intake" / "R3"
-INTAKE_ALLOWLIST = frozenset({"circuits-alexander-sadiku-6e"})
+# 显式白名单：只有列在这里的 resource_id 才会被读进目录并允许提供原件。
+# 不批量导入——清单里出现不等于可以展示，其余课程不宣称教材已就绪。
+INTAKE_ALLOWLIST = frozenset({
+    "circuits-alexander-sadiku-6e",
+    # 陈纪修《数学分析》第三版：上册/下册。封面与书名页已核对；
+    # 片段库里的 source_id 后缀正是这两个文件的 sha256 前缀，来源可对上。
+    "chen-jixiu-3e-vol1",
+    "chen-jixiu-3e-vol2",
+})
 PRIVATE_HEADERS = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
 
 
