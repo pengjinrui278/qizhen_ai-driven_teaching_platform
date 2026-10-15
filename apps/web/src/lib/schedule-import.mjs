@@ -1,9 +1,10 @@
 // 课表文件导入解析（纯浏览器本地解析，不上传服务器，账号/密码不涉及）。
 // 支持三种格式：
-//   - XLSX：浙大教务「导出课表」的 Excel 文件（由调用方用 read-excel-file 读成二维表后传入）。
+//   - XLSX：浙大教务「导出课表」的 Excel（由调用方用 read-excel-file 读成二维表后传入）。
+//     表头形如：课程代码 / 课程名称 / 教师姓名 / 学期 / 上课时间 / 上课地点 …
+//     「上课时间」可含多个时段（分号隔开），如「周一第3,4,5节;周四第3,4节」，一门课拆成多条。
 //   - CSV：表头含「课程名称、教师、星期、节次、周次、地点」等列，可缺省或使用别名。
 //   - ICS：iCalendar VEVENT（浙大教务 / 学在浙大导出的 .ics 日历文件）。
-// 列映射对中文表头做别名匹配；「星期」「节次」也可合并为「上课时间」一列（如「周一第1-2节」）。
 
 const WEEKDAY_CN = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7 };
 
@@ -15,11 +16,13 @@ const PERIOD_STARTS = [
 
 const HEADER_ALIASES = {
   name: ["课程名称", "课程名", "课程", "名称", "name", "course", "title"],
-  teacher: ["教师", "老师", "授课教师", "任课教师", "teacher"],
+  code: ["课程代码", "课程编号", "课程号", "code", "course_id"],
+  teacher: ["教师姓名", "教师", "老师", "授课教师", "任课教师", "teacher"],
   day: ["星期", "星期几", "周几", "day", "weekday"],
   periods: ["节次", "节", "periods", "period"],
   weeks: ["周次", "周", "weeks", "week"],
-  location: ["地点", "教室", "上课地点", "location", "room"],
+  location: ["上课地点", "地点", "教室", "location", "room"],
+  term: ["学期", "term", "semester"],
   time: ["上课时间", "上课时段", "时间", "时段", "time"],
 };
 
@@ -82,55 +85,72 @@ function parseWeeks(value) {
   return { week_pattern, first_half, second_half };
 }
 
+function parseTerm(value) {
+  const t = String(value == null ? "" : value).trim();
+  return { first_half: /秋|春/.test(t), second_half: /冬|夏/.test(t) };
+}
+
 function range(from, to) {
   const out = [];
   for (let i = Math.min(from, to); i <= Math.max(from, to); i++) out.push(i);
   return out;
 }
 
-// 从「周一第1-2节」这类文本里拆出星期与节次。
-function parseTimeCell(value) {
-  const t = String(value == null ? "" : value).trim();
-  if (!t) return { day: 0, periods: [] };
-  let day = 0;
-  const dm = t.match(/(?:星期|周)([一二三四五六日天1-7])/);
-  if (dm) {
-    day = WEEKDAY_CN[dm[1]] || Number(dm[1]);
-  } else {
-    const cn = t.match(/[一二三四五六日天]/);
-    if (cn) day = WEEKDAY_CN[cn[0]];
-  }
-  let periods = [];
-  let m = t.match(/第\s*(\d{1,2})\s*[-—~～至]\s*(\d{1,2})\s*节/);
-  if (m) periods = range(Number(m[1]), Number(m[2]));
-  else {
-    m = t.match(/第\s*(\d{1,2})\s*节/);
-    if (m) periods = [Number(m[1])];
-    else {
-      m = t.match(/(\d{1,2})\s*[-—~～至]\s*(\d{1,2})\s*节/);
-      if (m) periods = range(Number(m[1]), Number(m[2]));
-      else {
-        m = t.match(/(\d{1,2})\s*节/);
-        if (m) periods = [Number(m[1])];
-      }
-    }
-  }
-  return { day, periods: periods.filter((n) => n >= 1 && n <= 20) };
+function splitSemi(value) {
+  return String(value == null ? "" : value)
+    .split(/[;；]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
-function makeCourse({ name, teacher, location, day_of_week, periods, weeks, index }) {
+// 从「周二第6,7,8节」这类文本里拆出星期。
+function parseDayFromTime(s) {
+  const m = String(s || "").match(/周([一二三四五六日天1-7])/);
+  if (!m) return 0;
+  return WEEKDAY_CN[m[1]] || Number(m[1]);
+}
+
+// 从「第6,7,8节」「第1-2节」「第9节」里拆出节次。
+function parsePeriodsFromTime(s) {
+  const m = String(s || "").match(/第([^节]{1,12})节/);
+  return m ? parsePeriods(m[1]) : [];
+}
+
+// 「上课时间」可含多个时段（分号隔开），每个时段 = 星期 + 节次。
+function parseTimeSessions(value) {
+  const t = String(value == null ? "" : value).trim();
+  if (!t) return [];
+  const out = [];
+  for (const part of t.split(/[;；]/)) {
+    const s = part.trim();
+    if (!s) continue;
+    const day = parseDayFromTime(s);
+    const periods = parsePeriodsFromTime(s);
+    if (day && periods.length) out.push({ day, periods });
+  }
+  return out;
+}
+
+function makeCourse({ name, course_id, teacher, location, day_of_week, periods, weeks, term, index }) {
   const w = parseWeeks(weeks);
+  let first_half = w.first_half;
+  let second_half = w.second_half;
+  if (term) {
+    const t = parseTerm(term);
+    first_half = t.first_half;
+    second_half = t.second_half;
+  }
   return {
     id: "file-" + index,
     source: "zju-undergraduate",
-    course_id: null,
+    course_id: course_id || null,
     course_name: name,
     teacher: teacher || "",
     location: location || null,
     day_of_week,
     periods,
-    first_half: w.first_half,
-    second_half: w.second_half,
+    first_half,
+    second_half,
     week_pattern: w.week_pattern,
     confirmed: true,
   };
@@ -155,10 +175,37 @@ function buildSnapshot(courses, academic_year_start, season) {
   };
 }
 
-// 二维表（含表头行）→ 课表快照。CSV 与 XLSX 共用。
+// 表头可能不在第 0 行（第 0 行可能是「XXXX-XXXX学年…课表」标题行）。
+function findHeaderIndex(rows) {
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    const cells = rows[i].map((c) => String(c == null ? "" : c).trim());
+    if (mapColumns(cells).name !== undefined) return i;
+  }
+  return 0;
+}
+
+// 从标题行里取「2026-2027学年秋冬学期」作为学年/学季。
+function titleInfo(rows, headerIndex) {
+  for (let i = 0; i < headerIndex; i++) {
+    const joined = rows[i].map((c) => String(c == null ? "" : c)).join(" ");
+    const m = joined.match(/(\d{4})-(\d{4})学年\s*([^ ]{0,4}?)学期/);
+    if (!m) continue;
+    const s = String(m[3] || "").replace(/\s+/g, "");
+    let season = "";
+    if (s === "秋") season = "1|秋";
+    else if (s === "冬") season = "1|冬";
+    else if (s === "春") season = "2|春";
+    else if (s === "夏") season = "2|夏";
+    return { academic_year_start: Number(m[1]), season };
+  }
+  return null;
+}
+
+// 二维表（含表头行，前面可有标题行）→ 课表快照。CSV 与 XLSX 共用。
 function rowsToCourses(rows) {
   if (!Array.isArray(rows) || !rows.length) throw new Error("表格内容为空。");
-  const headerCells = rows[0].map((c) => String(c == null ? "" : c).trim());
+  const headerIndex = findHeaderIndex(rows);
+  const headerCells = rows[headerIndex].map((c) => String(c == null ? "" : c).trim());
   const col = mapColumns(headerCells);
   if (col.name === undefined) throw new Error("缺少「课程名称」列，请检查表头。");
   const hasTime = col.time !== undefined;
@@ -167,40 +214,47 @@ function rowsToCourses(rows) {
     throw new Error("需要「星期」「节次」两列，或「上课时间」一列（如「周一第1-2节」）。");
   }
 
-  const cell = (row, idx) => (idx === undefined ? "" : String(row[idx] == null ? "" : row[idx]).trim());
+  const cell = (row, idx) =>
+    idx === undefined ? "" : String(row[idx] == null ? "" : row[idx]).trim();
   const courses = [];
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = headerIndex + 1; i < rows.length; i++) {
     const row = rows[i] || [];
     const name = cell(row, col.name);
     if (!name) continue;
-    let day_of_week = 0;
-    let periods = [];
-    if (hasTime) {
-      const parsed = parseTimeCell(cell(row, col.time));
-      day_of_week = parsed.day;
-      periods = parsed.periods;
+    let sessions = [];
+    if (hasTime) sessions = parseTimeSessions(cell(row, col.time));
+    if (!sessions.length && hasDayPeriods) {
+      const d = parseDay(cell(row, col.day));
+      const p = parsePeriods(cell(row, col.periods));
+      if (d && p.length) sessions = [{ day: d, periods: p }];
     }
-    if ((!day_of_week || !periods.length) && hasDayPeriods) {
-      day_of_week = parseDay(cell(row, col.day));
-      periods = parsePeriods(cell(row, col.periods));
+    if (!sessions.length) continue;
+    const locations = splitSemi(cell(row, col.location));
+    const teacher = cell(row, col.teacher);
+    const course_id = cell(row, col.code) || null;
+    const term = cell(row, col.term);
+    const weeks = cell(row, col.weeks);
+    for (let j = 0; j < sessions.length; j++) {
+      courses.push(
+        makeCourse({
+          name,
+          course_id,
+          teacher,
+          location: locations[j] || locations[0] || null,
+          day_of_week: sessions[j].day,
+          periods: sessions[j].periods,
+          weeks,
+          term,
+          index: courses.length,
+        }),
+      );
     }
-    if (!day_of_week || !periods.length) continue;
-    courses.push(
-      makeCourse({
-        name,
-        teacher: cell(row, col.teacher),
-        location: cell(row, col.location),
-        day_of_week,
-        periods,
-        weeks: cell(row, col.weeks),
-        index: courses.length,
-      }),
-    );
   }
   if (!courses.length) {
     throw new Error("未能解析出课表项，请检查「星期」「节次」或「上课时间」的格式。");
   }
-  return buildSnapshot(courses);
+  const ti = titleInfo(rows, headerIndex);
+  return buildSnapshot(courses, ti ? ti.academic_year_start : null, ti ? ti.season : "");
 }
 
 // ---- CSV ----
@@ -395,11 +449,13 @@ export function parseScheduleIcs(text) {
     courses.push(
       makeCourse({
         name: ev.name,
+        course_id: null,
         teacher: ev.teacher,
         location: ev.location,
         day_of_week: ev.day_of_week,
         periods: ev.periods,
         weeks: ev.weeks,
+        term: "",
         index: courses.length,
       }),
     );

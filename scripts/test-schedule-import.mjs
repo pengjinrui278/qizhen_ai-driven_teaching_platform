@@ -140,6 +140,37 @@ test('XLSX：缺少「课程名称」列时报错', () => {
   assert.throws(() => parseScheduleXlsx([['教师', '星期', '节次'], ['张三', 1, '1-2']]), /课程名称/);
 });
 
+test('XLSX：真实浙大导出（标题行 + 上课时间多时段 + 逗号节次）', () => {
+  const rows = [
+    ['2026-2027学年秋冬学期吴芷曦的课表', null, null, null, null, null, null, null],
+    ['课程代码', '课程名称', '教师姓名', '学期', '上课时间', '上课地点', '选课时间', '选课志愿'],
+    ['MATH2131F', '复变函数与积分变换', '孙业顺', '秋', '周二第3,4节;周四第1,2节', '紫金港西2-205;紫金港西2-205', '2026-06-05 09:24:24', 1],
+    ['MATH2432F', '概率论与数理统计', '吴国桢', '秋冬', '周三第3,4,5节', '紫金港西2-102', '2026-09-11 09:21:44', 1],
+  ];
+  const snap = parseScheduleXlsx(rows);
+  assert.equal(snap.academic_year_start, 2026);
+  assert.equal(snap.season, '');
+  assert.equal(snap.courses.length, 3);
+  const a = snap.courses[0];
+  assert.equal(a.course_name, '复变函数与积分变换');
+  assert.equal(a.course_id, 'MATH2131F');
+  assert.equal(a.teacher, '孙业顺');
+  assert.equal(a.day_of_week, 2);
+  assert.deepEqual(a.periods, [3, 4]);
+  assert.equal(a.first_half, true);
+  assert.equal(a.second_half, false);
+  const b = snap.courses[1];
+  assert.equal(b.day_of_week, 4);
+  assert.deepEqual(b.periods, [1, 2]);
+  assert.equal(b.location, '紫金港西2-205');
+  const c = snap.courses[2];
+  assert.equal(c.course_name, '概率论与数理统计');
+  assert.equal(c.day_of_week, 3);
+  assert.deepEqual(c.periods, [3, 4, 5]);
+  assert.equal(c.first_half, true);
+  assert.equal(c.second_half, true);
+});
+
 test('parseScheduleFile：按扩展名分发', () => {
   const csv = '课程名称,星期,节次\n物理,1,3';
   const snap = parseScheduleFile('timetable.csv', csv);
