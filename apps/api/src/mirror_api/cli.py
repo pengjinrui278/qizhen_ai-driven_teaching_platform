@@ -40,7 +40,7 @@ from .models import (
     TextbookChunk,
     WorkspaceFinding,
 )
-from .platform_models import Account, SandboxMember, SandboxPolicy
+from .platform_models import Account, Hypothesis, Observation, SandboxMember, SandboxPolicy, Submission
 from .seed import seed_profiles
 from .textbook_ingest import ingest_textbook
 
@@ -239,6 +239,80 @@ def cmd_seed_demo_workspace(args) -> int:
             if i <= students:
                 demo_request(f"demo-stu-{i:02d}-full", f"demo-stu-{i:02d}", "full_solution", chosen[0])
 
+        # --- 演示数据：作业作品批改需真实学生账号（participant 取自 account 昵称） ---
+        demo_students = []
+        for i in range(1, 5):
+            uname = f"demo-stu-{i:02d}"
+            acct = session.execute(select(Account).where(Account.username == uname)).scalar_one_or_none()
+            if acct is None:
+                acct = Account(
+                    id=f"demo-stu-{i:02d}-account",
+                    username=uname,
+                    nickname=f"演示学生{i}",
+                    password_hash=password_hash(DEMO_STUDENT_PASSWORD),
+                    role="student",
+                    status="active",
+                    retention_days=180,
+                )
+                session.add(acct)
+                session.flush()
+            if not session.get(SandboxMember, (DEMO_WORKSPACE_ID, acct.id)):
+                session.add(SandboxMember(workspace_id=DEMO_WORKSPACE_ID, account_id=acct.id, role="student"))
+            demo_students.append(acct)
+
+        # --- 演示学生的学习档案与诊断（观察 + 假设） ---
+        for oid, theme, text, kind in [
+            ("demo-obs-1", "quantifiers", "学生不清楚 N 可以依赖哪些量，习惯先给定 N 再补 ε。", "student_question"),
+            ("demo-obs-2", "proof_structure", "证明时量词次序容易写反，先写结论再补条件。", "hint_used"),
+            ("demo-obs-3", "boundedness", "用有界性控制乘积时，不确定上界 M 该从哪里取。", "student_question"),
+        ]:
+            if not session.get(Observation, oid):
+                session.add(Observation(id=oid, account_id=student.id, course_id=DEMO_COURSE,
+                    attempt_id=None, kind=kind, theme=theme, text=text,
+                    direction="support", source="interaction", strength="weak"))
+        for hid, theme, statement, supporting, status in [
+            ("demo-hyp-1", "quantifiers", "在量词次序与 N 的依赖上，需要再核对一次。", ["demo-obs-1", "demo-obs-2"], "worth_attention"),
+            ("demo-hyp-2", "boundedness", "对「有界 × 趋于零」这类估计，上界的取法还不够熟练。", ["demo-obs-3"], "emerging"),
+        ]:
+            if not session.get(Hypothesis, hid):
+                session.add(Hypothesis(id=hid, account_id=student.id, course_id=DEMO_COURSE,
+                    theme=theme, statement=statement, supporting=supporting, contradicting=[],
+                    status=status, sufficiency="合成示例，不代表个人能力结论"))
+
+        # --- 教师端批改数据：作业作品（含 AI 候选批改与已确认结论） ---
+        for sid, stu_index, text, review in [
+            ("demo-sub-1", 0, "任给 ε>0，取 N=10。当 n>N 时 1/n<ε，所以极限为零。",
+             {"candidate": {"text": "N 被取成固定常数 10，无法覆盖任意小的 ε；N 应随 ε 改变。", "model": "预置样例", "status": "unverified"},
+              "decision": "confirmed", "theme": "quantifiers", "note": "N 与 ε 的依赖关系写错。"}),
+            ("demo-sub-2", 1, "任给 ε>0，取 N=⌈1/ε⌉。当 n>N 时 |1/n-0|<ε。",
+             {"candidate": {"text": "思路正确，N 的选取与 ε 依赖清晰。", "model": "预置样例", "status": "unverified"},
+              "decision": "ignored", "theme": "quantifiers", "note": "本题正确，无需额外批改。"}),
+            ("demo-sub-3", 2, "设 |a_n|≤M，b_n→0。取 ε>0，由 b_n→0 得 |b_n|<ε。",
+             {"candidate": {"text": "乘积估计少了 M：应取 |b_n|<ε/M 才能得到 |a_nb_n|<ε。", "model": "预置样例", "status": "unverified"},
+              "decision": "confirmed", "theme": "conditions", "note": "遗漏有界上界 M 的控制。"}),
+            ("demo-sub-4", 3, "收敛数列极限唯一：设 a_n→A 且 a_n→B，取 ε=|A-B|/2。",
+             {"candidate": {"text": "取 ε 的方式与三角不等式衔接不够，建议用 ε=|A-B|/3。", "model": "预置样例", "status": "unverified"}}),
+        ]:
+            if not session.get(Submission, sid):
+                session.add(Submission(id=sid, workspace_id=DEMO_WORKSPACE_ID,
+                    account_id=demo_students[stu_index].id, text=text,
+                    source="artifact", synthetic=False, review=review))
+
+        # --- 教师端批改分析：候选现象（1 条已确认 + 1 条待处理） ---
+        for fid, phenomenon, basis, ta_status, ta_note, teacher_status, teacher_note in [
+            ("demo-finding-1", "在「N 是否依赖 ε」上，8 名模拟学生中有 3 名把 N 取成与 ε 无关的常数。",
+             {"coverage": "3/8", "synthetic": True, "sample_submissions": 4},
+             "confirmed", "已核对：该现象在多数作品中可复现。", "accepted", "下周一习题课统一讲解 N 对 ε 的依赖。"),
+            ("demo-finding-2", "在「有界 × 趋于零」的估计中，有学生遗漏了上界 M 的控制。",
+             {"coverage": "1/8", "synthetic": True, "sample_submissions": 4},
+             "candidate", None, "pending", None),
+        ]:
+            if not session.get(WorkspaceFinding, fid):
+                session.add(WorkspaceFinding(finding_id=fid, workspace_id=DEMO_WORKSPACE_ID,
+                    phenomenon=phenomenon, basis=basis, generator="预置样例",
+                    ta_status=ta_status, ta_note=ta_note, teacher_status=teacher_status, teacher_note=teacher_note))
+        session.commit()
+
         events = session.execute(
             select(func.count(MirrorEvent.request_id)).where(
                 MirrorEvent.assignment_workspace_id == DEMO_WORKSPACE_ID
@@ -250,6 +324,7 @@ def cmd_seed_demo_workspace(args) -> int:
         print(f"演示学生账号：{DEMO_STUDENT_USERNAME} / {DEMO_STUDENT_PASSWORD}")
         print(f"模拟学生：{students} 名（demo-stu-01 .. demo-stu-{students:02d}）")
         print(f"工作区事件数：{events}（模型：{model.name}）")
+        print("批改数据：4 份作业作品 + 2 条候选现象；学生诊断：3 条观察 + 2 条假设")
     return 0
 
 
