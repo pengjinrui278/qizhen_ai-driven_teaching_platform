@@ -2,7 +2,7 @@
 /* Design B R5 mapping: time groups and accessible timestamps; no deletion action. */
 .portal.lmStudentShell .lmCourseChat .chatHistoryGroup h3 {font:500 12px/1.5 system-ui,sans-serif;color:var(--lm-muted);margin:18px 10px 8px;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList .chatHistoryGroup button {position:relative;margin:4px 0;overflow:visible;}
-.portal.lmStudentShell .lmCourseChat .chatHistoryTitle {display:block;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
+.portal.lmStudentShell .lmCourseChat .chatHistoryTitle {flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--lm-text,#0f172a);}
 
 
 .portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {outline:2px solid #93b4ed;outline-offset:1px;}
@@ -15,7 +15,7 @@
 .portal.lmStudentShell .lmCourseChat .chatHistory select {margin-top:8px;font:inherit;}
 .portal.lmStudentShell .lmCourseChat .chatHistory h2 {margin:20px 0 10px;color:var(--lm-muted);}
 .portal.lmStudentShell .lmCourseChat .chatSessionList {gap:4px;}
-.portal.lmStudentShell .lmCourseChat .chatSessionList button {display:block;width:100%;min-height:36px;padding:8px 10px;border:0;box-shadow:none;background:transparent;border-radius:6px;text-align:left;font:400 13px/1.45 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--lm-text);}
+.portal.lmStudentShell .lmCourseChat .chatSessionList button {display:flex;align-items:center;gap:6px;width:100%;min-height:36px;padding:8px 10px;border:0;box-shadow:none;background:transparent;border-radius:6px;text-align:left;font:400 13px/1.45 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--lm-text);}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button:hover,.portal.lmStudentShell .lmCourseChat .chatSessionList button:focus-visible {background:#f0f5ff;}
 .portal.lmStudentShell .lmCourseChat .chatSessionList button[aria-current=true] {background:#e6eeff;color:#1d4ed8;font-weight:500;border:0;}
 .portal.lmStudentShell .lmCourseChat .chatCourseName {font:500 14px/1.5 system-ui,sans-serif;flex:1;}
