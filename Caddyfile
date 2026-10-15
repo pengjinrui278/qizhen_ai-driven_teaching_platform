@@ -2,10 +2,9 @@
 	encode zstd gzip
 
 	# A top-level navigation must never display a static-export RSC payload.
-	@rsc_document expression path('*.txt') && header({'Sec-Fetch-Dest':'document'})
+	@rsc_document expression path_regexp('rsc', '^(.+)\\.txt$') && header({'Sec-Fetch-Dest':'document'})
 	handle @rsc_document {
-		uri strip_suffix .txt
-		redir {uri} 302
+		redir {re.rsc.1} 302
 	}
 
 	@health path /api/health
