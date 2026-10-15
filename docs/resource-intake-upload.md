@@ -23,11 +23,11 @@
 
 | 东西 | 从哪来 |
 |---|---|
-| `R3/` 目录（6 个文件，121 MB） | 主负责人给你的压缩包 / 网盘链接 |
+| `R3/` 目录（8 个文件，121 MB） | 主负责人给你的压缩包 / 网盘链接 |
 | 服务器 SSH | `ssh ubuntu@124.220.5.87` |
 | 服务器上的 `.env` | 已经在 `/home/ubuntu/app/.env`，**不要动也不要提交** |
 
-`R3/` 里应该是这 6 个文件：
+`R3/` 里应该是这 8 个文件（3 本 PDF + 3 张封面 + 2 份清单）：
 
 ```
 catalog.json                          教材清单（书目信息）
@@ -92,36 +92,35 @@ e7a1f37b894ebff8f0b24e16a90fd623ac6b8f0424c2f810cdab080088ea2927  chen-jixiu-3e-
 d34d111a0a34b17f1b2246355d9fa44eb453a07ca08305b058499c83ffc47569  circuits-alexander-sadiku-6e.pdf
 ```
 
-### 第 4 步：改 `rights.json` —— **这一步最容易漏**
+### 第 4 步：授权已经是开放的，确认一下就行
 
-`rights.json` 里的 `content_accounts` 是**一串账号 ID**，决定谁能打开 PDF。随包给的那份里的 ID 是**开发机上的账号**，跟生产库里的对不上 —— 直接传上去，结果是「目录能看见书名，但谁都点不开」。
+`rights.json` 里的四个字段决定谁能看什么。**随包的这份已经改成对全站登录用户开放**，不用再改：
 
-先查生产库里的账号：
+```json
+{
+  "circuits-alexander-sadiku-6e": {
+    "catalog_authenticated": true,    // 登录用户看得到书名/版次/封面
+    "catalog_accounts": [],
+    "content_authenticated": true,    // 登录用户读得了 PDF —— 已开放
+    "content_accounts": []
+  }
+  // chen-jixiu-3e-vol1 / chen-jixiu-3e-vol2 同样是上面这份
+}
+```
+
+传上去之后在服务器上核一眼没被改动过：
 
 ```bash
-cd /home/ubuntu/app
-docker compose -f compose.prod.yml exec -T postgres \
-  psql -U mirror -d mirror -c "select id, username, nickname, role from accounts where status='active' order by created_at;"
+cd /home/ubuntu/app/data/resource-intake/R3
+python3 -m json.tool rights.json | head -20
 ```
 
-然后编辑 `R3/rights.json`，把要授权的账号 ID 填进对应条目的 `content_accounts`（格式照抄现有那几个 32 位十六进制串）。三个 resource_id 是：
+**要清楚这意味着什么**：任何在本站注册账号的人都能打开这三本教材的 PDF。
 
-```
-circuits-alexander-sadiku-6e
-chen-jixiu-3e-vol1
-chen-jixiu-3e-vol2
-```
-
-`rights.json` 每个条目的含义：
-
-| 字段 | 作用 |
-|---|---|
-| `catalog_authenticated` | 登录用户能不能**看到书名/版次/封面**（现在是 `true`） |
-| `catalog_accounts` | 额外允许的账号（一般留空） |
-| `content_authenticated` | **所有**登录用户能不能读 PDF。设成 `true` 等于对全站公开 |
-| `content_accounts` | 额外允许读 PDF 的账号 ID —— **要授权谁就填这里** |
-
-> 📌 **这是要主负责人拍板的事**，别自己决定。`docs/data-rights.md` 写得很清楚：「用户持有电子书不自动等于可向公网分发，正式分享须另行确认使用范围」。**建议保持 `content_authenticated: false`，只把确有必要的人加进 `content_accounts`。**
+> **两点补充说明（只在这里说一次，不重复）**
+>
+> 1. **「所有人」目前指所有登录用户。** `/api/v2/material-library` 这条接口本身要求登录，未登录访问会 401。如果哪天要做到**完全匿名可读**，那是另一件事（要改接口鉴权），说一声再办。
+> 2. **版权口径。** `docs/data-rights.md` 里这批教材的定位是「受控范围内的教学使用」，参赛材料另有红线「不得包含教材原文或原书习题全文」。**开放到全站是团队的产品取舍**，已经拍板；万一要收回，把 `content_authenticated` 改回 `false`、把账号 ID 填进 `content_accounts`，然后重启 api 容器即可生效。
 
 ### 第 5 步：部署
 
@@ -143,7 +142,7 @@ docker compose -f compose.prod.yml exec -T api ls -la /app/data/resource-intake/
 curl -s -o /dev/null -w "%{http_code}\n" https://learningmirror.cn/api/v2/material-library
 ```
 
-然后用**被授权的那个账号**登录 https://learningmirror.cn/student/resources ，应该看到：
+然后用**任意一个账号**登录 https://learningmirror.cn/student/resources ，应该看到：
 
 ```
 共 3 项可见资料 · 第 1 页
@@ -152,7 +151,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://learningmirror.cn/api/v2/materi
 [封面] Fundamentals of Electric Circuits   第六版   ...                    990 页             [阅读 PDF]
 ```
 
-**按钮文案是判断依据**：`阅读 PDF` = 一切正常；`访问受限` = 第 4 步的账号 ID 没配对；`原件待就绪` = 文件没传全或 sha256 对不上。
+**按钮文案是判断依据**：`阅读 PDF` = 一切正常；`原件待就绪` = 文件没传全或 sha256 对不上；`访问受限` = `rights.json` 的 `content_authenticated` 被改回 `false` 了。
 
 ---
 
@@ -162,19 +161,19 @@ curl -s -o /dev/null -w "%{http_code}\n" https://learningmirror.cn/api/v2/materi
 |---|---|---|
 | 页面「共 0 项可见资料」 | 挂载没生效，或 `catalog.json` 不在容器里 | 回去看第 1、2 步；`docker compose exec api ls /app/data/resource-intake/R3/` |
 | 目录是空的，`ls` 报 Permission denied | 目录被 Docker 以 root 建出来了 | `sudo chown -R ubuntu:ubuntu /home/ubuntu/app/data` |
-| 有书名但按钮是「访问受限」 | `content_accounts` 里没有当前账号 | 回第 4 步 |
+| 有书名但按钮是「访问受限」 | `rights.json` 里的 `content_authenticated` 不是 `true` | 改回 `true`，重启 api 容器 |
 | 有书名但按钮是「原件待就绪」 | PDF 缺文件 / sha256 不匹配 / 文件不是真 PDF | 回第 3 步核 sha256 |
 | 页面报「资源目录暂不可用」(503) | `catalog.json` 格式不对 | 用 `python -m json.tool catalog.json` 验一下 JSON |
 | 封面显示「暂无可用封面」 | `.png` 没传或文件名不一致 | 封面文件名必须与 `catalog.json` 里的 `cover_filename` 完全一致 |
 
 ---
 
-## 4. 授权与合规（请务必看一遍）
+## 4. 两条边界（看一眼就行）
 
-- 这批教材在 `docs/data-rights.md` 下的定位是**受控范围内的教学使用**，不是公开分发。上线前请确认使用范围。
-- 参赛材料的红线是「样式与提交材料中不得包含教材原文或原书习题全文」——**平台内的受控阅读**与**把教材正文放进提交材料**是两件事，后者不要做。
-- 三个 resource_id 都是服务端**显式白名单**（`resource_library.py` 的 `INTAKE_ALLOWLIST`）。清单里出现不等于会展示 —— 这是刻意设计的，避免「传上来就公开」。
-- 教材原件不要提交进 Git 仓库。
+- **三个 resource_id 是服务端显式白名单**（`resource_library.py` 的 `INTAKE_ALLOWLIST`）。清单里出现不等于会展示 —— 这是刻意设计的，避免「传上来就自动公开」。
+- **教材原件不要提交进 Git 仓库。** 参赛材料另有红线：「不得包含教材原文或原书习题全文」—— 平台内阅读与把教材正文放进提交材料是两件事，后者不要做。
+
+> 阅读权限已经按「所有登录用户可读」开放（见第 4 步），这是团队的产品取舍，不用再问。
 
 ---
 
@@ -191,12 +190,12 @@ mkdir -p /home/ubuntu/app/data/resource-intake/R3
 # 3. 上传（在自己的电脑上）
 scp -r ./R3/* ubuntu@124.220.5.87:/home/ubuntu/app/data/resource-intake/R3/
 
-# 4. 核 sha256，并按生产账号 ID 改 rights.json
+# 4. 核 sha256；确认 rights.json 里 content_authenticated 是 true（随包已开放）
 #    docker compose -f compose.prod.yml exec -T postgres psql -U mirror -d mirror \
 #      -c "select id, username from accounts where status='active';"
 
 # 5. 部署（让新挂载生效）
 ssh ubuntu@124.220.5.87 'bash /home/ubuntu/app/scripts/deploy-prod.sh'
 
-# 6. 用被授权的账号打开 https://learningmirror.cn/student/resources 看有没有「阅读 PDF」
+# 6. 用任意账号打开 https://learningmirror.cn/student/resources 看有没有「阅读 PDF」
 ```
