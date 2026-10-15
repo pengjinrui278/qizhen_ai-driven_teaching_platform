@@ -498,3 +498,72 @@ def test_reply_material_says_so_when_it_really_cannot_fit(note_db):
     material = build_replies_material([("问一", huge), ("问二", "第二处")], budget_bytes=1000)
     assert "没放进来" in material and "如实说明" in material
     assert "第二处" not in material
+
+
+def test_blocked_answer_never_touches_the_note_library(note_db):
+    """被 harness 拦下的回答，一个字都不许落到学生的笔记库里。
+
+    操作块一度是在 harness 之前执行的——自动落库那条路有守卫，操作块这条路绕过了它，
+    等于「内容被拦下、库却已经改了」。解析可以提前（harness 不该拿那段 JSON 当正文），
+    执行必须在 harness 通过之后。
+    """
+    import json
+
+    from mirror_api.models import Problem
+    from mirror_api.note_library import Note
+    from mirror_api.note_ops import OPS_FENCE
+
+    _seed_note(note_db, "n1", "原样不动", "原文", folder="")
+    # 有参考解、且回答里出现完整关键步骤 → answer_leakage 判 failed
+    note_db.add(Problem(coursepack_id="pack", problem_id="note-exercise", type="problem",
+                        provenance="team_authored", statement="合成练习", answer_type="proof",
+                        rights={"allowed_for_runtime": True},
+                        solution_paths=[{"key_steps": ["合成答案不得直接展示"]}]))
+    note_db.commit()
+
+    class BlockedOpsModel:
+        name = "blocked-ops"
+        dynamic_hints = False
+        deep_max_tokens = None
+
+        def generate(self, context):
+            # 触发数分 harness 的拦截条件，同时附上一段会改库的操作块
+            return ("合成答案不得直接展示。\n\n```" + OPS_FENCE + "\n" + json.dumps(
+                {"ops": [{"op": "delete", "ids": ["n1"]},
+                         {"op": "rename", "id": "n1", "title": "不该被改"}]},
+                ensure_ascii=False) + "\n```")
+
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    request = CourseMirrorRequest(
+        request_id="note-20", course_id="mathematical_analysis", course_profile_id="v1",
+        participant_code="student", attempt_id="attempt", interaction_mode="chat",
+        problem={"problem_id": "note-exercise"}, message=f"帮我整理一下笔记\n\n{marker}")
+    response = MirrorPipeline(BlockedOpsModel()).handle(note_db, request)
+
+    assert response.harness.status == "failed", "这段回答应当被拦下"
+    assert "note_ops" not in response.decision, "被拦下就不该有操作回执"
+    assert OPS_FENCE not in response.answer
+    row = note_db.get(Note, "n1")
+    assert row.deleted_at is None, "被拦下的回答不许删学生的笔记"
+    assert row.title == "原样不动", "也不许改"
+    assert row.content == "原文"
+
+
+def test_merge_into_a_full_note_saves_a_new_one_and_says_so(note_db):
+    """目标笔记已经写满：另存一份新的，并如实说明，绝不静默截断学生的笔记。"""
+    from mirror_api.note_library import NOTE_CONTENT_LIMIT, Note
+    # 已经顶到正文上限：再加一段必然超
+    full = "正文。" * (NOTE_CONTENT_LIMIT // 3)
+    _seed_note(note_db, "note-full", "快满的笔记", full)
+
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"},
+                           "d": {"mg": "note-full"}})
+    model = CapturingModel()
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=21, message="补一份反常积分的笔记"))
+
+    saved = response.decision["note_saved"]
+    assert saved["merged"] is False and saved["merge_overflow"] is True, "要说明是另存了一份"
+    assert saved["id"] != "note-full"
+    assert note_db.get(Note, "note-full").content == full, "目标笔记一个字都不许被砍"
+    assert note_db.query(Note).count() == 2

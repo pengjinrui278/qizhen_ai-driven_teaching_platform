@@ -296,18 +296,16 @@ class MirrorPipeline:
         if on_progress:
             on_progress("checking")
 
-        # agent 管理笔记库：把回答末尾的操作块解析出来，逐条校验后由服务端执行，
-        # 再把它从可见正文里剥掉（学生不该看到那段 JSON）。模型碰不到别人的笔记——
-        # 属主检查在 note_ops 里，幻觉出来的 id 会被丢掉并如实回报。
+        # agent 管理笔记库：回答末尾的操作块先解析出来、从可见正文里剥掉
+        # （学生不该看到那段 JSON，harness 也不该拿它当正文去检查）。
+        # **但先不执行**——必须等 harness 过了再动学生的笔记库，否则被拦下的回答
+        # 已经把库改了。自动落库那条路有同样的守卫，这里不能绕过。
         note_results: list[dict] = []
         ops_receipt: dict = {}
+        planned_ops: list[dict] = []
         if note_ops_on:
-            from .note_ops import run_ops_block
-            answer, ops_receipt = run_ops_block(
-                session, request.participant_code or "", answer,
-                default_course=request.course_id,
-                default_folder=((marker.get("d") or {}).get("f") or ""))
-            note_results = (ops_receipt.get("note_ops") or {}).get("results") or []
+            from .note_ops import parse_ops
+            answer, planned_ops = parse_ops(answer)
 
         citations = [
             CourseCitation(
@@ -329,6 +327,14 @@ class MirrorPipeline:
         if harness.status == "failed":
             answer = "这次生成的内容没有通过检查，已停止展示。请换一种问法，或请教师/TA核对。"
             uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
+            planned_ops = []   # 被拦下的回答不许再动学生的笔记库
+        if planned_ops:
+            from .note_ops import apply_ops, operations_payload
+            note_results = apply_ops(
+                session, request.participant_code or "", planned_ops,
+                default_course=request.course_id, default_body=answer,
+                default_folder=((marker.get("d") or {}).get("f") or ""))
+            ops_receipt = operations_payload(note_results)
         # 笔记模式：agent 自主落库。用户已授权自动保存（见「自动存 + 事后通知可撤销」），
         # 前端拿 decision.note_saved 回一条「已存到 …」并提供撤回。被 harness 拦下的不存。
         saved_note, saved_merged, merge_overflow = None, False, False
