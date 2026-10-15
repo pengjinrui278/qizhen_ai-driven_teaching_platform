@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select
 
 from . import retrieval
+from .auth import password_hash
 from .config import get_settings
 from .coursepack import CoursePackImportError, import_coursepack
 from .db import init_db, make_engine, make_session_factory
@@ -38,6 +40,7 @@ from .models import (
     TextbookChunk,
     WorkspaceFinding,
 )
+from .platform_models import Account, SandboxMember, SandboxPolicy
 from .seed import seed_profiles
 from .textbook_ingest import ingest_textbook
 
@@ -45,6 +48,10 @@ DEMO_COURSE = "mathematical_analysis"
 DEMO_PROFILE = "chen-jixiu-3e"
 DEMO_WORKSPACE_ID = "demo-workspace-01"
 DEMO_JOIN_CODE = "DEMO2026"
+DEMO_TEACHER_USERNAME = "demo-teacher"
+DEMO_TEACHER_PASSWORD = "demo2026"
+DEMO_STUDENT_USERNAME = "demo-student"
+DEMO_STUDENT_PASSWORD = "demo2026"
 
 
 def _setup():
@@ -130,6 +137,35 @@ def cmd_seed_demo_workspace(args) -> int:
     students = max(1, args.students)
 
     with factory() as session:
+        teacher = session.execute(
+            select(Account).where(Account.username == DEMO_TEACHER_USERNAME)
+        ).scalar_one_or_none()
+        if teacher is None:
+            teacher = Account(
+                id="demo-teacher-account",
+                username=DEMO_TEACHER_USERNAME,
+                nickname="演示教师",
+                password_hash=password_hash(DEMO_TEACHER_PASSWORD),
+                role="teacher",
+                status="active",
+                retention_days=180,
+            )
+            session.add(teacher)
+        student = session.execute(
+            select(Account).where(Account.username == DEMO_STUDENT_USERNAME)
+        ).scalar_one_or_none()
+        if student is None:
+            student = Account(
+                id="demo-student-account",
+                username=DEMO_STUDENT_USERNAME,
+                nickname="演示学生",
+                password_hash=password_hash(DEMO_STUDENT_PASSWORD),
+                role="student",
+                status="active",
+                retention_days=180,
+            )
+            session.add(student)
+
         workspace = session.get(AssignmentWorkspace, DEMO_WORKSPACE_ID)
         if workspace is None:
             workspace = AssignmentWorkspace(
@@ -141,7 +177,23 @@ def cmd_seed_demo_workspace(args) -> int:
                 join_code=DEMO_JOIN_CODE,
             )
             session.add(workspace)
-            session.commit()
+        session.commit()
+
+        # 教师拥有该演示工作区；演示学生加入为成员（便于演示师生协同）。
+        policy = session.get(SandboxPolicy, DEMO_WORKSPACE_ID)
+        if policy is None:
+            session.add(SandboxPolicy(
+                workspace_id=DEMO_WORKSPACE_ID,
+                owner_id=teacher.id,
+                retention_hours=720,
+                expires_at=datetime.now(UTC) + timedelta(hours=720),
+                class_size=max(students, 3),
+                assignment="证明 1/n → 0，并说明 N 的选取如何依赖 ε。",
+            ))
+        member = session.get(SandboxMember, (DEMO_WORKSPACE_ID, student.id))
+        if member is None:
+            session.add(SandboxMember(workspace_id=DEMO_WORKSPACE_ID, account_id=student.id, role="student"))
+        session.commit()
 
         pack_ids = retrieval.course_pack_ids(session, DEMO_COURSE, DEMO_PROFILE)
         if not pack_ids:
@@ -194,6 +246,8 @@ def cmd_seed_demo_workspace(args) -> int:
         ).scalar()
         print(f"演示工作区：{DEMO_WORKSPACE_ID}")
         print(f"加入码：{DEMO_JOIN_CODE}")
+        print(f"演示教师账号：{DEMO_TEACHER_USERNAME} / {DEMO_TEACHER_PASSWORD}")
+        print(f"演示学生账号：{DEMO_STUDENT_USERNAME} / {DEMO_STUDENT_PASSWORD}")
         print(f"模拟学生：{students} 名（demo-stu-01 .. demo-stu-{students:02d}）")
         print(f"工作区事件数：{events}（模型：{model.name}）")
     return 0
