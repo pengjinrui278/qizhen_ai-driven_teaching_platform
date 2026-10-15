@@ -6,7 +6,7 @@
     "dev": "node ../../scripts/build-windows-helper.cjs && next dev",
     "build": "node ../../scripts/build-windows-helper.cjs && next build",
     "start": "next start",
-    "test": "node --test"
+    "test": "node --test && node ../../scripts/test-zju-connector-launch.cjs"
   },
   "dependencies": {
     "cytoscape-fcose": "^2.2.0",

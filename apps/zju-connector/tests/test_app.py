@@ -7,8 +7,9 @@ def test_local_ui_is_available_only_on_expected_loopback_host() -> None:
     local = TestClient(app, base_url="http://127.0.0.1:8765")
     response = local.get("/")
     assert response.status_code == 200
-    assert "学镜 · 浙大本地连接器" in response.text
-    assert "同步到学镜工作台" in response.text
+    assert "学镜·导入浙大课表" in response.text
+    assert "登录成功后，当前学期课表将自动返回学镜" in response.text
+    assert 'id="importSchedule"' in response.text
     assert '"https://learningmirror.cn"' in response.text
 
     foreign = TestClient(app, base_url="http://attacker.example")
