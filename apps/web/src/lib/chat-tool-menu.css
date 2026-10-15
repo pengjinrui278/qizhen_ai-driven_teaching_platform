@@ -1,0 +1,25 @@
+/* 输入框旁的「+」工具库：一个入口收拢拍照/文档/摘录/参阅 */
+.chatToolMenu{position:relative;display:inline-flex;}
+.chatToolToggle{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;
+  background:#fff;border:1px solid var(--lm-border,#e2e8f0);color:var(--lm-text,#0f172a);cursor:pointer;transition:transform .15s,border-color .15s;}
+.chatToolToggle:hover:not(:disabled){border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);}
+.chatToolToggle.isOpen{background:#eef2ff;border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);transform:rotate(45deg);}
+.chatToolToggle:disabled{opacity:.5;cursor:not-allowed;}
+
+/* 面板向上弹：输入框在底部，往下弹会被窗口切掉 */
+.chatToolPanel{position:absolute;left:0;bottom:calc(100% + 10px);z-index:40;width:300px;max-height:min(70vh,520px);overflow:auto;
+  background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.16);padding:12px;}
+.chatToolPanelTitle{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--lm-muted,#64748b);}
+.chatToolSection{border-top:1px solid var(--lm-border,#e2e8f0);padding:10px 0 4px;}
+.chatToolSection:first-of-type{border-top:0;padding-top:0;}
+.chatToolSection h4{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--lm-text,#0f172a);display:flex;align-items:baseline;gap:8px;}
+.chatToolHint{font-weight:400;font-size:11px;color:var(--lm-muted,#64748b);}
+/* 面板里的控件统一排一行，别各自撑满 */
+.chatToolSection .photoInput,.chatToolSection .quoteToolbar,.chatToolSection .materialToolbar{display:flex;flex-wrap:wrap;gap:8px;}
+.chatToolSection .photoActions{display:flex;flex-wrap:wrap;gap:8px;}
+
+/* 面板里每个控件都占满一行、左对齐，图标与文字保持一行 */
+.chatToolPanel .chatDocUpload{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;}
+.chatToolPanel .chatDocUpload svg{flex:0 0 auto;width:16px;height:16px;}
+.chatToolPanel .photoInput,.chatToolPanel .quoteToolbar,.chatToolPanel .materialToolbar{display:flex;flex-wrap:wrap;gap:8px;width:100%;}
+.chatToolPanel .chatDocUpload,.chatToolPanel .photoButton,.chatToolPanel .quoteTool{white-space:nowrap;}

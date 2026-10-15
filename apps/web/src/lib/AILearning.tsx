@@ -25,6 +25,8 @@ import "./ai-learning.css";
 import "./ai-prompts.css";
 import NotePreferencePanel,{NoteModeToggle} from "./NotePreferencePanel";
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
+import ChatToolMenu from "./ChatToolMenu";
+import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
 import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
 import {decodeNoteMarker,stripNoteMarker,withNoteMarker} from "./note-prefs";
 import "./note-prefs.css";
@@ -57,6 +59,21 @@ export default function AILearning({section=""}:{section?:string}){
  const [organizing,setOrganizing]=useState(false);
  // 笔记模式：关着时笔记相关交互一概不出现
  const [noteMode,setNoteMode]=useState(false);
+ // 文档上传：抽正文交给后端，前端只留一个高亮块
+ const [uploading,setUploading]=useState(false);
+ async function addDocuments(files:File[]){
+  const docs=files.filter(isDocFile);
+  if(!docs.length){setError("只支持 PDF、Word、PPT、txt/md 与常见代码文件；图片请用「图片」那一格。");return;}
+  setUploading(true);setError("");
+  try{
+   for(const file of docs){
+    const saved=await uploadDocument(file);
+    aiInput.current?.addFile({id:saved.id,name:saved.filename,kind:saved.kind_label});
+    if(saved.note)setError(saved.note);   // 抽不出正文时如实说明
+   }
+  }catch(e){setError(e instanceof Error?e.message:"文档上传失败");}
+  finally{setUploading(false);}
+ }
  const lock=useRef(false),bottom=useRef<HTMLDivElement>(null),aiMessagesRef=useRef<HTMLDivElement>(null),pending=useRef<{id:string;text:string;image:string}|null>(null),aiInput=useRef<FormulaComposerHandle>(null);
  async function run(task:()=>Promise<void>){if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");try{await task();}catch(e){setError(e instanceof Error?e.message:"暂时无法完成");}finally{lock.current=false;setBusy(false);}}
  // 笔记列表改从新的笔记库取（科目=AI 教学）；旧的 /ai/notes 由后端 migrate_ai_notes 并过去
@@ -222,7 +239,7 @@ export default function AILearning({section=""}:{section?:string}){
     <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(x=>x.id===id?{...x,height:h}:x))} onMove={moveMaterial} onClear={clearMaterials}/>
    </div>
  </>:null} dropping={dropping} transport={paneTransport} user={{status:"active"}} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
- <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy}/><NoteModeToggle on={noteMode} disabled={busy} toggle={()=>setNoteMode(v=>!v)}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
+ <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><NoteModeToggle on={noteMode} disabled={busy} toggle={()=>setNoteMode(v=>!v)}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
  {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);aiInput.current?.focus();}}>{p.title}</button>)}</div></div>}
  {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={stripNoteMarker(m.question)}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
  {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
@@ -233,7 +250,15 @@ export default function AILearning({section=""}:{section?:string}){
  {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
  <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}
   placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}/>
- <div className="aiActions"><label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><label className="aiFile"><StudentIcon name="camera"/>拍照<input aria-label="拍照" type="file" accept="image/*" capture="environment" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><button className="aiPrimary" disabled={busy||!text.trim()} type="submit"><StudentIcon name="send"/>发送</button></div>
+ <div className="aiActions">
+  <ChatToolMenu label="工具库" disabled={busy}>
+    <label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label>
+    <label className="aiFile"><StudentIcon name="camera"/>拍照<input aria-label="拍照" type="file" accept="image/*" capture="environment" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label>
+    <label className="chatDocUpload"><StudentIcon name="file"/>{uploading?"上传中…":"选择文件"}<input type="file" multiple accept={DOC_ACCEPT} aria-label="上传文档" disabled={busy||uploading} onChange={e=>{void addDocuments(Array.from(e.target.files||[]));e.target.value="";}}/></label>
+    <QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy} onToggle={()=>toggleScissors("main")}/>
+    <MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy}/>
+  </ChatToolMenu>
+  <button className="aiPrimary" disabled={busy||!text.trim()} type="submit"><StudentIcon name="send"/>发送</button></div>
  <p className="aiPrivacy">消息及图片会发送至 DeepSeek；图片仅用于本次回答，不保存原图。</p>
  </form></section></QuotePanes></div>}
  {tab==="resources"&&<><form className="aiSearch" onSubmit={e=>{e.preventDefault();void run(async()=>{const found=await liveApi("/ai/search?q="+encodeURIComponent(query));setResults(found);if(!found.length)setNotice("未找到已核对的相关内容");});}}><input aria-label="搜索教材" placeholder="搜索知识点" value={query} maxLength={500} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!query.trim()}>搜索</button></form><div className="aiGrid">{resources.map(r=><section className="portalPanel" key={r.id}><h2>{r.title}</h2><p>{r.metadata_json.authors||""}</p><p>{r.metadata_json.total_pages} 页 · 已核对 {r.reviewed_pages} 处节选</p></section>)}{!resources.length&&<p>暂无教材</p>}</div>{results.map(r=><section className="portalPanel" key={r.id}><h3>{r.heading||"教材段落"} · PDF 第 {r.page} 页</h3><Markdown text={r.content}/></section>)}<div className="aiGrid"><section className="portalPanel"><h2>例题与习题</h2><p>暂无已核对的题目</p></section><section className="portalPanel"><h2>课程试卷</h2><p>暂无试卷</p></section></div></>}

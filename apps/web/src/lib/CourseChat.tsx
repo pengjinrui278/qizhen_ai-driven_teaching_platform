@@ -21,6 +21,7 @@ import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,lo
 import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
 import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
+import ChatToolMenu from "./ChatToolMenu";
 import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
 import {composeRepliesMarker,decodeNoteMarker,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
 import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
@@ -400,7 +401,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   onDrop={e=>{e.preventDefault();setDragging(false);void addDocuments(Array.from(e.dataTransfer?.files||[]));}}
   data-quoting={quotingPaneId==="main"?"":undefined}
   data-dragging={dragging?"true":undefined}
-  onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/><NoteModeToggle on={noteMode} disabled={busy||loading||user.status!=="active"} toggle={()=>{setNoteMode(v=>!v);setPickedReplies([]);}}/><button onClick={()=>clear()}>新对话</button></header>
+  onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><NoteModeToggle on={noteMode} disabled={busy||loading||user.status!=="active"} toggle={()=>{setNoteMode(v=>!v);setPickedReplies([]);}}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
  {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>{courseIntro(course)}</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}
  {loading&&<p role="status">正在打开对话…</p>}
@@ -450,7 +451,14 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}
   placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}
   onMention={query=>setMentionQuery(query)}/>
- <div className="chatComposerActions"><details className="chatAttachments"><summary><StudentIcon name="camera"/>图片</summary><PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/></details><label className="chatDocUpload"><StudentIcon name="file"/>{uploading?"上传中…":"文档"}<input type="file" multiple accept={DOC_ACCEPT} aria-label="上传文档" disabled={busy||loading||uploading||user.status!=="active"} onChange={e=>{void addDocuments(Array.from(e.target.files||[]));e.target.value="";}}/></label><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
+ <div className="chatComposerActions">
+  <ChatToolMenu label="工具库" disabled={busy||loading||user.status!=="active"}>
+    <PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/>
+    <label className="chatDocUpload"><StudentIcon name="file"/>{uploading?"上传中…":"选择文件"}<input type="file" multiple accept={DOC_ACCEPT} aria-label="上传文档" disabled={busy||loading||uploading||user.status!=="active"} onChange={e=>{void addDocuments(Array.from(e.target.files||[]));e.target.value="";}}/></label>
+    <QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/>
+    <MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/>
+  </ChatToolMenu>
+  <button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
  </form>
  {events.length>0&&<details><summary>补充学习反馈</summary><label>反馈环节<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="conditions">定理条件</option><option value="quantifiers">量词与依赖</option><option value="construction">辅助对象</option></select></label><button disabled={busy} onClick={()=>report("still_stuck")}>仍有困难</button><button disabled={busy} onClick={()=>report("independent_success")}>这次独立完成</button>{feedback&&<p role="status">{feedback}</p>}</details>}
  </section>
