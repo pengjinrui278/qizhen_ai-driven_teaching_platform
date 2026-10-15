@@ -28,7 +28,7 @@ import NoteOrganizeDialog from "./NoteOrganizeDialog";
 import ChatToolMenu from "./ChatToolMenu";
 import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
 import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
-import {decodeNoteMarker,stripNoteMarker,withNoteMarker} from "./note-prefs";
+import {decodeNoteMarker,freeNoteMarker,stripNoteMarker,withNoteMarker} from "./note-prefs";
 import "./note-prefs.css";
 type Row=Record<string,any>;
 type SourceMeta={source:string;label:string;paneId:string;attemptId?:string|null;requestId:string};
@@ -83,10 +83,13 @@ export default function AILearning({section=""}:{section?:string}){
  async function send(){if(!text.trim())return;await run(async()=>{
   let current=active;
   if(!current){current=await liveApi("/ai/sessions","POST");setActive(current);}
-  // 面板拼好的提示词：发送时追加来源标记（输入框与气泡里都不显示）
+  // 面板拼好的提示词：发送时追加来源标记（输入框与气泡里都不显示）。
+  // 笔记模式下直接提要求也要带标记走 agent——不然回答只是一条普通回答，
+  // 还得学生自己复制粘贴进笔记库，与课程对话页的行为也对不上。
   const composed=noteComposed.current&&noteComposed.current.prompt.trim()===text?noteComposed.current:null;
-  const wire=composed?withNoteMarker(text,composed.marker):text;
-  if(composed)noteComposed.current=null;
+  const marker=composed?composed.marker:(noteMode&&text.trim()?freeNoteMarker(): "");
+  const wire=marker?withNoteMarker(text,marker):text;
+  noteComposed.current=null;
   if(!pending.current||pending.current.text!==text||pending.current.image!==picture)pending.current={id:crypto.randomUUID(),text,image:picture};
   await liveApi("/ai/sessions/"+current!.id+"/messages","POST",{request_id:pending.current.id,text:wire,image:picture||null});
   const detail=await liveApi("/ai/sessions/"+current!.id);setActive(detail);setMessages(detail.messages);
@@ -242,7 +245,7 @@ export default function AILearning({section=""}:{section?:string}){
  </>:null} dropping={dropping} transport={paneTransport} user={{status:"active"}} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
  <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><NoteModeToggle on={noteMode} disabled={busy} toggle={()=>setNoteMode(v=>!v)}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
  {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);aiInput.current?.focus();}}>{p.title}</button>)}</div></div>}
- {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={stripNoteMarker(m.question)}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
+ {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={stripNoteMarker(m.question)}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.note_ops&&m.note_ops.done!==undefined&&<div className="noteSavedNotice noteOpsNotice" role="status"><span>助手改动了你的笔记：完成 {m.note_ops.done} 项{m.note_ops.failed>0?`，${m.note_ops.failed} 项没做成`:""}</span><ul>{(m.note_ops.results||[]).map((r:Row,i:number)=><li key={i} className={r.ok?"":"isFailed"}>{r.detail}</li>)}</ul><a href="/student/notes">去我的笔记</a></div>}{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
  {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={aiMessagesRef} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(x=>x.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
@@ -250,7 +253,7 @@ export default function AILearning({section=""}:{section?:string}){
  {picture&&<div className="aiAttachment"><img src={picture} alt="待发送图片"/><button type="button" onClick={()=>setPicture("")} disabled={busy}>移除图片</button></div>}
  {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
  <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}
-  placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}/>
+  placeholder={noteMode?"笔记模式：说明你要什么笔记，生成后自动存进「我的笔记」；也可以拖入文件或输入 @ 引用笔记":undefined}/>
  <div className="aiActions">
   <ChatToolMenu label="工具库" disabled={busy}>
     <label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label>

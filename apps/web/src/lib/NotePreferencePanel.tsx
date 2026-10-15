@@ -147,8 +147,11 @@ export default function NotePreferencePanel({courseId,courses,preset,onClose,onC
 // 页边式的笔记偏好：拖进文件、引用教材或笔记之后，输入框上方冒出一条窄边；
 // 点它像抽页一样**上下**抽出面板（子页面是左右，这里是上下）。
 // 每个选项按钮点一下就往输入框插一段高亮要求，再点输入框里那块就撤销。
-export function NoteEdgePanel({open,onToggle,onPick}:{
+export function NoteEdgePanel({open,onToggle,onPick,targets,mergeId,onMerge}:{
  open:boolean;onToggle:()=>void;onPick:(fragment:string,label:string)=>void;
+ // 草稿里引用到的笔记：不只是依据，也可以当「并入」的目标
+ targets?:{id:string;name:string}[];
+ mergeId?:string;onMerge?:(id:string)=>void;
 }){
  const [schema,setSchema]=useState<Schema|null>(null);
  const [busy,setBusy]=useState("");
@@ -177,6 +180,17 @@ export function NoteEdgePanel({open,onToggle,onPick}:{
       </div>
      </div>)}
     </div>}
+   {/* 存到哪里。默认永远新建；「并入」必须在这里显式选，而且只有引用了笔记才出现。
+       选了之后写入由服务端做，agent 不需要自己去动学生的笔记。 */}
+   {(targets||[]).length>0&&<div className="noteEdgeGroup">
+    <span className="noteEdgeLabel">存到</span>
+    <div className="npChips">
+     <button type="button" aria-pressed={!mergeId} onClick={()=>onMerge?.("")}>新建一份</button>
+     {(targets||[]).map(note=><button type="button" key={note.id} aria-pressed={mergeId===note.id}
+      title={`把这次整理出来的内容追加到《${note.name}》`}
+      onClick={()=>onMerge?.(note.id)}>并入《{note.name}》</button>)}
+    </div>
+   </div>}
    <p className="noteEdgeHint">点一下就把这条要求插进输入框（会显示成高亮块）；想取消就点输入框里那一块。</p>
   </div>
  </div>;
