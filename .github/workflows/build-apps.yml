@@ -12,15 +12,21 @@ jobs:
   windows:
     runs-on: windows-latest
     strategy:
+      # 一个架构挂了不要把另一个也取消掉——两个 .exe 是分开要的
+      fail-fast: false
       matrix:
         arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v4
+      # pnpm 必须先装：下面 setup-node 的 cache: pnpm 要跑 `pnpm store path` 算缓存键，
+      # 装晚了它找不到可执行文件，整个 job 直接死在这一步（版本读根 package.json 的 packageManager）
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: pnpm
-      - run: npm install -g pnpm@10.0.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mirror/desktop exec electron-builder --win nsis portable --${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
@@ -36,6 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 同上：pnpm 先装，setup-node 的 cache: pnpm 才能算出缓存键
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -46,7 +56,6 @@ jobs:
           java-version: "21"
           cache: gradle
       - uses: android-actions/setup-android@v3
-      - run: npm install -g pnpm@10.0.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mirror/android sync
       - run: chmod +x apps/android/android/gradlew && cd apps/android/android && ./gradlew assembleDebug
