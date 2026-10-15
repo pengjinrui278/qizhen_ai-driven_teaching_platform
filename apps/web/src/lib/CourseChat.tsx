@@ -399,7 +399,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   onDragOver={e=>{if(Array.from(e.dataTransfer?.items||[]).some(i=>i.kind==="file")){e.preventDefault();setDragging(true);}}}
   onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setDragging(false);}}
   onDrop={e=>{e.preventDefault();setDragging(false);void addDocuments(Array.from(e.dataTransfer?.files||[]));}}
-  data-quoting={quotingPaneId==="main"?"":undefined}
+  data-quoting={quotingPaneId==="main"?"":undefined} data-note-mode={noteMode?"":undefined}
   data-dragging={dragging?"true":undefined}
   onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><NoteModeToggle on={noteMode} disabled={busy||loading||user.status!=="active"} toggle={()=>{setNoteMode(v=>!v);setPickedReplies([]);}}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
@@ -427,7 +427,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(p=>p.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
  {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
- {/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft)&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
+ {(noteMode||/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft))&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
   onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
  {mentionQuery!==null&&<div className="noteMention" role="listbox" aria-label="引用我的笔记">
   {(()=>{

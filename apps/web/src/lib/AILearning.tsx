@@ -39,7 +39,8 @@ const entranceMeta:Record<string,[string,string]>={ // [图标, 一句说明]
  tools:["switch","国内外常用 AI 工具黄页与安装指引"],
  setup:["download","在本机安装 AI 工具（WinGet 固定版本）"],
 };
-const tabs=[["","知识问答"],["resources","学习资料"],["notes","我的笔记"],["tools","工具中心"],["setup","本地安装"]];
+// 「我的笔记」已并入左侧栏的独立板块，这里不再重复放一个入口
+const tabs=[["","知识问答"],["resources","学习资料"],["tools","工具中心"],["setup","本地安装"]];
 // 与课程对话页统一：同一套渲染管线（ChatMarkdown），公式、引用标记行为一致
 function Markdown({text}:{text:string}){
  return <ChatMarkdown text={text}/>;

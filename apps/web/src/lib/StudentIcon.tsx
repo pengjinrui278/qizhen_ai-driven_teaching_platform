@@ -20,7 +20,7 @@ export default function StudentIcon({name}:{name:string}){
   send:"m22 2-7 20-4-9-9-4zM22 2 11 13",
   scissors:"M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12",
   download:"M21 15v5H3v-5M7 10l5 5 5-5M12 15V3",
-  note:"M4 4a2 2 0 0 1 2-2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM14 2v6h6M8 13h8M8 17h5",
+  note:"M8 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM3 6h3M3 12h3M3 18h3M11 7h6M11 11h6M11 15h4",
  };
  return <svg className="lmIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]||paths.library}/></svg>;
 }
