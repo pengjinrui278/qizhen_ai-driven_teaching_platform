@@ -50,7 +50,7 @@ def fit_user_sections(sections: list[str]) -> str:
     # 前缀越靠前越先保留。笔记任务的教材章节/笔记检索结果要和题目同级优先，
     # 否则它们会排到 others 末尾，正好最先被裁掉。
     priority = ("交互模式：", "本次应给", "题目：", "教材章节内容", "笔记库检索结果",
-                "学生本次上传的资料", "可用课程知识：")
+                "待整理的回答", "要并入的笔记", "学生本次上传的资料", "可用课程知识：")
     others.sort(key=lambda s: next((i for i, prefix in enumerate(priority) if s.startswith(prefix)), len(priority)))
     result = []
     remaining = MAX_USER_BYTES

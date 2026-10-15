@@ -43,6 +43,9 @@ def make_engine(database_url: str) -> Engine:
 # 这里只补**新增的可空列**，不删不改，幂等；新库走 create_all 不受影响。
 _ADDITIVE_COLUMNS: dict[str, dict[str, str]] = {
     "notes": {"deleted_at": "TIMESTAMP", "deleted_from": "VARCHAR(200) DEFAULT ''"},
+    # agent 直接动过笔记库之后的逐条回执。create_all 只会建新表，给已有的表加列得走这里，
+    # 否则老库一读到 ai_messages.note_ops 就 500。
+    "ai_messages": {"note_ops": "JSON"},
 }
 
 

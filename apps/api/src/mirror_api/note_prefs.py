@@ -15,6 +15,11 @@ import re
 VERSION = 1
 # 单条消息上限 6000（platform_api.Message）；提示词 + 标记必须留出余量。
 MAX_TOTAL_CHARS = 5200
+# 「整理选中的回答」的材料额度。单处 8000 / 总计 17000 字节：一整篇回答要能整段进来
+# （早先单处只给 6000，长回答会被拦腰截断），同时仍压在 context_budget.fit_user_sections
+# 的单段上限 18000 字节之下——超了就会被静默裁掉，白给。
+REPLY_ANSWER_BYTES = 8000
+REPLIES_BUDGET_BYTES = 17000
 
 # 每组：id / label / hint / 选项 (id, label, hint, 提示词片段)
 GROUPS = [
@@ -365,7 +370,7 @@ def build_note_material(chunks, marker, budget_bytes=16000, cited_limit=16):
 
 UPLOAD_RE = re.compile(r"\[\[MIRROR-UPLOAD1 ([A-Za-z0-9_-]{6,64})\]\]")
 # 笔记引用：前端在输入框里插的引用块序列化成它，名字用 base64url 带上（只为回显）
-NOTEREF_RE = re.compile(r"\[\[MIRROR-REF1 ([A-Za-z0-9_-]{6,64}) ([A-Za-z0-9_=-]*)\]\]")
+NOTEREF_RE = re.compile(r"\[\[MIRROR-REF1 ([A-Za-z0-9_-]{6,64}) ([A-Za-z0-9_=+/-]*)\]\]")
 
 
 def parse_note_refs(text):
@@ -441,10 +446,11 @@ def build_upload_material(rows, budget_bytes=16000):
     return "\n\n".join(parts)
 
 
-def build_replies_material(replies, budget_bytes=14000):
+def build_replies_material(replies, budget_bytes=REPLIES_BUDGET_BYTES):
     """把选中的若干处问答渲染成整理笔记的素材。
 
     明确要求「整理」而不是照抄：用户选多处的目的就是让 agent 去重、重组。
+    单处上限给得宽（一整篇回答要能整段进来），总预算压在 fit_user_sections 的单段上限之下。
     """
     if not replies:
         return ("待整理的回答（本次笔记任务的依据）\n这一批回答没有取到，"
@@ -453,7 +459,7 @@ def build_replies_material(replies, budget_bytes=14000):
              f"共 {len(replies)} 处，请去重、按主题重组，不要按原顺序照抄。"]
     budget = budget_bytes
     for index, (question, answer) in enumerate(replies, 1):
-        block = f"## 第 {index} 处\n问：{_clip(question, 400)}\n答：{_clip(answer, 6000)}"
+        block = f"## 第 {index} 处\n问：{_clip(question, 600)}\n答：{_clip(answer, REPLY_ANSWER_BYTES)}"
         cost = len(block.encode("utf-8"))
         if cost > budget:
             parts.append(f"（后面还有 {len(replies) - index + 1} 处未列出，受长度限制）")
@@ -461,6 +467,19 @@ def build_replies_material(replies, budget_bytes=14000):
         budget -= cost
         parts.append(block)
     return "\n\n".join(parts)
+
+
+def build_merge_material(note, budget_bytes=6000):
+    """并入已有笔记时，把目标笔记的现有内容也交给模型。
+
+    不给的话模型会把同样的东西再写一遍，并进去就是一堆重复段落。
+    同时明说「服务端会替你写」，免得模型回一句「我无法直接写入你的笔记」。
+    """
+    title = getattr(note, "title", "") or "未命名"
+    body = _clip(getattr(note, "content", "") or "", budget_bytes)
+    return ("要并入的笔记（本次结果会由服务端追加到它后面；已经写过的内容不要再重复，"
+            "只补它还没有的部分，也不要重写它的旧内容）\n"
+            f"《{title}》现有正文：\n{body}")
 
 
 def note_title_from(marker, answer, fallback="课程笔记"):

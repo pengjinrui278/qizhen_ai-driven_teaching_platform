@@ -28,6 +28,8 @@ ATTACHMENT_ROOT = REPO_ROOT / "data" / "note-attachments"
 # 回收站保留期：删除满 30 天后由治理任务连同附件文件彻底清理（见 governance.expire_personal）。
 TRASH_RETENTION_DAYS = 30
 MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+# 单篇笔记正文上限，与 NotePatch.content 的 max_length 一致。
+NOTE_CONTENT_LIMIT = 60000
 PRIVATE_HEADERS = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
 KINDS = {"md", "text", "code", "image", "pdf", "doc", "ppt", "sheet", "video", "audio", "archive", "other"}
 EXT_KIND = {
@@ -123,6 +125,51 @@ def save_agent_note(db, account_id, course_id, title, content, source_meta=None,
     db.add(row)
     db.flush()
     return row
+
+
+def merge_target(db, account_id, note_id):
+    """并入的目标笔记。不属于本人 / 已进回收站一律返回 None——宁可新建，也绝不动别人的笔记。"""
+    if not note_id:
+        return None
+    row = db.get(Note, note_id)
+    if row is None or row.account_id != account_id or row.deleted_at is not None:
+        return None
+    return row
+
+
+def merge_agent_note(db, row, content, source_meta=None):
+    """把 agent 生成的一段文字并进已有笔记（学生显式选了「并入这一篇」）。
+
+    agent 不需要自己去写文件：正文由服务端追加，前端拿到的仍然只是一条可撤回的通知。
+    并入不产生新行，所以往 source_meta.merged 追加一条来源、正文里也留一行出处，
+    否则合并之后就查不到这段是哪次、从哪来的了。
+    超出正文上限就返回 None，让调用方另存一份新的——静默截断学生的笔记不可接受。
+    """
+    body = (content or "").strip()
+    if not body:
+        return None
+    current = row.content or ""
+    stamp = datetime.now(UTC)
+    head = f"\n\n---\n\n### 由助手整理 · {stamp.strftime('%Y-%m-%d')}\n\n"
+    merged = current.rstrip() + head + body + "\n"
+    if len(merged) > NOTE_CONTENT_LIMIT:
+        return None
+    meta = dict(row.source_meta or {})
+    history = list(meta.get("merged") or [])
+    history.append({"at": stamp.isoformat(), "note_id": row.id, **dict(source_meta or {})})
+    meta["merged"] = history[-20:]
+    row.content = merged
+    row.source_meta = meta
+    db.flush()
+    return row
+
+
+def own_note_ids(db, account_id, limit=200):
+    """本人未删除的笔记，最近更新的排前面。给 agent 当索引用（它据此拿到可引用的 id）。"""
+    return list(db.execute(
+        select(Note).where(Note.account_id == account_id, Note.deleted_at.is_(None))
+        .order_by(Note.updated_at.desc()).limit(limit)
+    ).scalars().all())
 
 
 def search_notes(db, account_id, q, limit=8):

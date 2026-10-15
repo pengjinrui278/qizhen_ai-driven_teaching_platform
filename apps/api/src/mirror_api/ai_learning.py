@@ -37,6 +37,9 @@ class AIMessage(Base):
     answer: Mapped[str] = mapped_column(Text)
     has_image: Mapped[bool] = mapped_column(default=False)
     citations: Mapped[list] = mapped_column(JSON, default=list)
+    # agent 直接管理笔记库的逐条回执（做了什么、哪几项没做成）。
+    # 老库靠 db._ADDITIVE_COLUMNS 补列，不是靠 create_all。
+    note_ops: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -146,6 +149,10 @@ def chat(sid: str, body: ChatInput, db=Depends(db_for), user=Depends(user_for)):
             _busy_accounts.discard(user.id)
 
 
+# AI 学习页的笔记统一落在「AI 教学」这个科目下（与笔记库里的既有分类一致）。
+NOTE_COURSE = "ai_literacy"
+
+
 def answer_chat(sid, body, db, user):
     if not body.text.strip():
         raise HTTPException(422, "请输入问题")
@@ -159,8 +166,18 @@ def answer_chat(sid, body, db, user):
     settings = get_settings()
     # 笔记面板拼的提示词末尾带来源标记：检索、送模型、会话标题都用剥离后的可见文本。
     # 存下来的 question 保留标记，确认卡重载后才能恢复面板选择。
-    from .note_prefs import build_upload_material, parse_upload_ids, strip_marker, strip_upload_markers
+    from .note_prefs import (build_upload_material, note_title_from, parse_marker,
+                             parse_upload_ids, strip_marker, strip_upload_markers)
     visible = strip_upload_markers(strip_marker(body.text))
+    # 笔记模式下的自由请求：这条路走 agent，能直接建/改/整理笔记库。
+    # 与课程对话页是同一套操作块机制，否则同一个「笔记」按钮在两边行为不一样。
+    marker = parse_marker(body.text)
+    note_agent = bool(marker and marker.get("mode") == "agent")
+    note_index_block = ""
+    if note_agent:
+        from .note_library import own_note_ids
+        from .note_ops import build_note_index, ops_prompt
+        note_index_block = ops_prompt(build_note_index(own_note_ids(db, user.id)))
     upload_block = ""
     if parse_upload_ids(body.text):
         from .chat_upload import load_uploads
@@ -197,7 +214,8 @@ def answer_chat(sid, body, db, user):
               "教材依据使用[1]这样的编号，只能引用下面实际提供的证据，不编造书名、页码或题号。"
               "无证据时明确是一般知识解释，不声称来自教材；不得假装已读整本书。"
               "旧教材不代表当下工具规格，无法核实的新信息请说明不确定。\n教材证据：\n"+
-              ("\n\n".join(evidence) or "没有匹配到已核对的教材段落。"))
+              ("\n\n".join(evidence) or "没有匹配到已核对的教材段落。")
+              + ("\n\n" + note_index_block if note_index_block else ""))
     messages = [{"role": "system", "content": system}]
     for item in history:
         messages.extend([{"role": "user", "content": item.question + ("（此前附图不保留，如需再看请重传）" if item.has_image else "")},
@@ -215,8 +233,22 @@ def answer_chat(sid, body, db, user):
     # Prevent deletion while generation runs from resurrecting private data.
     db.expire_all()
     own(db, AISession, sid, user)
+    # agent 动笔记库：执行回答末尾的操作块并把它从可见正文里剥掉。
+    # 模型自己发过操作块就不再自动新建一份，免得同样的内容存两遍。
+    from .note_ops import run_ops_block
+    answer, ops_receipt = run_ops_block(db, user.id, answer, default_course=NOTE_COURSE)
+    if note_agent and not ops_receipt:
+        from .note_library import save_agent_note
+        save_agent_note(db, user.id, NOTE_COURSE,
+                        note_title_from(marker, answer), answer,
+                        source_meta={"v": 1, "origin": "note_mode", "mode": "agent",
+                                     "prefs": (marker or {}).get("p") or {},
+                                     "src": (marker or {}).get("src") or {},
+                                     "session_id": sid, "request_id": body.request_id},
+                        folder_path=((marker or {}).get("d") or {}).get("f") or "")
     row = AIMessage(id=ident, session_id=sid, account_id=user.id, question=body.text,
-                    answer=answer, has_image=bool(body.image), citations=citations)
+                    answer=answer, has_image=bool(body.image), citations=citations,
+                    note_ops=ops_receipt or {})
     db.add(row)
     if session.title == "新对话":
         session.title = visible[:60]

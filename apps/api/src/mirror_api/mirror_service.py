@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 import threading
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -41,6 +42,7 @@ from .models import (
 )
 from .note_prefs import (
     build_note_find_block,
+    build_merge_material,
     build_note_material,
     build_replies_material,
     build_note_ref_material,
@@ -166,7 +168,13 @@ class MirrorPipeline:
 
         # 笔记任务：按章取材料 / 检索笔记库；没有标记就走原来的泛检索。
         # 三条路互斥——同时跑会给出两套互相矛盾的「依据」。
-        note_material, note_hits = "", []
+        note_material, note_hits, merge_row = "", [], None
+        # agent 直接管理笔记库：只有「笔记模式下的自由请求」才开。
+        # 开着的时候 system 里会带上可用的操作清单，回答末尾的操作块由服务端执行。
+        note_ops_on = bool(marker and marker.get("mode") == "agent")
+        # 这次到底有没有取到「可写成一笔记」的课程内容。只有笔记库索引、没有正文时，
+        # 说明学生是在让你整理笔记库而不是让你写新笔记——那种情况不该自动新建一份。
+        note_source_found = True
         if marker and marker.get("mode") == "find":
             # 函数内导入：note_library 会拉起 platform_api，模块级导入会成环
             from .note_library import search_notes
@@ -190,6 +198,30 @@ class MirrorPipeline:
             source = marker["src"]
             rows = chapter_chunks(session, source["sid"], source.get("ch") or "")
             note_material, chunks = build_note_material(rows, marker)
+        elif marker and marker.get("mode") in ("generate", "agent"):
+            # 学生在笔记模式下直接提要求（没走偏好面板、也没指定教材章）：
+            # 按这次的要求去教材里找材料；agent 模式再把本人笔记库的索引一并给它，
+            # 它才能用 id 引用既有笔记（整理、移动、改名、删除都靠这个）。
+            rows = search_textbook_chunks(session, request.course_id, visible_message, limit=40)
+            if rows:
+                note_material, chunks = build_note_material(rows, marker)
+            else:
+                note_source_found = False
+                chunks = search_textbook_chunks(
+                    session, request.course_id,
+                    retrieval_query or (problem.statement if problem else ""), limit=3
+                )
+            if note_ops_on:
+                # 索引 + 按这次的话做一次笔记库检索：库大过索引上限时，「帮我找那篇…」也还找得到。
+                from .note_library import own_note_ids, search_notes
+                from .note_ops import build_note_index
+                account = request.participant_code or ""
+                parts = [build_note_index(own_note_ids(session, account))]
+                hits = search_notes(session, account, visible_message, limit=8)
+                if hits:
+                    parts.append(build_note_find_block(hits))
+                block = "\n\n".join(parts)
+                note_material = (note_material + "\n\n" + block) if note_material else block
         else:
             # 补充教材文本块（授权 RAG 门控后）作为额外上下文
             chunks = search_textbook_chunks(
@@ -238,7 +270,18 @@ class MirrorPipeline:
             history=request.history,
             note_material=note_material,
             upload_material=upload_material,
+            note_ops_enabled=note_ops_on,
         )
+        # 并入已有笔记：学生显式选了目标那一篇。把目标笔记的现有内容也交给模型，
+        # 免得它把已经写过的东西再写一遍；落库由服务端追加，agent 不需要自己去写文件。
+        if marker and note_material:
+            from .note_library import merge_target
+            merge_row = merge_target(session, request.participant_code or "",
+                                     str((marker.get("d") or {}).get("mg") or ""))
+            if merge_row is not None:
+                note_material = note_material + "\n\n" + build_merge_material(merge_row)
+                context = replace(context, note_material=note_material)
+
         context = bounded_context(context)
         included = {(node.get("source_id"), node["knowledge_id"]) for node in context.knowledge}
         knowledge = [node for node in knowledge if (node.coursepack_id, node.knowledge_id) in included]
@@ -252,6 +295,19 @@ class MirrorPipeline:
         answer = self.model.generate(context)
         if on_progress:
             on_progress("checking")
+
+        # agent 管理笔记库：把回答末尾的操作块解析出来，逐条校验后由服务端执行，
+        # 再把它从可见正文里剥掉（学生不该看到那段 JSON）。模型碰不到别人的笔记——
+        # 属主检查在 note_ops 里，幻觉出来的 id 会被丢掉并如实回报。
+        note_results: list[dict] = []
+        ops_receipt: dict = {}
+        if note_ops_on:
+            from .note_ops import run_ops_block
+            answer, ops_receipt = run_ops_block(
+                session, request.participant_code or "", answer,
+                default_course=request.course_id,
+                default_folder=((marker.get("d") or {}).get("f") or ""))
+            note_results = (ops_receipt.get("note_ops") or {}).get("results") or []
 
         citations = [
             CourseCitation(
@@ -275,18 +331,30 @@ class MirrorPipeline:
             uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
         # 笔记模式：agent 自主落库。用户已授权自动保存（见「自动存 + 事后通知可撤销」），
         # 前端拿 decision.note_saved 回一条「已存到 …」并提供撤回。被 harness 拦下的不存。
-        saved_note = None
-        if marker and marker.get("mode") in ("compose", "generate") and note_material and harness.status != "failed":
-            from .note_library import save_agent_note
+        saved_note, saved_merged, merge_overflow = None, False, False
+        # 模型自己发过操作块就不再自动新建：它已经说清楚该怎么落库了，
+        # 再存一份就成了同样的内容存两遍。
+        auto_save = (marker and marker.get("mode") in ("compose", "generate", "agent") and note_material
+                     and note_source_found and not note_results and harness.status != "failed")
+        if auto_save:
+            from .note_library import merge_agent_note, save_agent_note
             dest = marker.get("d") or {}
-            saved_note = save_agent_note(
-                session, request.participant_code or "", request.course_id,
-                note_title_from(marker, answer), answer,
-                source_meta={"v": 1, "origin": "note_mode", "mode": marker.get("mode"),
-                             "prefs": marker.get("p") or {}, "src": marker.get("src") or {},
-                             "attempt_id": request.attempt_id, "request_id": request.request_id},
-                folder_path=dest.get("f") or ((marker.get("src") or {}).get("ch") or ""),
-                starred=bool(dest.get("s")))
+            source_meta = {"v": 1, "origin": "note_mode", "mode": marker.get("mode"),
+                           "prefs": marker.get("p") or {}, "src": marker.get("src") or {},
+                           "attempt_id": request.attempt_id, "request_id": request.request_id}
+            if merge_row is not None:
+                merged = merge_agent_note(session, merge_row, answer, source_meta=source_meta)
+                if merged is not None:
+                    saved_note, saved_merged = merged, True
+                else:
+                    # 目标笔记已经写满：另存一份新的，并如实说明，不静默截断学生的笔记
+                    merge_overflow = True
+            if saved_note is None:
+                saved_note = save_agent_note(
+                    session, request.participant_code or "", request.course_id,
+                    note_title_from(marker, answer), answer, source_meta=source_meta,
+                    folder_path=dest.get("f") or ((marker.get("src") or {}).get("ch") or ""),
+                    starred=bool(dest.get("s")))
 
         evidence = self._draft_evidence(request, problem, knowledge, hint_level, harness.status)
 
@@ -313,7 +381,10 @@ class MirrorPipeline:
                 **decision_payload(marker, hits=note_hits),
                 **({"note_saved": {"id": saved_note.id, "title": saved_note.title,
                                    "course_id": saved_note.course_id,
-                                   "folder_path": saved_note.folder_path}} if saved_note else {}),
+                                   "folder_path": saved_note.folder_path,
+                                   "merged": saved_merged, "merge_overflow": merge_overflow}}
+                   if saved_note else {}),
+                **ops_receipt,
             },
         )
 
