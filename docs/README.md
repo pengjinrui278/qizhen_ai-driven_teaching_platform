@@ -18,6 +18,7 @@
 | `architecture.md` | 技术架构与模块边界 |
 | `course-model-guide.md` | 课程模型指南 |
 | `data-rights.md` | 数据权利红线（教材授权范围、版权约束） |
+| `参赛演示与视频拍摄指南.md` | **PPT 要点 + 演示视频分镜与拍摄准备**（决赛用） |
 | `competition/通知原文.md` | 大赛通知原文存档 |
 | `competition/参赛指南.md` | 大赛要求摘要 + 行动清单 + 关键日期 |
 | `progress/进度日志.md` | 重大更新流水账（新条目在最上方） |
