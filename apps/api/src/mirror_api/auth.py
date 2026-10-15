@@ -63,7 +63,8 @@ def require_active(user: Account):
 
 def public_account(user):
     return {"id": user.id, "username": user.username, "nickname": user.nickname,
-            "role": user.role, "status": user.status, "retention_days": user.retention_days}
+            "role": user.role, "status": user.status, "retention_days": user.retention_days,
+            "avatar": getattr(user, "avatar", "") or ""}
 
 
 def remove_sessions(db, user_id):

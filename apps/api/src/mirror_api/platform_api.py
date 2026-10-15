@@ -11,7 +11,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from . import memory, retrieval, sandboxes, learning_activity
@@ -193,13 +193,58 @@ def create_attempt(body:AttemptCreate,db=Depends(db_for),user=Depends(user_for))
             "title":learning_activity.summarize(body.text,body.course_id),"title_source":"topic_extraction","created_at":learning_activity.timestamp(row.created_at)}
 
 
+def _attempt_title(row):
+    """学生自己起的名字优先；没起过就按首条消息现算。"""
+    custom=(row.title or "").strip()
+    if custom:
+        return custom,"custom"
+    return learning_activity.summarize((row.problem or {}).get("text",""),row.course_id),"topic_extraction"
+
+
 @router.get("/attempts")
 def attempts(offset:int=Query(default=0,ge=0),limit:int=Query(default=100,ge=1,le=100),db=Depends(db_for),user=Depends(user_for)):
     rows=db.execute(select(Attempt).where(Attempt.account_id==user.id)
                     .order_by(Attempt.created_at.desc(),Attempt.id.desc()).offset(offset).limit(limit)).scalars().all()
-    return [{"id":r.id,"course_id":r.course_id,"problem":r.problem,"sandbox_id":r.sandbox_id,
-             "title":learning_activity.summarize(r.problem.get("text", ""),r.course_id),"title_source":"topic_extraction",
-             "created_at":learning_activity.timestamp(r.created_at)} for r in rows]
+    result=[]
+    for r in rows:
+        title,source=_attempt_title(r)
+        result.append({"id":r.id,"course_id":r.course_id,"problem":r.problem,"sandbox_id":r.sandbox_id,
+                       "title":title,"title_source":source,
+                       "created_at":learning_activity.timestamp(r.created_at)})
+    return result
+
+
+class AttemptPatch(BaseModel):
+    title:str=Field(default="",max_length=120)
+
+
+@router.patch("/attempts/{aid}")
+def rename_attempt(aid:str,body:AttemptPatch,db=Depends(db_for),user=Depends(user_for)):
+    """给对话改个名字。传空串就退回按首条消息现算的标题。"""
+    row=own_attempt(db,user,aid)
+    row.title=body.title.strip()[:120]
+    db.commit()
+    title,source=_attempt_title(row)
+    return {"id":row.id,"title":title,"title_source":source}
+
+
+@router.delete("/attempts/{aid}")
+def delete_attempt(aid:str,db=Depends(db_for),user=Depends(user_for)):
+    """删掉一段对话：连同它的消息与这条对话留下的学习活动记录。
+
+    学习观察（observations）不在这里删——那是学生自己确认过的记录，
+    另有「学习档案」那条路去更正或撤回，不该被删一段对话顺手带走。
+    """
+    row=own_attempt(db,user,aid)
+    events=db.execute(delete(MirrorEvent).where(
+        MirrorEvent.participant_code==user.id,
+        MirrorEvent.request_payload["attempt_id"].as_string()==aid)).rowcount
+    activities=db.execute(delete(Audit).where(
+        Audit.actor_id==user.id,Audit.action==learning_activity.ACTION,
+        Audit.target==aid)).rowcount
+    db.delete(row)
+    db.commit()
+    return {"deleted":True,"events":events,"activities":activities}
 
 
 @router.get("/attempts/{aid}")
@@ -749,6 +794,25 @@ class Preferences(BaseModel):
 def preferences(body:Preferences,db=Depends(db_for),user=Depends(user_for)):
     user.retention_days=body.retention_days;user.status=body.status
     db.commit();return public_account(user)
+
+
+class AvatarInput(BaseModel):
+    # 客户端用 canvas 裁好再传：正方形小图。服务端不碰图像处理，只认类型与体积，
+    # 免得为了一个头像把 Pillow 之类的重量级依赖拖进来。
+    avatar:str=Field(default="",max_length=400000)
+
+
+_AVATAR_PREFIXES=("data:image/png;base64,","data:image/jpeg;base64,","data:image/webp;base64,")
+
+
+@router.patch("/me/avatar")
+def set_avatar(body:AvatarInput,db=Depends(db_for),user=Depends(user_for)):
+    value=(body.avatar or "").strip()
+    if value and not value.startswith(_AVATAR_PREFIXES):
+        raise HTTPException(422,"头像请用 PNG、JPEG 或 WebP 图片")
+    user.avatar=value
+    db.commit()
+    return public_account(user)
 
 
 @router.get("/me/export")

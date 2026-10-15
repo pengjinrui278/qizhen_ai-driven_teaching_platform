@@ -46,6 +46,10 @@ _ADDITIVE_COLUMNS: dict[str, dict[str, str]] = {
     # agent 直接动过笔记库之后的逐条回执。create_all 只会建新表，给已有的表加列得走这里，
     # 否则老库一读到 ai_messages.note_ops 就 500。
     "ai_messages": {"note_ops": "JSON"},
+    # 学生自己给对话起的名字（空 = 现算）
+    "student_attempts": {"title": "VARCHAR(120) DEFAULT ''"},
+    # 学生自选头像（客户端裁好的小图 data URL）
+    "accounts": {"avatar": "TEXT DEFAULT ''"},
 }
 
 

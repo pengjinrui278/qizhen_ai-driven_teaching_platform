@@ -16,6 +16,9 @@ class Account(Base):
     role: Mapped[str] = mapped_column(String(16), default="student")
     status: Mapped[str] = mapped_column(String(16), default="active")
     retention_days: Mapped[int] = mapped_column(Integer, default=180)
+    # 头像：客户端裁好的小图 data URL（正方形，服务端只校验类型与体积，不做图像处理）。
+    # 空串 = 没有头像，界面显示昵称首字。老库靠 db._ADDITIVE_COLUMNS 补列。
+    avatar: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -34,6 +37,9 @@ class Attempt(Base):
     profile_id: Mapped[str] = mapped_column(String(64))
     problem: Mapped[dict] = mapped_column(JSON, default=dict)
     sandbox_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 学生自己起的名字。空 = 用 learning_activity.summarize 现算的标题。
+    # 老库靠 db._ADDITIVE_COLUMNS 补列，不是靠 create_all。
+    title: Mapped[str] = mapped_column(String(120), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
