@@ -1,6 +1,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({channel:'msedge',headless:true});try{
- const p=await b.newPage({viewport:{width:1440,height:1000}});const external=[];p.on('request',r=>{if(/^https?:/.test(r.url())&&!r.url().startsWith('http://127.0.0.1:3011/'))external.push(r.url());});const errors=[];p.on('pageerror',e=>errors.push(e.message));let attempt=null,payload=null;
+ const BASE=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3011';
+const p=await b.newPage({viewport:{width:1440,height:1000}});const external=[];p.on('request',r=>{if(/^https?:/.test(r.url())&&!r.url().startsWith(BASE+'/'))external.push(r.url());});const errors=[];p.on('pageerror',e=>errors.push(e.message));let attempt=null,payload=null;
  await p.route('**/api/v2/**',async r=>{const path=new URL(r.request().url()).pathname.replace('/api/v2','');let value=[];
  if(path==='/me')value={id:'formula-fixture',role:'student',status:'active'};
  if(path==='/courses')value=[{course_id:'mathematical_analysis',display_name:'数学分析'}];if(path==='/memory')value={observations:[],hypotheses:[]};if(path==='/config')value={};
@@ -9,7 +10,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  if(path==='/attempts/formula-session')value=attempt;
  if(path.endsWith('/messages/stream')){payload=r.request().postDataJSON();attempt.events.push({request_id:payload.request_id,message:payload.message,response:{answer:'已收到公式。'}});await r.fulfill({contentType:'text/event-stream',body:'event: done\ndata: {"answer":"已收到公式。"}\n\n'});return;}
  await r.fulfill({json:value});});
- await p.goto('http://127.0.0.1:3011/student/learn?mode=live');const input=p.getByRole('textbox',{name:'发送消息',exact:true});await input.waitFor();await input.fill('前文后文');
+ await p.goto(BASE+'/student/learn?mode=live');const input=p.getByRole('textbox',{name:'发送消息',exact:true});await input.waitFor();await input.fill('前文后文');
  await input.evaluate(e=>{const r=document.createRange();r.setStart(e.firstChild,2);r.collapse(true);getSelection().removeAllRanges();getSelection().addRange(r);});
  await p.getByRole('button',{name:'插入公式',exact:true}).click();await p.locator('math-field').waitFor();await p.getByRole('button',{name:'分式',exact:true}).click();assert.equal(await input.innerText(),'前文后文');
  // Fill the visible mathfield using its public input API, not the chat textbox.

@@ -11,7 +11,7 @@ const {chromium}=require('playwright');const assert=require('assert/strict');
  if(path==='/attempts')value=[empty,saved];if(path==='/attempts/empty')value=empty;if(path==='/attempts/saved')value=saved;
  if(path.endsWith('/messages/stream')){started();await delayed;try{await route.fulfill({contentType:'text/event-stream',body:'event: done\ndata: {"answer":"迟到响应不得覆盖历史"}\n\n'});}catch{}return;}
  await route.fulfill({json:value});});
- await p.goto('http://127.0.0.1:3011/student/learn?attempt=empty');
+ await p.goto((process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3011')+'/student/learn?attempt=empty');
  await p.getByText('这段对话尚无已完成的回答。原问题已保留在下方，可直接发送继续。',{exact:true}).waitFor();
  assert.equal(await p.getByLabel('发送消息',{exact:true}).innerText(),empty.problem.text);
  assert.equal(await p.getByRole('button',{name:'新对话',exact:true}).count(),1);

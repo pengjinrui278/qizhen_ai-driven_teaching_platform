@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const prompts=require('../apps/web/src/lib/course-prompts.json');
 async function main(){
- const base='http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
+ const base=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3010',headers={'X-Mirror-Request':'1'};
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
