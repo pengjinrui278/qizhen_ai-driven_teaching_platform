@@ -157,11 +157,14 @@ export default forwardRef<FormulaComposerHandle,Props>(function FormulaComposer(
  const mention=useRef<Range|null>(null);
  const [open,setOpen]=useState(false),[ready,setReady]=useState(false),[latex,setLatex]=useState(""),[error,setError]=useState(""),[source,setSource]=useState(false);
  const latexRef=useRef(latex);latexRef.current=latex;
+ // 下面这组句柄的依赖是空的，直接用 disabled 会把它永远定格在首帧——
+ // 首帧一定还在 loading，于是「点偏好选项插入要求」会静默失效。跟 latex 一样走 ref。
+ const disabledRef=useRef(disabled);disabledRef.current=disabled;
  // 对外暴露的操作：焦点、插入高亮要求、把文件块钉到最前面
  useImperativeHandle(ref,()=>({
   focus:()=>{editor.current?.focus();},
   addPrompt:(text:string)=>{
-   const root=editor.current;if(!root||disabled)return;
+   const root=editor.current;if(!root||disabledRef.current)return;
    const exists=Array.from(root.querySelectorAll<HTMLElement>(".promptChip")).some(c=>c.dataset.prompt===text);
    if(exists||read(root).length+text.length>6000)return;
    const r=restore();r.collapse(false);
