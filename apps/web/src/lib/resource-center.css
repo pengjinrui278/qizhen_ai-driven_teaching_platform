@@ -92,6 +92,10 @@
 .zjuPrivacyRail{display:flex;gap:0;margin:14px 0 22px;border:1px solid #dce3ef;border-radius:12px;background:#fff;overflow:hidden}
 .zjuPrivacyRail span{flex:1;padding:10px 14px;color:#486050;font-size:12px;text-align:center;border-right:1px solid #e5eaf2}
 .zjuPrivacyRail span:last-child{border-right:0}
+.zjuConnectorSetup{margin:-8px 0 22px;padding:20px 22px;border:1px solid #cbd8f4;border-radius:16px;background:#f7f9ff;box-shadow:0 12px 28px rgba(39,69,133,.08)}
+.zjuConnectorSetupHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.zjuConnectorSetupHeading span{color:#315ee7;font-size:12px;font-weight:800}.zjuConnectorSetupHeading h3{margin:3px 0 0;font-size:19px}.zjuConnectorSetupHeading>button{width:32px;height:32px;border:0;border-radius:50%;background:#e9eefb;color:#42506c;font-size:22px;cursor:pointer}
+.zjuConnectorSetup ol{margin:16px 0;padding-left:22px;color:#526078;line-height:1.85}.zjuConnectorSetup code{padding:2px 5px;border-radius:5px;background:#e9eefb;color:#243a72}
+.zjuConnectorSetupActions{display:flex;flex-wrap:wrap;gap:10px}.zjuConnectorSetupActions a,.zjuConnectorSetupActions button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border:1px solid #315ee7;border-radius:10px;font-weight:800;text-decoration:none;cursor:pointer}.zjuConnectorSetupActions a{background:#315ee7;color:#fff}.zjuConnectorSetupActions button{background:#fff;color:#315ee7}.zjuConnectorSetup>p{margin:14px 0 0;color:#647087;font-size:13px;line-height:1.65}
 .zjuScheduleNotice{padding:11px 14px;border-radius:10px;background:#e8f6ef;color:#146b4c;font-weight:650}
 .zjuScheduleEmpty{position:relative;min-height:320px;padding:60px 32px;text-align:center;border:1px dashed #bdc9dc;border-radius:18px;background:#fbfcff;overflow:hidden}
 .zjuScheduleEmpty h3{position:relative;margin:20px 0 8px;font-size:22px}
@@ -113,7 +117,7 @@
 .zjuCourseSlip h4{margin:5px 0 8px;font-size:14px;line-height:1.4}.zjuCourseSlip p{margin:2px 0;color:#677287;font-size:12px}
 .zjuCourseSlip>span{display:inline-block;margin-top:9px;padding:3px 7px;border-radius:999px;background:#eef2fb;color:#53617c;font-size:10px}
 .zjuCoursePeriods{color:var(--zju-blue);font:750 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}.zjuNoCourse{margin:32px 0;color:#a0a8b5;text-align:center;font-size:12px}
-@media(max-width:800px){.zjuScheduleHero{align-items:stretch;flex-direction:column;background:linear-gradient(155deg,#f8fbff 0%,#f8fbff 76%,#e4f5ef 76%)}.zjuScheduleActions{min-width:0}.zjuPrivacyRail{flex-direction:column}.zjuPrivacyRail span{border-right:0;border-bottom:1px solid #e5eaf2}.zjuScheduleMeta{grid-template-columns:1fr 1fr}.zjuScheduleMeta>div:first-child{grid-column:1/-1}.zjuScheduleMeta button{min-height:44px}.zjuWeekGrid{scroll-snap-type:x proximity}.zjuDayColumn{scroll-snap-align:start}}
+@media(max-width:800px){.zjuScheduleHero{align-items:stretch;flex-direction:column;background:linear-gradient(155deg,#f8fbff 0%,#f8fbff 76%,#e4f5ef 76%)}.zjuScheduleActions{min-width:0}.zjuPrivacyRail{flex-direction:column}.zjuPrivacyRail span{border-right:0;border-bottom:1px solid #e5eaf2}.zjuConnectorSetupActions{display:grid}.zjuScheduleMeta{grid-template-columns:1fr 1fr}.zjuScheduleMeta>div:first-child{grid-column:1/-1}.zjuScheduleMeta button{min-height:44px}.zjuWeekGrid{scroll-snap-type:x proximity}.zjuDayColumn{scroll-snap-align:start}}
 .rcType-definition .rcLabelTag,.rcType-theorem .rcLabelTag,.rcType-corollary .rcLabelTag,
 .rcType-lemma .rcLabelTag,.rcType-proposition .rcLabelTag,.rcType-property .rcLabelTag{
   background:#2563eb;

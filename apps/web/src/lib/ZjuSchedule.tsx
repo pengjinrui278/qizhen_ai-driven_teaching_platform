@@ -30,6 +30,7 @@ type ScheduleSnapshot={
 };
 
 const STORAGE_KEY="learning-mirror.zju-schedule.v1";
+const CONNECTOR_DOWNLOAD="/downloads/zju/learning-mirror-zju-connector.zip";
 const CONNECTOR_ORIGINS=new Set(["http://127.0.0.1:8765","http://localhost:8765"]);
 const DAYS=["周一","周二","周三","周四","周五","周六","周日"];
 const SEASONS:Record<string,string>={"1|秋":"秋学季","1|冬":"冬学季","2|春":"春学季","2|夏":"夏学季"};
@@ -64,6 +65,7 @@ export default function ZjuSchedule(){
  const [snapshot,setSnapshot]=useState<ScheduleSnapshot|null>(null);
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
+ const [showConnectorSetup,setShowConnectorSetup]=useState(false);
  const fileRef=useRef<HTMLInputElement|null>(null);
  const connectorWindow=useRef<Window|null>(null);
  useEffect(()=>{setSnapshot(readStored());},[]);
@@ -94,12 +96,18 @@ export default function ZjuSchedule(){
  return <section className="zjuSchedule" aria-labelledby="zju-schedule-title">
   <div className="zjuScheduleHero">
    <div><h2 id="zju-schedule-title">我的课表</h2><p>连接浙大课表，或导入已有课表文件。</p></div>
-   <div className="zjuScheduleActions"><button className="zjuConnectButton" onClick={openConnector}>在本机连接浙大</button><button onClick={()=>fileRef.current?.click()}>导入连接器 JSON</button><input ref={fileRef} className="zjuHiddenInput" type="file" accept="application/json,.json" onChange={importFile}/></div>
+   <div className="zjuScheduleActions"><button className="zjuConnectButton" onClick={()=>{setShowConnectorSetup(true);setError("");}}>在本机连接浙大</button><button onClick={()=>fileRef.current?.click()}>导入连接器 JSON</button><input ref={fileRef} className="zjuHiddenInput" type="file" accept="application/json,.json" onChange={importFile}/></div>
   </div>
   <div className="zjuPrivacyRail"><span>密码不离开电脑</span><span>Cookie 仅在本地内存</span><span>课表仅存当前浏览器</span></div>
+  {showConnectorSetup&&<section className="zjuConnectorSetup" aria-labelledby="zju-connector-setup-title">
+   <div className="zjuConnectorSetupHeading"><div><span>首次使用</span><h3 id="zju-connector-setup-title">先下载并启动本地连接器</h3></div><button type="button" onClick={()=>setShowConnectorSetup(false)} aria-label="关闭连接器引导">×</button></div>
+   <ol><li>下载 ZIP 后解压全部文件。</li><li>双击 <code>start-local.bat</code>，并保持窗口运行。</li><li>首次启动需要 Python 3.11 或更高版本，并会安装连接器依赖。</li></ol>
+   <div className="zjuConnectorSetupActions"><a href={CONNECTOR_DOWNLOAD} download>下载 Windows 本地连接器</a><button type="button" onClick={openConnector}>我已启动，打开连接器</button></div>
+   <p>连接器只在本机运行，学号、密码和 Cookie 不会发送到学镜服务器。</p>
+  </section>}
   {notice&&<p className="zjuScheduleNotice" role="status">{notice}</p>}
-  {error&&<div className="rcError" role="alert">{error}<p>若连接器尚未启动，请先运行仓库中的 <code>apps/zju-connector/start-local.bat</code>。</p></div>}
-  {!snapshot?<div className="zjuScheduleEmpty"><div className="zjuEmptyWeek" aria-hidden="true">一<span>二</span><span>三</span><span>四</span><span>五</span></div><h3>还没有课表</h3><p>点击“在本机连接浙大”，在新窗口输入本人统一认证学号和密码。同步完成后，课表会自动回到这里。</p><p className="zjuScheduleFallback">连接器窗口没有自动返回？在本地窗口下载 JSON，再从这里导入。</p></div>:<>
+  {error&&<div className="rcError" role="alert">{error}<p>若连接器尚未启动，请先<a href={CONNECTOR_DOWNLOAD} download>下载本地连接器</a>并运行 <code>start-local.bat</code>。</p></div>}
+  {!snapshot?<div className="zjuScheduleEmpty"><div className="zjuEmptyWeek" aria-hidden="true">一<span>二</span><span>三</span><span>四</span><span>五</span></div><h3>还没有课表</h3><p>首次使用请先下载并启动本地连接器，再在本地窗口完成本人统一认证。同步完成后，课表会自动回到这里。</p><p className="zjuScheduleFallback">连接器窗口没有自动返回？在本地窗口下载 JSON，再从这里导入。</p></div>:<>
    <div className="zjuScheduleMeta"><div><span>当前学期</span><strong>{term}</strong></div><div><span>课表项</span><strong>{snapshot.courses.length}</strong></div><div><span>更新时间</span><strong>{snapshot.fetched_at?new Date(snapshot.fetched_at).toLocaleString("zh-CN",{hour12:false}):"本地导入"}</strong></div><button onClick={clear}>清除本机课表</button></div>
    <div className="zjuWeekGrid" tabIndex={0} role="table" aria-label={term+"课表"}>{DAYS.map((day,index)=><section className="zjuDayColumn" role="rowgroup" key={day}><h3>{day}</h3>{byDay[index].length?byDay[index].map(course=><article className="zjuCourseSlip" key={course.id}><div className="zjuCoursePeriods">{course.periods.length===1?`第 ${course.periods[0]} 节`:`${course.periods[0]}—${course.periods.at(-1)} 节`}</div><h4>{course.course_name}</h4><p>{course.teacher}</p><p>{course.location||"地点待定"}</p><span>{WEEK_LABELS[course.week_pattern]||"每周"}{course.first_half&&!course.second_half?" · 前半学季":course.second_half&&!course.first_half?" · 后半学季":""}</span></article>):<p className="zjuNoCourse">无课</p>}</section>)}</div>
   </>}

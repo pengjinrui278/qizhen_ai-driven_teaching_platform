@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/build-windows-helper.cjs && next dev",
-    "build": "node ../../scripts/build-windows-helper.cjs && next build",
+    "dev": "node ../../scripts/build-windows-helper.cjs && node ../../scripts/build-zju-connector.cjs && next dev",
+    "build": "node ../../scripts/build-windows-helper.cjs && node ../../scripts/build-zju-connector.cjs && next build",
     "start": "next start",
-    "test": "node --test"
+    "test": "node --test && node ../../scripts/test-zju-connector-launch.cjs"
   },
   "dependencies": {
     "katex": "^0.18.4",
