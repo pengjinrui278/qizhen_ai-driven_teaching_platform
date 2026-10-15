@@ -1,6 +1,13 @@
 (mirror_app) {
 	encode zstd gzip
 
+	# A top-level navigation must never display a static-export RSC payload.
+	@rsc_document expression path('*.txt') && header({'Sec-Fetch-Dest':'document'})
+	handle @rsc_document {
+		uri strip_suffix .txt
+		redir {uri} 302
+	}
+
 	@health path /api/health
 	handle @health {
 		rewrite * /health
@@ -22,12 +29,10 @@
 	}
 }
 
-# DNS 解析生效后，Caddy 会自动申请并续期 HTTPS 证书。
 learningmirror.cn, www.learningmirror.cn {
 	import mirror_app
 }
 
-# 保留服务器 IP 的 HTTP 应急入口，避免在 DNS 尚未生效时中断访问。
 http://124.220.5.87 {
 	import mirror_app
 }
