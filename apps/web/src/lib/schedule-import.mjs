@@ -1,7 +1,9 @@
-// 课表文件导入解析（纯浏览器本地解析，不上传服务器，密码/账号不涉及）。
-// 支持两种格式：
+// 课表文件导入解析（纯浏览器本地解析，不上传服务器，账号/密码不涉及）。
+// 支持三种格式：
+//   - XLSX：浙大教务「导出课表」的 Excel 文件（由调用方用 read-excel-file 读成二维表后传入）。
 //   - CSV：表头含「课程名称、教师、星期、节次、周次、地点」等列，可缺省或使用别名。
-//   - ICS：iCalendar VEVENT（浙大教务 / 学在浙大导出的 .ics 日历文件），尽量从描述里取节次/周次/教师。
+//   - ICS：iCalendar VEVENT（浙大教务 / 学在浙大导出的 .ics 日历文件）。
+// 列映射对中文表头做别名匹配；「星期」「节次」也可合并为「上课时间」一列（如「周一第1-2节」）。
 
 const WEEKDAY_CN = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7 };
 
@@ -11,17 +13,29 @@ const PERIOD_STARTS = [
   [14, 5], [15, 5], [15, 55], [18, 30], [19, 20], [20, 10],
 ];
 
-const CSV_HEADERS = {
+const HEADER_ALIASES = {
   name: ["课程名称", "课程名", "课程", "名称", "name", "course", "title"],
   teacher: ["教师", "老师", "授课教师", "任课教师", "teacher"],
   day: ["星期", "星期几", "周几", "day", "weekday"],
   periods: ["节次", "节", "periods", "period"],
   weeks: ["周次", "周", "weeks", "week"],
   location: ["地点", "教室", "上课地点", "location", "room"],
+  time: ["上课时间", "上课时段", "时间", "时段", "time"],
 };
 
 function normalizeHeader(value) {
   return String(value == null ? "" : value).replace(/^﻿/, "").trim().toLowerCase();
+}
+
+function mapColumns(headerCells) {
+  const col = {};
+  headerCells.forEach((h, i) => {
+    const key = normalizeHeader(h);
+    for (const field of Object.keys(HEADER_ALIASES)) {
+      if (HEADER_ALIASES[field].includes(key) && col[field] === undefined) col[field] = i;
+    }
+  });
+  return col;
 }
 
 function parseDay(value) {
@@ -68,6 +82,42 @@ function parseWeeks(value) {
   return { week_pattern, first_half, second_half };
 }
 
+function range(from, to) {
+  const out = [];
+  for (let i = Math.min(from, to); i <= Math.max(from, to); i++) out.push(i);
+  return out;
+}
+
+// 从「周一第1-2节」这类文本里拆出星期与节次。
+function parseTimeCell(value) {
+  const t = String(value == null ? "" : value).trim();
+  if (!t) return { day: 0, periods: [] };
+  let day = 0;
+  const dm = t.match(/(?:星期|周)([一二三四五六日天1-7])/);
+  if (dm) {
+    day = WEEKDAY_CN[dm[1]] || Number(dm[1]);
+  } else {
+    const cn = t.match(/[一二三四五六日天]/);
+    if (cn) day = WEEKDAY_CN[cn[0]];
+  }
+  let periods = [];
+  let m = t.match(/第\s*(\d{1,2})\s*[-—~～至]\s*(\d{1,2})\s*节/);
+  if (m) periods = range(Number(m[1]), Number(m[2]));
+  else {
+    m = t.match(/第\s*(\d{1,2})\s*节/);
+    if (m) periods = [Number(m[1])];
+    else {
+      m = t.match(/(\d{1,2})\s*[-—~～至]\s*(\d{1,2})\s*节/);
+      if (m) periods = range(Number(m[1]), Number(m[2]));
+      else {
+        m = t.match(/(\d{1,2})\s*节/);
+        if (m) periods = [Number(m[1])];
+      }
+    }
+  }
+  return { day, periods: periods.filter((n) => n >= 1 && n <= 20) };
+}
+
 function makeCourse({ name, teacher, location, day_of_week, periods, weeks, index }) {
   const w = parseWeeks(weeks);
   return {
@@ -103,6 +153,54 @@ function buildSnapshot(courses, academic_year_start, season) {
     assignments: [],
     fetched_at: now.toISOString(),
   };
+}
+
+// 二维表（含表头行）→ 课表快照。CSV 与 XLSX 共用。
+function rowsToCourses(rows) {
+  if (!Array.isArray(rows) || !rows.length) throw new Error("表格内容为空。");
+  const headerCells = rows[0].map((c) => String(c == null ? "" : c).trim());
+  const col = mapColumns(headerCells);
+  if (col.name === undefined) throw new Error("缺少「课程名称」列，请检查表头。");
+  const hasTime = col.time !== undefined;
+  const hasDayPeriods = col.day !== undefined && col.periods !== undefined;
+  if (!hasTime && !hasDayPeriods) {
+    throw new Error("需要「星期」「节次」两列，或「上课时间」一列（如「周一第1-2节」）。");
+  }
+
+  const cell = (row, idx) => (idx === undefined ? "" : String(row[idx] == null ? "" : row[idx]).trim());
+  const courses = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const name = cell(row, col.name);
+    if (!name) continue;
+    let day_of_week = 0;
+    let periods = [];
+    if (hasTime) {
+      const parsed = parseTimeCell(cell(row, col.time));
+      day_of_week = parsed.day;
+      periods = parsed.periods;
+    }
+    if ((!day_of_week || !periods.length) && hasDayPeriods) {
+      day_of_week = parseDay(cell(row, col.day));
+      periods = parsePeriods(cell(row, col.periods));
+    }
+    if (!day_of_week || !periods.length) continue;
+    courses.push(
+      makeCourse({
+        name,
+        teacher: cell(row, col.teacher),
+        location: cell(row, col.location),
+        day_of_week,
+        periods,
+        weeks: cell(row, col.weeks),
+        index: courses.length,
+      }),
+    );
+  }
+  if (!courses.length) {
+    throw new Error("未能解析出课表项，请检查「星期」「节次」或「上课时间」的格式。");
+  }
+  return buildSnapshot(courses);
 }
 
 // ---- CSV ----
@@ -143,44 +241,14 @@ export function parseScheduleCsv(text) {
     .split(/\r\n|\n|\r/)
     .filter((l) => l.trim());
   if (lines.length < 2) throw new Error("CSV 内容不足：至少需要表头和一行的数据。");
+  return rowsToCourses(lines.map(splitCsvLine));
+}
 
-  const headerCells = splitCsvLine(lines[0]);
-  const col = {};
-  headerCells.forEach((h, i) => {
-    const key = normalizeHeader(h);
-    for (const field of Object.keys(CSV_HEADERS)) {
-      if (CSV_HEADERS[field].includes(key) && col[field] === undefined) col[field] = i;
-    }
-  });
-  if (col.name === undefined) throw new Error("CSV 缺少「课程名称」列，请检查表头。");
-  if (col.day === undefined || col.periods === undefined) {
-    throw new Error("CSV 至少需要「课程名称」「星期」「节次」三列。");
-  }
+// ---- XLSX（调用方已用 read-excel-file 读成二维表） ----
 
-  const courses = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitCsvLine(lines[i]);
-    const name = (cells[col.name] || "").trim();
-    if (!name) continue;
-    const day_of_week = parseDay(cells[col.day]);
-    const periods = parsePeriods(cells[col.periods]);
-    if (!day_of_week || !periods.length) continue;
-    courses.push(
-      makeCourse({
-        name,
-        teacher: col.teacher !== undefined ? (cells[col.teacher] || "").trim() : "",
-        location: col.location !== undefined ? (cells[col.location] || "").trim() : "",
-        day_of_week,
-        periods,
-        weeks: col.weeks !== undefined ? cells[col.weeks] : "",
-        index: courses.length,
-      }),
-    );
-  }
-  if (!courses.length) {
-    throw new Error("未能从 CSV 中解析出课表项，请检查「星期」（1–7）和「节次」（如 1-2）的格式。");
-  }
-  return buildSnapshot(courses);
+export function parseScheduleXlsx(rows) {
+  if (!Array.isArray(rows)) throw new Error("无法读取 Excel 表格。");
+  return rowsToCourses(rows);
 }
 
 // ---- ICS ----
@@ -242,9 +310,7 @@ function periodsFromTime(start, end) {
   }
   if (!first) return [];
   if (!last) last = first;
-  const out = [];
-  for (let i = first; i <= last; i++) out.push(i);
-  return out;
+  return range(first, last);
 }
 
 function periodsFromDescription(desc) {
@@ -355,13 +421,16 @@ export function parseScheduleIcs(text) {
   return buildSnapshot(courses, academic_year_start, season);
 }
 
-// ---- 分发 ----
+// ---- 分发（仅文本格式；XLSX 由调用方用 read-excel-file 处理） ----
 
 export function parseScheduleFile(filename, text) {
   const lower = String(filename || "").toLowerCase();
+  if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+    throw new Error("Excel 文件请使用「从文件导入」的表格解析方式。");
+  }
   if (lower.endsWith(".ics") || lower.endsWith(".ical")) return parseScheduleIcs(text);
   if (lower.endsWith(".csv")) return parseScheduleCsv(text);
   if (/\bBEGIN:VCALENDAR\b/i.test(text)) return parseScheduleIcs(text);
   if (/[，,]/.test(text || "")) return parseScheduleCsv(text);
-  throw new Error("无法识别课表文件格式，请选择 .ics 或 .csv 文件。");
+  throw new Error("无法识别课表文件格式，请选择 .xlsx、.ics 或 .csv 文件。");
 }

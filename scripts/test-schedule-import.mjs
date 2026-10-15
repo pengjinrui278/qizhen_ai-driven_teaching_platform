@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseScheduleCsv,
+  parseScheduleXlsx,
   parseScheduleIcs,
   parseScheduleFile,
 } from '../apps/web/src/lib/schedule-import.mjs';
@@ -60,7 +61,7 @@ test('CSV：缺少课程名称列时报错', () => {
 });
 
 test('CSV：没有任何可解析行时报错', () => {
-  assert.throws(() => parseScheduleCsv('课程名称,星期,节次\n,1,1-2'), /未能从 CSV/);
+  assert.throws(() => parseScheduleCsv('课程名称,星期,节次\n,1,1-2'), /未能解析出课表项/);
 });
 
 test('ICS：从 VEVENT 解析出课程、星期与描述字段', () => {
@@ -103,6 +104,40 @@ test('ICS：无节次描述时按时间兜底', () => {
   assert.equal(snap.courses.length, 1);
   assert.equal(snap.courses[0].day_of_week, 2); // 2026-09-15 是周二
   assert.deepEqual(snap.courses[0].periods, [3, 4]);
+});
+
+test('XLSX：二维表（含表头）解析出课程', () => {
+  const rows = [
+    ['课程名称', '教师', '星期', '节次', '周次', '地点'],
+    ['数学分析', '张三', 1, '1-2', '1-16', '紫金港东1-101'],
+    ['高等代数', '李四', '三', '3-4', '1-8', '紫金港东2-202'],
+  ];
+  const snap = parseScheduleXlsx(rows);
+  assert.equal(snap.source, 'zju-file-import');
+  assert.equal(snap.courses.length, 2);
+  assert.equal(snap.courses[0].course_name, '数学分析');
+  assert.deepEqual(snap.courses[0].periods, [1, 2]);
+  assert.equal(snap.courses[1].day_of_week, 3);
+  assert.equal(snap.courses[1].first_half, true);
+});
+
+test('XLSX：「上课时间」合并列（周一第1-2节）', () => {
+  const rows = [
+    ['课程名称', '上课时间', '教师', '周次', '地点'],
+    ['数学分析', '周一第1-2节', '张三', '1-16', '紫金港东1-101'],
+    ['常微分方程', '周三第3-4节', '李四', '9-16', '紫金港东2-202'],
+  ];
+  const snap = parseScheduleXlsx(rows);
+  assert.equal(snap.courses.length, 2);
+  assert.equal(snap.courses[0].day_of_week, 1);
+  assert.deepEqual(snap.courses[0].periods, [1, 2]);
+  assert.equal(snap.courses[1].day_of_week, 3);
+  assert.deepEqual(snap.courses[1].periods, [3, 4]);
+  assert.equal(snap.courses[1].second_half, true);
+});
+
+test('XLSX：缺少「课程名称」列时报错', () => {
+  assert.throws(() => parseScheduleXlsx([['教师', '星期', '节次'], ['张三', 1, '1-2']]), /课程名称/);
 });
 
 test('parseScheduleFile：按扩展名分发', () => {

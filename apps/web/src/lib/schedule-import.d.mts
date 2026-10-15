@@ -24,5 +24,6 @@ export type ImportedScheduleSnapshot = {
 };
 
 export function parseScheduleCsv(text: string): ImportedScheduleSnapshot;
+export function parseScheduleXlsx(rows: unknown[][]): ImportedScheduleSnapshot;
 export function parseScheduleIcs(text: string): ImportedScheduleSnapshot;
 export function parseScheduleFile(filename: string, text: string): ImportedScheduleSnapshot;
