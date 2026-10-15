@@ -29,13 +29,31 @@ def topics(text):
 QUOTE_HEADER = '【引用追问】'
 
 
+_FILLER_RE = re.compile(
+    r'^(?:请|如何|求证|证明|设|已知|给定|若|对于|关于|试|求|讨论|比较|判断|说明|写出|计算|求解|解|请证明|请说明|证明设|求证设)\s*',
+    re.I,
+)
+
+
+def _topic_phrase(text):
+    """从题干抽一个具体短语作为标题主题：去引导词、取首个分句、截短。"""
+    t = _FILLER_RE.sub('', text.strip())
+    t = re.split(r'[，。；;！？!?\n]', t, 1)[0].strip()
+    t = re.sub(r'\s+', ' ', t)
+    t = re.sub(r'[^\w一-鿿·（）()：:、\s-]', '', t, flags=re.UNICODE)
+    return t[:16].strip()
+
+
 def summarize(text, course):
     text = text or ''
     following_up = text.lstrip().startswith(QUOTE_HEADER)
     matched = topics(text)
     intent = next((label for pattern,label in [(r'证明|prove','证明思路'),(r'比较|区别|difference','概念比较'),(r'计算|求解|求导','求解方法'),(r'调试|报错|debug','代码调试'),(r'写作|作文|邮件|essay','表达练习')] if re.search(pattern,text,re.I)), '概念讨论')
     name = load_course_profiles().get(course)
-    subject = '与'.join(matched[:2]) if matched else (name.display_name if name else '课程')
+    if matched:
+        subject = '与'.join(matched[:2])
+    else:
+        subject = _topic_phrase(text) or (name.display_name if name else '课程')
     # 追问的标题带上标记：前端据此把它折到父词条下，而不是当成一条独立对话。
     # 标记会占掉标题长度，所以给正文留的额度相应减少，别把「· 意图」截没了。
     head = QUOTE_HEADER if following_up else ''
