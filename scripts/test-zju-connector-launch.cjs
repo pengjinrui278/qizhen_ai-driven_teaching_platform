@@ -9,8 +9,8 @@ const connector = fs.readFileSync(
   "utf8",
 );
 
-assert.match(schedule, />导入课表<\/button>/, "课表页应只提供明确的导入入口");
-assert.doesNotMatch(schedule, /导入连接器 JSON|下载 Windows 本地连接器|showConnectorSetup/);
+assert.match(schedule, />从文件导入<\/button>/, "课表页应只提供明确的文件导入入口");
+assert.doesNotMatch(schedule, /导入课表|导入连接器 JSON|下载 Windows 本地连接器|showConnectorSetup/);
 assert.match(connector, /id="username"/);
 assert.match(connector, /id="password"/);
 assert.match(connector, /id="importSchedule"/);
