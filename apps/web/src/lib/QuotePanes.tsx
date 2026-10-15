@@ -157,7 +157,7 @@ function SubChatPane({pane,index,title,transport,user,quote,sourcesRef,layout,dr
    {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}
    <div ref={bottom}/>
   </div>
-  {quoting&&<QuoteHud count={pieces.length} limit={12} error={quote.error} canAssemble={pieces.length>0} onAssemble={()=>quote.onAssemble(pane.id)} onCopy={()=>quote.onCopy(pane.id)} onClear={()=>quote.onClear(pane.id)} onExit={quote.onExit}/>}
+  {quoting&&<QuoteHud count={pieces.length} error={quote.error} canAssemble={pieces.length>0} onAssemble={()=>quote.onAssemble(pane.id)} onCopy={()=>quote.onCopy(pane.id)} onClear={()=>quote.onClear(pane.id)} onExit={quote.onExit}/>}
   <QuoteSurface paneId={pane.id} active={quoting} containerRef={scroll} sourcesRef={sourcesRef} pieces={pieces} onChange={next=>quote.setPieces(pane.id,next)} onExit={quote.onExit}/>
   {error&&<div className="chatError" role="alert">{error}{pending.current&&!busy&&<button type="button" onClick={()=>void send(true)}>重试</button>}</div>}
   <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
@@ -171,7 +171,10 @@ function SubChatPane({pane,index,title,transport,user,quote,sourcesRef,layout,dr
   const host=scroll.current?.querySelector<HTMLElement>(`[data-quote-src="q:${pane.id}:${requestId}:ai"]`);
   if(!host)return;
   const found=collectUnitsWithin(host,paneSources(pane,title,events)).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
-  if(found.length)quote.onAddPieces(pane.id,found as QuotePiece[]);
+  if(found.length){
+   quote.onAddPieces(pane.id,found as QuotePiece[]);
+   if(quote.quotingPaneId!==pane.id)quote.onToggle(pane.id);
+  }
  }
 }
 

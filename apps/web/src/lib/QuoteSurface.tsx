@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useRef} from "react";
 import {QUOTE_SKIP,quoteKeyOf,readQuoteUnit,readRangePiece,topUnitsWithin} from "./chat-quote.mjs";
-import {holdPiece,pieceLimit} from "./quote-store";
+import {holdPiece} from "./quote-store";
 import type {QuotePiece} from "./quote-store";
 
 type SourceMeta={source:string;label:string;paneId:string;attemptId?:string|null;requestId:string};
@@ -117,12 +117,12 @@ export default function QuoteSurface({paneId,active,containerRef,sourcesRef,piec
   const current=piecesRef.current;
   const byKey=new Map(current.map(p=>[p.key,p]));
   incoming.forEach(p=>{if(!byKey.has(p.key))byKey.set(p.key,p);});
-  changeRef.current([...byKey.values()].slice(0,pieceLimit));
+  changeRef.current([...byKey.values()]);
  }
  function toggle(piece:QuotePiece){
   const current=piecesRef.current;
   const exists=current.some(p=>p.key===piece.key);
-  changeRef.current(exists?current.filter(p=>p.key!==piece.key):[...current,piece].slice(0,pieceLimit));
+  changeRef.current(exists?current.filter(p=>p.key!==piece.key):[...current,piece]);
  }
  return null;
 }

@@ -17,7 +17,7 @@ import QuotePanes from "./QuotePanes";
 import type {QuoteUi,PaneTransport} from "./QuotePanes";
 import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,isFollowUpText,quoteKeyOf} from "./chat-quote.mjs";
-import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
+import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
 import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
 import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
 import NoteOrganizeDialog from "./NoteOrganizeDialog";
@@ -137,9 +137,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
    const now=cur[paneId]??[];
    const byKey=new Map(now.map(p=>[p.key,p]));
    incoming.forEach(p=>{if(!byKey.has(p.key))byKey.set(p.key,p);});
-   const next=[...byKey.values()];
-   if(next.length>pieceLimit)setQuoteError(`一次最多引用 ${pieceLimit} 处，请先拼接或清理。`);
-   return {...cur,[paneId]:next.slice(0,pieceLimit)};
+   return {...cur,[paneId]:[...byKey.values()]};
   });
  }
  function assemble(parentPaneId:string){
@@ -180,7 +178,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   const host=workspace.current?.querySelector<HTMLElement>(`[data-quote-src="e:${requestId}:ai"]`);
   if(!host)return;
   const found=collectUnitsWithin(host,mainSourcesRef.current).map(p=>({...holdPiece(p),id:crypto.randomUUID()}));
-  if(found.length)addPieces("main",found as QuotePiece[]);
+  if(found.length){addPieces("main",found as QuotePiece[]);setQuotingPaneId("main");setQuoteError("");}
  }
  // 参阅区：拖入本地文件或网址 → 停靠在对话卡片右侧，只作阅读用，不含 agent 对话
  const [materials,setMaterials]=useState<MaterialPane[]>([]);
@@ -465,7 +463,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
    </div>}
    {e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button><button onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
  {pending&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={pending.message}/></article></div></div>}
- {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
+ {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(p=>p.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
  {/* 底部停靠区：这一层 .chatWorkspace 是整块滚动的，只有头部与输入框各自 sticky。

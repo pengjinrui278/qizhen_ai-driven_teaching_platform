@@ -36,18 +36,16 @@ export type QuoteWorkspaceState = {
   updatedAt: number;
 };
 
-const PIECE_SOURCE_LIMIT = 4000;
 const MAX_PANES = 6;
-const MAX_PIECES = 12;
 
 export function holdPiece<T extends { source: string; text: string }>(piece: T): T {
-  return { ...piece, source: piece.source.slice(0, PIECE_SOURCE_LIMIT), text: piece.text.slice(0, PIECE_SOURCE_LIMIT) };
+  // 引用必须忠实保留原文。总消息长度在真正发送追问时统一校验，
+  // 这里不按段数或单段长度静默截断，否则“引用此回答”会漏掉内容。
+  return { ...piece };
 }
 
 export function canAddPane(panes: PaneState[]) { return panes.length < MAX_PANES; }
-export function canAddPiece(pieces: QuotePiece[]) { return pieces.length < MAX_PIECES; }
 export const paneLimit = MAX_PANES;
-export const pieceLimit = MAX_PIECES;
 
 export function newPaneId() { return "pane-" + Math.random().toString(36).slice(2, 10); }
 

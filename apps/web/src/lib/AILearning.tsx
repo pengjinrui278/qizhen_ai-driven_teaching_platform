@@ -7,7 +7,7 @@ import QuoteSurface from "./QuoteSurface";
 import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
 import {buildTurnLabel,collectUnitsWithin,quoteKeyOf} from "./chat-quote.mjs";
-import {canAddPane,collapseWithSubtree,descendantIds,holdPiece,newPaneId,paneLimit,pieceLimit,reorderPane,subtreeEnd} from "./quote-store";
+import {canAddPane,collapseWithSubtree,descendantIds,holdPiece,newPaneId,paneLimit,reorderPane,subtreeEnd} from "./quote-store";
 import type {PaneState,QuotePiece} from "./quote-store";
 import {fileToDataUrl,inputFromFile,isImageFile,isTextFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
 import type {MaterialPane} from "./material-store";
@@ -134,7 +134,7 @@ export default function AILearning({section=""}:{section?:string}){
  function toggleScissors(paneId:string){setQuoteError("");setQuotingPaneId(cur=>cur===paneId?null:paneId);}
  function exitScissors(){setQuotingPaneId(null);setQuoteError("");}
  function addPieces(paneId:string,incoming:QuotePiece[]){
-  setTrays(cur=>{const now=cur[paneId]??[];const byKey=new Map(now.map(x=>[x.key,x]));incoming.forEach(x=>{if(!byKey.has(x.key))byKey.set(x.key,x);});const next=[...byKey.values()];if(next.length>pieceLimit)setQuoteError(`一次最多引用 ${pieceLimit} 处，请先拼接或清理。`);return {...cur,[paneId]:next.slice(0,pieceLimit)};});
+  setTrays(cur=>{const now=cur[paneId]??[];const byKey=new Map(now.map(x=>[x.key,x]));incoming.forEach(x=>{if(!byKey.has(x.key))byKey.set(x.key,x);});return {...cur,[paneId]:[...byKey.values()]};});
  }
  function assemble(parentPaneId:string){
   const pieces=piecesOf(parentPaneId);
@@ -247,7 +247,7 @@ export default function AILearning({section=""}:{section?:string}){
  <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><NoteModeToggle on={noteMode} disabled={busy} toggle={()=>setNoteMode(v=>!v)}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
  {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);aiInput.current?.focus();}}>{p.title}</button>)}</div></div>}
  {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={stripNoteMarker(m.question)}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.note_ops&&m.note_ops.done!==undefined&&<div className="noteSavedNotice noteOpsNotice" role="status"><span>助手改动了你的笔记：完成 {m.note_ops.done} 项{m.note_ops.failed>0?`，${m.note_ops.failed} 项没做成`:""}</span><ul>{(m.note_ops.results||[]).map((r:Row,i:number)=><li key={i} className={r.ok?"":"isFailed"}>{r.detail}</li>)}</ul><a href="/student/notes">去我的笔记</a></div>}{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
- {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
+ {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={aiMessagesRef} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(x=>x.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
  {/* 与课程对话页同一个页边面板：窄边上给「来源/存放位置」和「整理笔记」两个入口，
