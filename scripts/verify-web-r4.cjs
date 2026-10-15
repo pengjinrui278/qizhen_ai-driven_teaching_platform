@@ -49,8 +49,8 @@ async function main(){
   assert.equal(await page.locator('.hintButtons').count(),0);await page.locator('.hintButtons').waitFor();assert.ok(Date.now()-await finished>=2900,'real completion delay');await page.screenshot({path:out+'/actions-desktop.png',fullPage:true});
   const saved=page.url();await page.reload();await page.locator('.chatAssistant').waitFor();assert.equal(page.url(),saved);assert.equal(await page.locator('.hintButtons').count(),0);
   await page.goto(base+'/student?mode=live');await page.goBack();await page.locator('.chatAssistant').waitFor();assert.equal(page.url(),saved);
-  await page.getByLabel('聊天课程').selectOption('university_physics');assert.equal(await page.locator('.chatAssistant').count(),0);assert.equal(await page.locator('.chatSessionList button').count(),0);
-  await page.getByLabel('聊天课程').selectOption('mathematical_analysis');assert.equal(await page.locator('.chatSessionList button').count(),2);
+  await page.getByLabel('聊天课程').selectOption('university_physics');assert.equal(await page.locator('.chatAssistant').count(),0);assert.equal(await page.locator('.chatHistoryRow').count(),0);
+  await page.getByLabel('聊天课程').selectOption('mathematical_analysis');assert.equal(await page.locator('.chatHistoryRow').count(),2);
   failList=true;await send('列表独立失败');await page.getByRole('alert').filter({hasText:'历史加载失败'}).waitFor();assert.equal(await page.getByText('暂无对话',{exact:true}).count(),0);failList=false;await page.getByRole('button',{name:'重新加载历史'}).click();await page.getByRole('alert').filter({hasText:'历史加载失败'}).waitFor({state:'hidden'});
   failStream=true;await send('失败请求');await page.getByRole('alert').filter({hasText:'合成回复失败'}).waitFor();await page.waitForTimeout(3100);assert.equal(await page.locator('.hintButtons').count(),0);
   failStream=false;await page.getByRole('button',{name:'重试',exact:true}).click();await page.locator('.chatThinking').waitFor({state:'hidden'});assert.equal(writes.at(-1).request_id,writes.at(-2).request_id);
