@@ -57,6 +57,10 @@ services:
     volumes:
       - ./coursepacks:/app/coursepacks:ro
       - ./materials:/app/materials:ro
+      # 资源中心的教材清单与原件。data/ 不进 Git，所以这份清单和大文件要单独放到
+      # 服务器上（见 docs/resource-intake-upload.md），不挂这一条容器里根本看不到它。
+      # 只读挂载：应用只读这些文件，从不写。
+      - ./data/resource-intake:/app/data/resource-intake:ro
     networks:
       - mirror
     depends_on:
