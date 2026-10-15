@@ -125,8 +125,19 @@
 .noteRefChip{display:inline;padding:1px 6px;margin:0 2px;border-radius:6px;background:#fff7ed;color:#9a3412;box-shadow:inset 0 0 0 1px #fed7aa;cursor:pointer;white-space:normal;}
 .noteRefChip:focus{outline:2px solid #fdba74;}
 
-/* 页边式笔记偏好：平时只露一条窄边，点开向上抽出（上下方向，区别于子页面的左右） */
-.noteEdge{margin:0 auto 6px;max-width:760px;position:relative;}
+/* 底部停靠区：把抽出面板、@ 引用列表、已选条与输入框绑成一块，一起粘在滚动区底部。
+   这一层 .chatWorkspace 是整块滚动的（消息区不自带滚动条），只有头部与输入框各自 sticky；
+   面板若留在普通流里，消息一长就被滚出视野，非滑到底看不见。 */
+.portal.lmStudentShell .lmCourseChat .chatDock{position:sticky;bottom:0;z-index:2;flex-shrink:0;display:flex;flex-direction:column;gap:6px;background:var(--lm-bg,#f8fafc);}
+/* 间距交给停靠区的 gap；输入框自带 margin-top:12px，留着会和 gap 叠成 18px 的缝 */
+.portal.lmStudentShell .lmCourseChat .chatDock>.chatComposer{position:static;margin:0;}
+
+/* 页边式笔记偏好：平时只露一条窄边，点开向上抽出（上下方向，区别于子页面的左右）
+   宽度跟着停靠区走：面板放的是成组的选型按钮，窄条放不下；两者等宽也才看得出是连在一起的一整块。
+   只由 .chatDock 决定宽度，所以这里不再自己限宽。 */
+.noteEdge{margin:0;width:100%;max-width:none;position:relative;}
+/* 面板出现后，停靠区里排在它后面的（@ 列表、已选条、输入框）一起撑满，别一宽一窄 */
+.chatDock>.noteEdge~*{max-width:none;}
 .noteEdgeTab{display:flex;align-items:center;gap:8px;width:100%;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-bottom:0;border-radius:10px 10px 0 0;color:var(--lm-muted,#64748b);cursor:pointer;font:inherit;font-size:12px;padding:5px 12px;}
 .noteEdgeTab:hover{color:var(--lm-primary-deep,#4f46e5);border-color:var(--lm-border-hover,#a5b4fc);}
 .noteEdgeGrip{width:26px;height:3px;border-radius:99px;background:#cbd5e1;}
@@ -134,7 +145,7 @@
 /* 抽出：用 max-height 过渡，收起时高度归零、不可聚焦 */
 .noteEdgeBody{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease,opacity .2s ease;
   background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:0 0 10px 10px;}
-.noteEdge.isOpen .noteEdgeBody{max-height:340px;opacity:1;overflow:auto;}
+.noteEdge.isOpen .noteEdgeBody{max-height:340px;opacity:1;overflow:auto;overscroll-behavior:contain;}
 .noteEdgeBody[aria-hidden="true"]{pointer-events:none;}
 .noteEdgeGroups{display:grid;gap:8px;padding:12px 12px 4px;}
 .noteEdgeGroup{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}

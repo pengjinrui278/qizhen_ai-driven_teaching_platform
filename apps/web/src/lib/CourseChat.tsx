@@ -426,6 +426,9 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(p=>p.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
+ {/* 底部停靠区：这一层 .chatWorkspace 是整块滚动的，只有头部与输入框各自 sticky。
+     面板若留在普通流里，消息一长就被滚出视野、非滑到底看不见，所以和输入框绑成一块一起粘住。 */}
+ <div className="chatDock">
  {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
  {(noteMode||/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft))&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
   onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
@@ -460,6 +463,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   </ChatToolMenu>
   <button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
  </form>
+ </div>
  {events.length>0&&<details><summary>补充学习反馈</summary><label>反馈环节<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="conditions">定理条件</option><option value="quantifiers">量词与依赖</option><option value="construction">辅助对象</option></select></label><button disabled={busy} onClick={()=>report("still_stuck")}>仍有困难</button><button disabled={busy} onClick={()=>report("independent_success")}>这次独立完成</button>{feedback&&<p role="status">{feedback}</p>}</details>}
  </section>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={workspace} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
