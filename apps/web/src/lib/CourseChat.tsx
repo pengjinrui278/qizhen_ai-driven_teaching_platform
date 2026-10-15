@@ -297,6 +297,25 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  useEffect(()=>{if(loading||!active)return;let hash;try{hash=decodeURIComponent(location.hash.slice(1));}catch{return;}if(!hash.startsWith("turn-"))return;const frame=requestAnimationFrame(()=>{const target=document.getElementById(hash);if(target){followBottom.current=false;target.scrollIntoView({block:"start"});}});return()=>cancelAnimationFrame(frame);},[active?.id,loading]);
  function resetRelated(){setRelatedChunks([]);setRelatedLoading(false);setShowRelated(false);setCopied("");setFeedback("");}
  function clear(c=course){if(panes.length&&!window.confirm("开始新对话将关闭全部子页面，继续？"))return;leaveRequest();cancelActions();followBottom.current=true;updateUrl(c);setLoading(false);setFailedSession(null);resetRelated();setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setHistoryOpen(false);input.current?.focus();}
+ // 历史记录自己管：改名 / 删除。删掉的若是当前这段，就顺手回到空状态。
+ async function renameSession(row:Row,title:string){
+  setError("");
+  try{
+   const saved=await api("/attempts/"+row.id,"PATCH",{title});
+   setSessions(cur=>cur.map(s=>s.id===row.id?{...s,title:saved.title,title_source:saved.title_source}:s));
+  }catch(e){setError("改不了名字："+(e as Error).message);}
+ }
+ async function deleteSession(row:Row){
+  setError("");setFeedback("");
+  try{
+   await api("/attempts/"+row.id,"DELETE");
+   setSessions(cur=>cur.filter(s=>s.id!==row.id));
+   // 删除的对话留下的追问也不会再挂得上，本地链路一并清掉
+   setLinks(cur=>{const next={...cur};for(const key of Object.keys(next))if(next[key]===row.id||key===row.id)delete next[key];return next;});
+   if(active?.id===row.id){leaveRequest();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");updateUrl(course,"");}
+   setFeedback("已删除这段对话");
+  }catch(e){setError("删除失败："+(e as Error).message);}
+ }
  async function resume(a:Row){if(panes.length&&!window.confirm("打开其它对话将关闭全部子页面，继续？"))return;leaveRequest();setFailedSession(null);const token=++epoch.current;cancelActions();followBottom.current=false;if(workspace.current)workspace.current.scrollTop=0;resetRelated();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){updateUrl(d.course_id,a.id);setCourse(d.course_id);setActive(d);setAssignment(d.sandbox_id||"");setEvents(d.events);setPending(null);pendingRef.current=null;setDraft(d.events.length===0?(d.problem?.text||""):"");setHistoryOpen(false);}}catch(e){if(token===epoch.current){setError("无法打开对话："+(e as Error).message);setFailedSession(a);}}finally{if(token===epoch.current)setLoading(false);}}
  // 拖入/选择的文档：上传抽文本，成功后作为高亮块钉在输入框最前面（不管光标在哪）
  const [uploading,setUploading]=useState(false);
@@ -401,7 +420,8 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
   </div>
  </div>}
  {historyOpen&&<button className="chatDrawerOverlay" aria-label="关闭历史对话遮罩" onClick={()=>setHistoryOpen(false)}/> }
- <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
+ <aside ref={historyPanel} aria-label="历史对话" onKeyDown={e=>{if(e.key==="Escape"){setHistoryOpen(false);historyToggle.current?.focus();}}} className={"chatHistory "+(historyOpen?"isOpen":"")}><div className="chatSidebarHead"><strong>课程学习</strong><button aria-label={historyCollapsed?"展开左栏":"收起左栏"} onClick={()=>{if(window.matchMedia("(min-width:1024px)").matches)setHistoryCollapsed(!historyCollapsed);else setHistoryOpen(false);}}><StudentIcon name="menu"/></button></div><label>课程<select aria-label="聊天课程" disabled={loading} value={course} onChange={e=>clear(e.target.value)}>{courses.map(c=><option key={c.course_id} value={c.course_id}>{c.display_name}</option>)}</select></label>{!active&&<details><summary>关联作业</summary><select aria-label="关联作业" disabled={busy||loading} value={assignment} onChange={e=>setAssignment(e.target.value)}><option value="">私人学习</option>{sandboxes.filter(s=>s.course_id===course&&s.status==="open").map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></details>}<h2>最近对话</h2>{historyLoading&&<p role="status">正在加载历史…</p>}{historyError&&<p role="alert">历史加载失败：{historyError}<button onClick={()=>void retryHistory()}>重新加载历史</button></p>}<div className="chatSessionList"><ChatHistoryList sessions={sessions.filter(s=>s.course_id===course)} activeId={active?.id} onOpen={a=>void resume(a)} followUpOf={id=>links[id]??null}
+  onRename={renameSession} onDelete={deleteSession} busy={busy}/>{!historyLoading&&!historyError&&!sessions.some(s=>s.course_id===course)&&<p>暂无对话</p>}</div>{sessions.length>=100&&!historyEnd&&<button disabled={historyLoading} onClick={()=>void loadOlder()}>加载更早的对话</button>}</aside>
  <QuotePanes panes={panes} quote={quoteUi()} board={materials.length>0?<>
    <div className="paneResizer" role="separator" aria-orientation="vertical" aria-label="调整参阅区宽度" onPointerDown={startBoardResize}/>
    <div className="materialSlot" style={{flexBasis:boardWidth}}>
