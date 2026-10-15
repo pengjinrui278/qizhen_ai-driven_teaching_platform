@@ -1,7 +1,4 @@
 .portal.lmStudentShell .lmCourseChat .chatComposer{grid-template-columns:36px 36px minmax(0,1fr) 44px;gap:6px;}
-.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments{grid-column:1;}
-.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments summary{width:36px;}
-.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments[open]{grid-column:1/-1;grid-row:2;}
 .portal.lmStudentShell .lmCourseChat .chatComposer .primary{grid-column:4;}
 .portal.lmStudentShell .lmCourseChat .formulaToggle{grid-column:2;grid-row:1;width:36px;min-width:0;height:44px;padding:6px;display:flex;align-items:center;justify-content:center;border:1px solid var(--lm-border);border-radius:10px;background:#fff;color:#47618c;}
 .formulaInputWrap{grid-column:3;grid-row:1;position:relative;min-width:0;}
@@ -27,8 +24,7 @@
 .portal.lmStudentShell .lmCourseChat .formulaPanel button{min-height:30px;font-size:12px;padding:4px 7px;}
 @media(max-width:600px){
  .portal.lmStudentShell .lmCourseChat .formulaInputWrap{grid-column:1/-1;grid-row:1;}
- .portal.lmStudentShell .lmCourseChat .formulaToggle,.portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments,.portal.lmStudentShell .lmCourseChat .chatComposer .primary{grid-row:2;}
- .portal.lmStudentShell .lmCourseChat .chatComposer .chatAttachments[open]{grid-row:3;}
+ .portal.lmStudentShell .lmCourseChat .formulaToggle,.portal.lmStudentShell .lmCourseChat .chatComposer .primary{grid-row:2;}
  .formulaMessageInput{font-size:16px;}.formulaPanel{padding:7px;max-height:50dvh;}.formulaSymbols button{min-height:38px;}.formulaPanelFoot span{display:none;}.formulaPanelFoot{justify-content:flex-end;}
 }
 
