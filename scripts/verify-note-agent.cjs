@@ -298,8 +298,44 @@ const ANSWER = '一致收敛与逐点收敛的区别\n\n1. 一致收敛的 N 只
     await page.waitForTimeout(500);
     assert.equal((await probe()).present, false, '把文件块撤掉后页边也该收起');
 
+    // 13. 页边必须贴在输入框上端、且不靠滑到底才看得见。
+    // 这一层 .chatWorkspace 是整块滚动的，页边若留在普通流里就会被消息顶出视野。
+    for (let i = 0; i < 6; i += 1) {
+      await page.locator('.formulaMessageInput').click();
+      await page.keyboard.type('补充问题 ' + i);
+      await page.getByRole('button', {name: '发送'}).click();
+      await page.waitForTimeout(500);
+    }
+    if (!(await page.locator('.chatToolPanel').count())) { await page.locator('.chatToolToggle').click(); await page.waitForTimeout(300); }
+    await page.locator('.chatDocUpload input[type=file]').setInputFiles([
+      {name: '第10章讲义.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test')},
+    ]);
+    await page.waitForTimeout(800);
+    await clickEdgeTab();
+    await page.waitForTimeout(700);
+    // 滚到最顶端：这正是页边过去消失的位置
+    await page.evaluate(() => { document.querySelector('.chatWorkspace').scrollTop = 0; });
+    await page.waitForTimeout(400);
+
+    const dock = await page.evaluate(() => {
+      const rect = s => { const el = document.querySelector(s); if (!el) return null; const b = el.getBoundingClientRect();
+        return {top: Math.round(b.top), bottom: Math.round(b.bottom), width: Math.round(b.width)}; };
+      const ws = document.querySelector('.chatWorkspace');
+      return {edge: rect('.noteEdge'), composer: rect('.chatComposer'),
+              scrollable: ws.scrollHeight > ws.clientHeight + 50, viewportH: window.innerHeight};
+    });
+    assert.ok(dock.scrollable, '这段对话应长到能把工作区滚起来，否则这条断言什么都没验到');
+    assert.ok(dock.edge, '滚到顶端时页边仍应存在');
+    assert.ok(dock.edge.top >= 0 && dock.edge.bottom <= dock.viewportH,
+      `滚到最顶端时页边仍要在视口里，实际 top=${dock.edge.top} bottom=${dock.edge.bottom} 视口高=${dock.viewportH}`);
+    const gap = dock.composer.top - dock.edge.bottom;
+    assert.ok(gap >= 0 && gap <= 10, `页边底边要贴着输入框顶边，实际间隙 ${gap}px`);
+    assert.ok(dock.edge.width >= dock.composer.width * 0.9,
+      `页边要跟输入框同宽（自适应页面宽度），实际 ${dock.edge.width}px vs 输入框 ${dock.composer.width}px`);
+    await page.screenshot({path: 'data/preview/note-edge-docked.png'});
+
     assert.deepEqual(errors, [], '不应有页面错误');
-    console.log('PASS: 笔记入口只在笔记模式；选回答→存为笔记→整理指令入框→发送带 compose 标记→自动存库并回显位置→可撤回；文档上传成块且钉在最前；输入 @ 弹笔记目录、过滤、插入引用块并随消息带出；页边抽出偏好、选项插高亮要求、可撤销');
+    console.log('PASS: 笔记入口只在笔记模式；选回答→存为笔记→整理指令入框→发送带 compose 标记→自动存库并回显位置→可撤回；文档上传成块且钉在最前；输入 @ 弹笔记目录、过滤、插入引用块并随消息带出；页边抽出偏好、选项插高亮要求、可撤销；页边贴着输入框且长对话滚到顶端仍可见');
   } finally {
     await browser.close();
   }

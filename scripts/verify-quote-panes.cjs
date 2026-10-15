@@ -94,10 +94,21 @@ const SUB_ANSWER = [
     // 编号按位置派生后，标题序列恒为 1..N，判断真实顺序要用面板 id
     const orderIds = async () => page.locator('.chatPane').evaluateAll(els => els.map(e => e.dataset.paneId));
 
+    // 摘录入口收在输入框旁的「+」工具库里：先展开。面板是 toggle，已经开着就别再点（会关掉）。
+    // 子页面的剪刀在页头工具条上，不受影响。
+    const openTools = async scope => {
+      const root = scope || page;
+      if (!(await root.locator('.chatToolPanel').count())) await root.locator('.chatToolToggle').click();
+      await root.locator('.chatToolPanel').waitFor();
+    };
+
     // ---- 1. 打开剪刀，块级标记生效 ----
+    await openTools();
     const scissors = page.getByRole('button', {name: /^摘录/});
     await scissors.click();
     assert.equal(await scissors.getAttribute('aria-pressed'), 'true');
+    // 面板会随着点击消息区而收起；读状态前先把它展开回来
+    const scissorsPressed = async () => { await openTools(); return page.getByRole('button', {name: /^摘录/}).getAttribute('aria-pressed'); };
     assert.equal(await page.locator('[data-quoting]').count(), 1, '主面板应进入剪刀模式');
     const para = page.locator('.chatWorkspace [data-quote-src$=":ai"] p[data-quote-unit="text"]').first();
     assert.ok(await para.count(), '段落应带引用标记');
@@ -125,7 +136,7 @@ const SUB_ANSWER = [
 
     // ---- 3. Esc 退出剪刀模式 ----
     await page.keyboard.press('Escape');
-    assert.equal(await scissors.getAttribute('aria-pressed'), 'false');
+    assert.equal(await scissorsPressed(), 'false');
 
     // ---- 4. 拼接成子页面（Esc 后走输入框上方的引用托盘） ----
     await page.locator('.quoteTray').getByRole('button', {name: '拼接成子页面'}).click();
@@ -179,6 +190,7 @@ const SUB_ANSWER = [
     await page.screenshot({path: 'data/preview/quote-nested-desktop.png', fullPage: true});
 
     // ---- 7. M2：第三个面板自动收纳为抽页 ----
+    await openTools(page.locator('.chatWorkspace'));
     const mainScissors = page.locator('.chatWorkspace').getByRole('button', {name: /^摘录/});
     await mainScissors.click();
     await page.locator('.chatWorkspace [data-quote-src$=":ai"] li[data-quote-unit="text"]').first().click();
@@ -303,7 +315,8 @@ const SUB_ANSWER = [
     assert.match(await page.locator('.materialTile').first().innerText(), /这是拖入的素材正文/);
     const docx = page.locator('.materialTile', {hasText: '讲义.docx'});
     assert.match(await docx.innerText(), /无法在线渲染|暂不支持在线预览/, 'Word 应给占位说明而不是假装能预览');
-    // 粘贴网址
+    // 粘贴网址（参阅入口同样收在「+」工具库里）
+    await openTools();
     await page.getByRole('button', {name: /^参阅/}).click();
     await page.getByRole('textbox', {name: '粘贴网址'}).fill('https://example.com/slide');
     await page.getByRole('button', {name: '加入'}).click();

@@ -12,7 +12,7 @@ async function main(){
   assert.equal(reg.status(),200);registered=true;
   await page.goto(base+'/student/ai/tools');
   await page.locator('[data-tool]').first().waitFor();
-  assert.equal(await page.locator('[data-tool]').count(),41);
+  assert.equal(await page.locator('[data-tool]').count(),42);
   await page.getByRole('button',{name:/^音乐 ·/}).click();
   assert.equal(await page.locator('[data-tool]').count(),4);
   await page.getByRole('textbox',{name:'搜索工具'}).fill('suno');
@@ -31,7 +31,10 @@ async function main(){
   await page.getByRole('link',{name:'海绵音乐 ↗',exact:true}).waitFor();
   const popupPromise=context.waitForEvent('page');
   await page.getByRole('link',{name:'打开 Suno 官网'}).click();
-  const popup=await popupPromise;await popup.waitForLoadState('domcontentloaded');
+  const popup=await popupPromise;
+  // 新开的弹窗起始是 about:blank 且已触发过 domcontentloaded，waitForLoadState 会立刻返回、
+  // url() 还是空的。要等它真的导航过去。
+  await popup.waitForURL(/suno\.com/,{timeout:30000});
   assert.equal(new URL(popup.url()).hostname,'suno.com');await popup.close();
   await page.screenshot({path:'data/ai-preview/tools-suno-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});

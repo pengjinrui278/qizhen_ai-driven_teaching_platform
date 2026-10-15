@@ -1,7 +1,7 @@
 // Browser regression with synthetic API responses; no account or paid model calls.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const previewUrl=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3010';
+const previewUrl=process.env.MIRROR_WEB_PREVIEW_URL||'http://127.0.0.1:3011';
 async function main(){
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const page=await browser.newPage({viewport:{width:1365,height:1000}}),errors=[];
@@ -52,8 +52,14 @@ async function main(){
   const failures=[];
   const check=(condition,message)=>{if(!condition)failures.push(message);};
   const draft=page.getByLabel('发送消息',{exact:true});
+  // 图片入口收在输入框旁的「+」工具库里：先展开。面板是 toggle，已经是开的就别再点（会关掉）。
+  async function openTools(){
+   if(!(await page.locator('.chatToolPanel').count()))await page.locator('.chatToolToggle').click();
+   await page.locator('.chatToolPanel').waitFor();
+  }
   async function upload(){
-   await page.locator('.chatAttachments').evaluate(el=>{el.open=true;});
+   await openTools();
+   await page.locator('.photoInput').waitFor();
    await page.getByLabel('上传图片',{exact:true}).setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});
    await page.getByAltText('待识别图片').waitFor();
    await page.getByRole('button',{name:'识别文字',exact:true}).waitFor();
