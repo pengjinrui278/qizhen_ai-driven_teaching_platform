@@ -5,7 +5,9 @@
   "scripts": {
     "dev:web": "pnpm --filter @mirror/web dev",
     "build:web": "pnpm --filter @mirror/web build",
-    "test:web": "pnpm --filter @mirror/web test"
+    "test:web": "pnpm --filter @mirror/web test",
+    "test:apps": "node scripts/test-app-shells.cjs",
+    "build:desktop": "pnpm --filter @mirror/desktop dist",
+    "build:android": "pnpm --filter @mirror/android apk"
   }
 }
-

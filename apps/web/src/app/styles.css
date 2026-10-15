@@ -40,9 +40,12 @@
 *::-webkit-scrollbar-thumb:hover{background:#94a3b8;background-clip:content-box;border:2px solid transparent}
 *::-webkit-scrollbar-track{background:transparent}
 html,body{margin:0;min-height:100vh}
+html{background:#eef2f7}
 body{
   background:#f6f8fb;
   background-attachment:fixed;
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
   color:var(--text-main);line-height:1.65;
   -webkit-font-smoothing:antialiased;
 }

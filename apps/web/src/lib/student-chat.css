@@ -150,5 +150,10 @@
  .portal.lmStudentShell .lmCourseChat .relatedPanel {position:absolute;right:0;top:50px;width:min(280px,100%);max-height:75%;overflow:auto;z-index:4;background:var(--lm-bg,#f8fafc);}
 }
 @media(max-width:680px){.portal.lmStudentShell .lmCourseChat {height:calc(100dvh - 40px);min-height:0;}.portal.lmStudentShell .lmCourseChat .chatWorkspace {min-height:0;}}
+@media(max-width:540px){
+ .portal.lmStudentShell .lmCourseChat {height:calc(100dvh - 92px - env(safe-area-inset-bottom));min-height:0;border-radius:12px;}
+ .portal.lmStudentShell .lmCourseChat .chatHeader {padding-top:max(8px,env(safe-area-inset-top));}
+ .portal.lmStudentShell .lmCourseChat .chatComposer {padding-bottom:max(8px,env(safe-area-inset-bottom));}
+}
 .portal.lmStudentShell .lmCourseChat .chatHistoryClose {display:none;}
 @media(max-width:1023px){.portal.lmStudentShell .lmCourseChat .chatHistoryClose {display:block;min-height:44px;margin-bottom:8px;}}

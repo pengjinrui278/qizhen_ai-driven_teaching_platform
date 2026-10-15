@@ -1,0 +1,16 @@
+{
+  "appId": "cn.learningmirror.app",
+  "appName": "学镜学习空间",
+  "webDir": "www",
+  "server": {
+    "url": "https://learningmirror.cn",
+    "cleartext": false,
+    "allowNavigation": ["learningmirror.cn", "www.learningmirror.cn", "127.0.0.1", "localhost"]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#eef2f7"
+  }
+}

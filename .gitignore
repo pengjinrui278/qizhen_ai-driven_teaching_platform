@@ -32,3 +32,5 @@ coverage/
 
 # Generated from apps/windows-helper during web build
 apps/web/public/downloads/windows/
+apps/desktop/release/
+apps/android/release/
