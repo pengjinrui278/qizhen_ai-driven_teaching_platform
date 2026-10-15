@@ -10,7 +10,7 @@ import "./course-chat.css";
 import "./chat-refinement.css";
 import "./chat-quote.css";
 import {courseIntro} from "./course-intro";
-import FormulaComposer from "./FormulaComposer";
+import FormulaComposer,{type FormulaComposerHandle} from "./FormulaComposer";
 import ChatMarkdown,{messageSource} from "./ChatMarkdown";
 import QuoteSurface from "./QuoteSurface";
 import QuotePanes from "./QuotePanes";
@@ -19,6 +19,12 @@ import QuoteTray,{FollowUpMessage,QuoteHud,QuoteToolbar} from "./QuoteTray";
 import {buildTurnLabel,collectUnitsWithin,isFollowUpText,quoteKeyOf} from "./chat-quote.mjs";
 import {canAddPane,clearWorkspace,collapseWithSubtree,descendantIds,holdPiece,loadLinks,loadWorkspace,newPaneId,paneLimit,pieceLimit,reorderPane,saveLinks,saveWorkspace,subtreeEnd} from "./quote-store";
 import MaterialBoard,{MaterialToolbar} from "./MaterialBoard";
+import NotePreferencePanel,{NoteEdgePanel,NoteModeToggle} from "./NotePreferencePanel";
+import NoteOrganizeDialog from "./NoteOrganizeDialog";
+import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
+import {composeRepliesMarker,decodeNoteMarker,notesHref,stripNoteMarker,withNoteMarker} from "./note-prefs";
+import {DOC_ACCEPT,isDocFile,uploadDocument} from "./note-upload";
+import "./note-prefs.css";
 import {fileToDataUrl,inputFromFile,isImageFile,isTextFile,materialLimit,newMaterialPane,releaseMaterial,urlOf} from "./material-store";
 import type {MaterialPane} from "./material-store";
 import type {PaneState,QuotePiece} from "./quote-store";
@@ -33,11 +39,31 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  const [course,setCourse]=useState("mathematical_analysis"),[sessions,setSessions]=useState<Row[]>([]),[active,setActive]=useState<Row|null>(null),[events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[pending,setPending]=useState<Row|null>(null),[copied,setCopied]=useState(""),[historyOpen,setHistoryOpen]=useState(false),[feedback,setFeedback]=useState("");
  const [relatedChunks,setRelatedChunks]=useState<Row[]>([]),[relatedLoading,setRelatedLoading]=useState(false),[showRelated,setShowRelated]=useState(false);
- const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<HTMLDivElement>(null);
+ const lock=useRef(false),epoch=useRef(0),bottom=useRef<HTMLDivElement>(null),input=useRef<FormulaComposerHandle>(null);
  const [historyLoading,setHistoryLoading]=useState(true),[historyError,setHistoryError]=useState("");
  const [failedSession,setFailedSession]=useState<Row|null>(null);
  const historyPanel=useRef<HTMLElement>(null),historyToggle=useRef<HTMLButtonElement>(null);
  const [actionId,setActionId]=useState<string|null>(null);
+ // 笔记：面板打开状态、本次待发送的标记、以及「存为笔记」确认卡指向哪一条回答
+ const [notePanel,setNotePanel]=useState<{purpose?:string;source?:string}|null>(null);
+ const noteComposed=useRef<{prompt:string;marker:string}|null>(null);
+ const [noteTarget,setNoteTarget]=useState<{requestId:string;target:SaveTarget}|null>(null);
+ const [organizing,setOrganizing]=useState(false);
+ // 笔记模式：关着的时候笔记相关交互一概不出现（人为调用，不做常驻引导）
+ const [noteMode,setNoteMode]=useState(false);
+ const [pickedReplies,setPickedReplies]=useState<string[]>([]);
+ const [undoneNotes,setUndoneNotes]=useState<string[]>([]);   // 已撤回的自动存笔记
+ // 输入 @ 时的笔记目录：拉本人的笔记，按关键词过滤后供选择
+ const [edgeOpen,setEdgeOpen]=useState(false);
+ const [mentionQuery,setMentionQuery]=useState<string|null>(null);
+ const [mentionNotes,setMentionNotes]=useState<Row[]>([]);
+ useEffect(()=>{
+  if(mentionQuery===null||mentionNotes.length)return;
+  let live=true;
+  api("/notes").then((data:Row)=>{if(live)setMentionNotes(data.items||[]);}).catch(()=>{if(live)setMentionNotes([]);});
+  return()=>{live=false;};
+ },[mentionQuery,mentionNotes.length]);
+ const messagesRef=useRef<HTMLDivElement>(null);
  const actionTimer=useRef<ReturnType<typeof setTimeout>|null>(null),historyEpoch=useRef(0);
  const workspace=useRef<HTMLElement>(null),followBottom=useRef(true);
  const pendingRef=useRef<Row|null>(null);
@@ -267,10 +293,44 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  function resetRelated(){setRelatedChunks([]);setRelatedLoading(false);setShowRelated(false);setCopied("");setFeedback("");}
  function clear(c=course){if(panes.length&&!window.confirm("开始新对话将关闭全部子页面，继续？"))return;leaveRequest();cancelActions();followBottom.current=true;updateUrl(c);setLoading(false);setFailedSession(null);resetRelated();setCourse(c);setAssignment("");setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setError("");setHistoryOpen(false);input.current?.focus();}
  async function resume(a:Row){if(panes.length&&!window.confirm("打开其它对话将关闭全部子页面，继续？"))return;leaveRequest();setFailedSession(null);const token=++epoch.current;cancelActions();followBottom.current=false;if(workspace.current)workspace.current.scrollTop=0;resetRelated();setActive(null);setEvents([]);setPending(null);pendingRef.current=null;setDraft("");setLoading(true);setError("");try{const d=await api("/attempts/"+a.id);if(token===epoch.current){updateUrl(d.course_id,a.id);setCourse(d.course_id);setActive(d);setAssignment(d.sandbox_id||"");setEvents(d.events);setPending(null);pendingRef.current=null;setDraft(d.events.length===0?(d.problem?.text||""):"");setHistoryOpen(false);}}catch(e){if(token===epoch.current){setError("无法打开对话："+(e as Error).message);setFailedSession(a);}}finally{if(token===epoch.current)setLoading(false);}}
+ // 拖入/选择的文档：上传抽文本，成功后作为高亮块钉在输入框最前面（不管光标在哪）
+ const [uploading,setUploading]=useState(false);
+ const [dragging,setDragging]=useState(false);
+ async function addDocuments(files:File[]){
+  const docs=files.filter(isDocFile);
+  if(!docs.length){setError("只支持 PDF、Word、PPT、txt/md 与常见代码文件；图片请用左边的「图片」。");return;}
+  setUploading(true);setError("");
+  try{
+   for(const file of docs){
+    const saved=await uploadDocument(file);
+    input.current?.addFile({id:saved.id,name:saved.filename,kind:saved.kind_label});
+    if(saved.note)setError(saved.note);   // 抽不出正文时如实说明，不假装读到了
+   }
+  }catch(e){setError(e instanceof Error?e.message:"文档上传失败");}
+  finally{setUploading(false);}
+ }
+ // 选中的回答 → 交给 agent 整理成「一份」笔记（不是按顺序照抄），发送后由服务端自动存库
+ function composeFromPicked(){
+  if(!pickedReplies.length)return;
+  const seeds=pickedReplies.map((id,index)=>{
+   const row=events.find(x=>x.request_id===id);
+   return `【第 ${index+1} 处】${(row?.response?.answer||"").slice(0,300)}`;
+  }).join("\n");
+  const prompt=`请把下面这 ${pickedReplies.length} 处回答整理成一份笔记：去掉重复、按主题重新组织、补上必要的结构，不要按原顺序照抄。\n\n${seeds}`;
+  noteComposed.current={prompt,marker:composeRepliesMarker(pickedReplies)};
+  setDraft(prompt);
+  setPickedReplies([]);
+  input.current?.focus();
+ }
  async function send(retry=false,mode="chat"){
   if(lock.current||loading||user.status!=="active")return;
   const msg=mode==="chat"?draft.trim():(mode==="first_hint"?"我卡住了，请给我一个方向提示":mode==="next_hint"?"还是不太懂，请再深入一点":mode==="full_solution"?"请梳理大致解题流程、主要步骤、条件检查和验证方法，保留核心计算或论证让我完成":draft.trim());
-  const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:msg};
+  // 笔记偏好面板拼好的提示词：发送时把来源标记追加到末尾（输入框里不显示），
+  // 用户改过内容就不再加标记，退化成一次普通提问。
+  const composed=!retry&&noteComposed.current&&noteComposed.current.prompt.trim()===msg?noteComposed.current:null;
+  const wire=composed?withNoteMarker(msg,composed.marker):msg;
+  if(composed)noteComposed.current=null;
+  const request=retry?pendingRef.current:{request_id:crypto.randomUUID(),mode,message:wire};
   if(!request?.message)return;
   cancelActions();lock.current=true;setDraft("");setBusy(true);setError("");setFeedback("");setPending(request);pendingRef.current=request;
   const token=epoch.current;
@@ -334,25 +394,72 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
     <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(p=>p.id===id?{...p,height:h}:p))} onMove={moveMaterial} onClear={clearMaterials}/>
    </div>
  </>:null} dropping={dropping} transport={paneTransport} user={user} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
- <section className="chatWorkspace" ref={workspace} data-quoting={quotingPaneId==="main"?"":undefined} onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/><button onClick={()=>clear()}>新对话</button></header>
+ <section className="chatWorkspace" ref={workspace}
+  onDragOver={e=>{if(Array.from(e.dataTransfer?.items||[]).some(i=>i.kind==="file")){e.preventDefault();setDragging(true);}}}
+  onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setDragging(false);}}
+  onDrop={e=>{e.preventDefault();setDragging(false);void addDocuments(Array.from(e.dataTransfer?.files||[]));}}
+  data-quoting={quotingPaneId==="main"?"":undefined}
+  data-dragging={dragging?"true":undefined}
+  onScroll={()=>{const el=workspace.current;if(el)followBottom.current=el.scrollHeight-el.clientHeight-el.scrollTop<60;}}><header className="chatHeader"><button ref={historyToggle} className="chatSidebarLauncher" aria-label="打开对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(true)}><StudentIcon name="menu"/></button><span className="chatCourseName">{name}</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy||loading} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy||loading}/><NoteModeToggle on={noteMode} disabled={busy||loading||user.status!=="active"} toggle={()=>{setNoteMode(v=>!v);setPickedReplies([]);}}/><button onClick={()=>clear()}>新对话</button></header>
  <div className="chatMessages" role="log" aria-label="课程对话" aria-live="polite">
  {!active&&!pending&&<div className="chatWelcome"><div className="welcomeIcon">{courseSymbol[course]||"∑"}</div><h2>你好，我是{name} Course Mirror</h2><p>{courseIntro(course)}</p><div className="suggestionRow">{suggestionList.map(s=><button key={s.title} title={s.question} type="button" disabled={busy||loading} onClick={()=>{setDraft(s.question);input.current?.focus();}}>{s.title}</button>)}</div></div>}
  {loading&&<p role="status">正在打开对话…</p>}
  {active&&(!pending||pending.message!==active.problem.text)&&(events.length===0||!isInitial(events[0],0))&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser">{isFollowUpText(active.problem.text||"")?<FollowUpMessage text={active.problem.text}/>:<MessageText text={active.problem.text||"课程问题"}/>}</article></div></div>}
  {active&&!loading&&events.length===0&&!busy&&<p role="status">这段对话尚无已完成的回答。原问题已保留在下方，可直接发送继续。</p>}
- {events.map((e,i)=><div className="chatExchange" id={"turn-"+e.request_id} key={e.request_id}><div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser" data-quote-src={"e:"+e.request_id+":user"}>{isFollowUpText(e.message||"")?<FollowUpMessage text={e.message}/>:<MessageText text={e.message||active?.problem?.text||"继续"}/>}</article></div></div><div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {name}</div><article className="chatAssistant" data-quote-src={"e:"+e.request_id+":ai"}>{e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button><button onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
+ {events.map((e,i)=><div className="chatExchange" id={"turn-"+e.request_id} key={e.request_id}><div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser" data-quote-src={"e:"+e.request_id+":user"}>{isFollowUpText(stripNoteMarker(e.message||""))?<FollowUpMessage text={stripNoteMarker(e.message||"")}/>:<MessageText text={stripNoteMarker(e.message||"")||active?.problem?.text||"继续"}/>}</article></div></div><div className="lmMessageRow"><span className="lmMessageAvatar lmMessageAI"><StudentIcon name="spark"/></span><div className="lmMessageBody"><div className="lmMessageName">Course Mirror · {name}</div><article className={"chatAssistant"+(noteMode?" isPickable":"")+(pickedReplies.includes(e.request_id)?" isPicked":"")} data-quote-src={"e:"+e.request_id+":ai"} data-pick-id={e.request_id}
+   onClick={noteMode?(ev=>{const el=ev.target as HTMLElement;if(el.closest("button,a,details,summary"))return;setPickedReplies(cur=>cur.includes(e.request_id)?cur.filter(x=>x!==e.request_id):[...cur,e.request_id]);}):undefined}>
+   {noteMode&&<span className="pickMark" aria-hidden="true">{pickedReplies.includes(e.request_id)?"✓ 已选中":"选中这处"}</span>}
+   {e.response?.decision?.note_saved&&<div className="noteSavedNotice" role="status">
+    {undoneNotes.includes(e.response.decision.note_saved.id)
+     ? <span>已撤回，这份笔记已移入回收站。</span>
+     : <>
+       <span>已存到 我的笔记 › {courses.find(c=>c.course_id===e.response.decision.note_saved.course_id)?.display_name||e.response.decision.note_saved.course_id}
+        {e.response.decision.note_saved.folder_path?` › ${e.response.decision.note_saved.folder_path}`:""} › 《{e.response.decision.note_saved.title}》</span>
+       <a href={"/student/notes?note="+encodeURIComponent(e.response.decision.note_saved.id)}>查看</a>
+       <button type="button" onClick={()=>{const id=e.response.decision.note_saved.id;
+         void api("/notes/"+id,"DELETE").then(()=>setUndoneNotes(cur=>[...cur,id])).catch(()=>setError("撤回失败，请到「我的笔记」里手动删除。"));}}>撤回</button>
+      </>}
+   </div>}
+   {e.response?.hint_level&&<div className="hintTag">{e.response?.decision?.hint_scale_version==="course-hints-v1-three" ? `提示 ${e.response.hint_level}/3` : `历史提示级别 ${e.response.hint_level}（量表未转换）`}</div>}<MessageText text={e.response.answer}/><div className="chatMessageTools"><button onClick={async()=>{try{await navigator.clipboard.writeText(e.response.answer);setCopied(e.request_id);}catch{setError("复制失败，请手动选择文字。");}}}>{copied===e.request_id?"✓ 已复制":"复制"}</button><button onClick={()=>quoteAnswer(e.request_id)}>引用此回答</button>{e.response.citations?.length>0&&<details><summary>资料来源</summary>{e.response.citations.map((c:Row,j:number)=><p key={j}>{c.locator||c.source_id}</p>)}</details>}</div>{actionId===e.request_id&&!busy&&!loading&&<div className="hintButtons" aria-label="继续学习"><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"first_hint")}>我卡住了</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"next_hint")}>再深入一点</button><button className="hintBtn" disabled={user.status!=="active"} onClick={()=>send(false,"full_solution")}>梳理解题框架</button></div>}</article></div></div></div>)}
  {pending&&<div className="lmMessageRow lmMessageMe"><span className="lmMessageAvatar"><StudentIcon name="person"/></span><div className="lmMessageBody"><div className="lmMessageName">我</div><article className="chatUser"><MessageText text={pending.message}/></article></div></div>}
  {busy&&<p className="chatThinking" role="status">{({queued:"正在准备…",retrieving:"寻知 · 正在查找教材…",generating:"答疑 · 正在思考…",checking:"正在核对回答…"} as Row)[stage]||"正在思考…"}</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  {error&&<div className="chatError" role="alert">{error}{failedSession&&!loading&&<button onClick={()=>void resume(failedSession)}>重新打开对话</button>}{pending&&!busy&&<button onClick={()=>send(true)}>重试</button>}</div>}
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(p=>p.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
+ {/* 拖进文件或引用了教材/笔记之后，输入框上方冒出页边；点它上下抽出偏好面板 */}
+ {/\[\[MIRROR-(UPLOAD1|REF1) /.test(draft)&&<NoteEdgePanel open={edgeOpen} onToggle={()=>setEdgeOpen(v=>!v)}
+  onPick={fragment=>{input.current?.addPrompt(fragment);input.current?.focus();}}/>}
+ {mentionQuery!==null&&<div className="noteMention" role="listbox" aria-label="引用我的笔记">
+  {(()=>{
+   const keyword=mentionQuery.trim().toLowerCase();
+   const hits=(keyword?mentionNotes.filter(n=>((n.title||"")+(n.folder_path||"")+(n.remark||"")).toLowerCase().includes(keyword)):mentionNotes).slice(0,8);
+   if(!mentionNotes.length)return <p className="noteMentionEmpty">还没有笔记可以引用。</p>;
+   if(!hits.length)return <p className="noteMentionEmpty">没有匹配的笔记。</p>;
+   return hits.map(row=><button type="button" role="option" aria-selected="false" key={row.id}
+     onClick={()=>{input.current?.insertNoteRef({id:row.id,name:row.title});setMentionQuery(null);}}>
+    <span className="noteMentionTitle">{row.starred?"★ ":""}{row.title}</span>
+    <span className="noteMentionMeta">{courses.find(c=>c.course_id===row.course_id)?.display_name||row.course_id} › {row.folder_path||"科目根"}</span>
+   </button>);
+  })()}
+ </div>}
+ {noteMode&&pickedReplies.length>0&&<div className="notePickBar" role="group" aria-label="已选中的回答">
+  <span>已选 {pickedReplies.length} 处回答</span>
+  <button type="button" className="notePickGo" onClick={composeFromPicked}>存为笔记</button>
+  <button type="button" onClick={()=>setPickedReplies([])}>清除</button>
+ </div>}
  <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
- <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}/>
- <div className="chatComposerActions"><details className="chatAttachments"><summary><StudentIcon name="camera"/>图片</summary><PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/></details><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
+ <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}
+  placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}
+  onMention={query=>setMentionQuery(query)}/>
+ <div className="chatComposerActions"><details className="chatAttachments"><summary><StudentIcon name="camera"/>图片</summary><PhotoInput key={photoEpoch} disabled={busy||loading||user.status!=="active"} recognize={data=>api("/recognize","POST",{data_url:data})} onText={handleRecognizedText}/></details><label className="chatDocUpload"><StudentIcon name="file"/>{uploading?"上传中…":"文档"}<input type="file" multiple accept={DOC_ACCEPT} aria-label="上传文档" disabled={busy||loading||uploading||user.status!=="active"} onChange={e=>{void addDocuments(Array.from(e.target.files||[]));e.target.value="";}}/></label><button className="primary" type="submit" disabled={busy||loading||!draft.trim()||user.status!=="active"}><StudentIcon name="send"/>{busy?"思考中":"发送"}</button></div>
  </form>
  {events.length>0&&<details><summary>补充学习反馈</summary><label>反馈环节<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="conditions">定理条件</option><option value="quantifiers">量词与依赖</option><option value="construction">辅助对象</option></select></label><button disabled={busy} onClick={()=>report("still_stuck")}>仍有困难</button><button disabled={busy} onClick={()=>report("independent_success")}>这次独立完成</button>{feedback&&<p role="status">{feedback}</p>}</details>}
  </section>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={workspace} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
  </QuotePanes>
+ {notePanel&&<NotePreferencePanel courseId={course} courses={courses} preset={notePanel} onClose={()=>setNotePanel(null)}
+  onComposed={(prompt,marker)=>{noteComposed.current={prompt,marker};setDraft(prompt);setNotePanel(null);input.current?.focus();}}/>}
+ {organizing&&<NoteOrganizeDialog courses={courses} onClose={()=>setOrganizing(false)}
+  onDone={count=>{setOrganizing(false);setError("");setFeedback(`已移动 ${count} 份笔记`);}}/>}
  {showRelated&&<div className="relatedPanel">
   <div className="relatedHeader">
    <span className="relatedTitle"><StudentIcon name="library"/>相关教材内容</span>

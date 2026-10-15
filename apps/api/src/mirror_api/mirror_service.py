@@ -39,7 +39,23 @@ from .models import (
     LearningEvidenceRow,
     MirrorEvent,
 )
+from .note_prefs import (
+    build_note_find_block,
+    build_note_material,
+    build_replies_material,
+    build_note_ref_material,
+    build_upload_material,
+    decision_payload,
+    note_title_from,
+    parse_marker,
+    parse_note_refs,
+    parse_upload_ids,
+    strip_marker,
+    strip_note_refs,
+    strip_upload_markers,
+)
 from .retrieval import (
+    chapter_chunks,
     course_pack_ids,
     find_problem,
     knowledge_for_problem,
@@ -113,7 +129,28 @@ class MirrorPipeline:
                 uncertainty.append("命中的题目授权范围不允许运行时使用，已按未命中处理。")
                 problem = None
 
-        retrieval_text = request.message + " " + (request.problem.text or "")
+        # 笔记任务的来源标记随消息正文一起来（不再给请求体加字段：幂等重放只比对 message，
+        # 加了字段会出现「同一 request_id 换一章重放却返回上一章回答」）。
+        marker = parse_marker(request.message)
+        # 上传/引用标记也要先剥掉：既不该进检索词，也不该出现在给模型看的正文里
+        visible_message = strip_note_refs(strip_upload_markers(strip_marker(request.message)))
+        upload_ids = parse_upload_ids(request.message)
+        note_ref_ids = parse_note_refs(request.message)
+        upload_material = ""
+        if upload_ids:
+            from .chat_upload import load_uploads
+            upload_material = build_upload_material(
+                load_uploads(session, request.participant_code or "", upload_ids))
+        if note_ref_ids:
+            # 只取本人的笔记：别人 id 混进来也读不到
+            from .note_library import Note as _Note
+            rows = session.execute(select(_Note).where(
+                _Note.account_id == request.participant_code,
+                _Note.deleted_at.is_(None), _Note.id.in_(note_ref_ids))).scalars().all()
+            by_id = {row.id: row for row in rows}
+            ref_material = build_note_ref_material([by_id[i] for i in note_ref_ids if i in by_id])
+            upload_material = "\n\n".join(part for part in (upload_material, ref_material) if part)
+        retrieval_text = visible_message + " " + (request.problem.text or "")
         # Extract known concepts before clipping: a long introduction must not
         # hide the actual question at the end of an otherwise valid request.
         concepts = " ".join(group[0] for group in concept_groups(retrieval_text))
@@ -127,11 +164,38 @@ class MirrorPipeline:
                 if rag_allowed(node)
             ]
 
-        # 补充教材文本块（授权 RAG 门控后）作为额外上下文
-        chunks = search_textbook_chunks(
-            session, request.course_id,
-            retrieval_query or (problem.statement if problem else ""), limit=3
-        )
+        # 笔记任务：按章取材料 / 检索笔记库；没有标记就走原来的泛检索。
+        # 三条路互斥——同时跑会给出两套互相矛盾的「依据」。
+        note_material, note_hits = "", []
+        if marker and marker.get("mode") == "find":
+            # 函数内导入：note_library 会拉起 platform_api，模块级导入会成环
+            from .note_library import search_notes
+            note_hits = search_notes(session, request.participant_code or "", marker.get("q", ""), limit=8)
+            note_material = build_note_find_block(note_hits)
+            chunks = []
+        elif marker and marker.get("mode") == "compose":
+            # 学生选中的几处回答：把原文取回来当素材，让模型去重重组
+            ids = [str(i) for i in ((marker.get("src") or {}).get("ids") or [])][:20]
+            rows = session.execute(
+                select(MirrorEvent).where(MirrorEvent.request_id.in_(ids),
+                                          MirrorEvent.participant_code == request.participant_code)
+            ).scalars().all()
+            by_id = {row.request_id: row for row in rows}
+            ordered = [by_id[i] for i in ids if i in by_id]
+            note_material = build_replies_material([
+                ((row.request_payload or {}).get("message"),
+                 (row.response_json or {}).get("answer")) for row in ordered])
+            chunks = []
+        elif marker and (marker.get("src") or {}).get("sid"):
+            source = marker["src"]
+            rows = chapter_chunks(session, source["sid"], source.get("ch") or "")
+            note_material, chunks = build_note_material(rows, marker)
+        else:
+            # 补充教材文本块（授权 RAG 门控后）作为额外上下文
+            chunks = search_textbook_chunks(
+                session, request.course_id,
+                retrieval_query or (problem.statement if problem else ""), limit=3
+            )
 
         hint_level, hints_exhausted = self._decide_hint_level(session, request, problem)
 
@@ -160,21 +224,29 @@ class MirrorPipeline:
                  "locator": node.source.get("locator") or node.title}
                 for node in knowledge
             ]
-            + [
+            # 笔记任务的材料已经整段放进 note_material；再塞进 knowledge 会被
+            # bounded_context 截到 8 个节点，等于把刚取到的整章内容丢掉。
+            + ([] if note_material else [
                 {"knowledge_id": chunk.chunk_id, "title": chunk.title or chunk.source_id,
                  "statement": chunk.content, "source_id": chunk.source_id,
                  "locator": chunk.locator or chunk.title}
                 for chunk in chunks
-            ],
+            ]),
             common_mistakes=list(problem.common_mistakes) if problem else [],
             student_context=request.student_context.model_dump(),
-            message=request.message,
+            message=visible_message,
             history=request.history,
+            note_material=note_material,
+            upload_material=upload_material,
         )
         context = bounded_context(context)
         included = {(node.get("source_id"), node["knowledge_id"]) for node in context.knowledge}
         knowledge = [node for node in knowledge if (node.coursepack_id, node.knowledge_id) in included]
-        chunks = [chunk for chunk in chunks if (chunk.source_id, chunk.chunk_id) in included]
+        if not note_material:
+            # 教材块平时和 knowledge 一一对应，按存活集裁剪才安全。
+            # 笔记任务的材料走 note_material 不进 knowledge，这里再裁就会把
+            # 刚取到的引用全部滤掉，回答就没有资料来源了。
+            chunks = [chunk for chunk in chunks if (chunk.source_id, chunk.chunk_id) in included]
         if on_progress:
             on_progress("generating")
         answer = self.model.generate(context)
@@ -201,6 +273,21 @@ class MirrorPipeline:
         if harness.status == "failed":
             answer = "这次生成的内容没有通过检查，已停止展示。请换一种问法，或请教师/TA核对。"
             uncertainty.append("原始生成内容已被阻断，不能作为学习依据。")
+        # 笔记模式：agent 自主落库。用户已授权自动保存（见「自动存 + 事后通知可撤销」），
+        # 前端拿 decision.note_saved 回一条「已存到 …」并提供撤回。被 harness 拦下的不存。
+        saved_note = None
+        if marker and marker.get("mode") in ("compose", "generate") and note_material and harness.status != "failed":
+            from .note_library import save_agent_note
+            dest = marker.get("d") or {}
+            saved_note = save_agent_note(
+                session, request.participant_code or "", request.course_id,
+                note_title_from(marker, answer), answer,
+                source_meta={"v": 1, "origin": "note_mode", "mode": marker.get("mode"),
+                             "prefs": marker.get("p") or {}, "src": marker.get("src") or {},
+                             "attempt_id": request.attempt_id, "request_id": request.request_id},
+                folder_path=dest.get("f") or ((marker.get("src") or {}).get("ch") or ""),
+                starred=bool(dest.get("s")))
+
         evidence = self._draft_evidence(request, problem, knowledge, hint_level, harness.status)
 
         response = CourseMirrorResponse(
@@ -222,6 +309,11 @@ class MirrorPipeline:
                 "context": request.student_context.model_dump(),
                 "attempt_id": request.attempt_id,
                 "coursepack": problem.coursepack_id if problem else None,
+                # 有笔记标记时回显面板选择与来源（确认卡重载后还能重建）；没有标记则不加字段
+                **decision_payload(marker, hits=note_hits),
+                **({"note_saved": {"id": saved_note.id, "title": saved_note.title,
+                                   "course_id": saved_note.course_id,
+                                   "folder_path": saved_note.folder_path}} if saved_note else {}),
             },
         )
 

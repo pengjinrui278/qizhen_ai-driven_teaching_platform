@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import Link from "next/link";
 import StudentIcon from "./StudentIcon";
 
-export const studentNav=[["","学习首页","home"],["learn","课程学习","message"],["ai","AI 学习","spark"],["resources","资源中心","library"],["assignments","我的作业","file"],["observations","学习反馈","chart"],["privacy","档案与隐私","shield"]];
+export const studentNav=[["","学习首页","home"],["learn","课程学习","message"],["ai","AI 学习","spark"],["notes","我的笔记","note"],["resources","资源中心","library"],["assignments","我的作业","file"],["observations","学习反馈","chart"],["privacy","档案与隐私","shield"]];
 
 const COLLAPSE_KEY="learning-mirror.sidebar.collapsed.v1";
 

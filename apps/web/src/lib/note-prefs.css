@@ -1,0 +1,143 @@
+/* 笔记引导芯片 + 偏好面板 + 存为笔记确认卡。令牌来自 student-design-tokens.css。 */
+.npGuide{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 auto 8px;max-width:760px}
+.npChips{display:flex;flex-wrap:wrap;gap:8px}
+.npGuide button{background:#fff;border:1px solid var(--lm-border);border-radius:99px;color:var(--lm-text);cursor:pointer;font:inherit;font-size:12px;min-height:32px;padding:5px 13px}
+.npGuide button:hover:not(:disabled){border-color:var(--lm-border-hover);color:var(--lm-primary-deep)}
+.npGuide button:disabled{opacity:.5;cursor:not-allowed}
+
+.npFind{align-items:center;background:#fff;border:1px solid var(--lm-border);border-radius:12px;box-shadow:var(--lm-shadow);padding:8px 10px}
+.npFind label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--lm-muted)}
+.npFind input{background:#fff;border:1px solid var(--lm-border);border-radius:9px;color:var(--lm-text);font:inherit;font-size:13px;min-height:32px;min-width:200px;padding:5px 10px}
+
+/* 整理方案：勾选科目 + 填目标目录，确认前不动任何笔记 */
+.npBackdrop .noPlan{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.npBackdrop .noPlan li{border:1px solid var(--lm-border);border-radius:12px;padding:12px}
+.npBackdrop .noPick{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--lm-text);cursor:pointer}
+/* 同理：必须比 .pilot input 更具体，否则复选框会被拉成整行宽 */
+.npBackdrop .noPick input{flex:0 0 auto;width:16px;height:16px;min-height:0;min-width:0;margin:3px 0 0;padding:0;accent-color:var(--lm-primary)}
+.npBackdrop .noFolder{width:100%;margin-top:10px;background:#fff;border:1px solid var(--lm-border);border-radius:10px;color:var(--lm-text);font:inherit;font-size:13px;min-height:40px;padding:8px 12px}
+.npBackdrop .noList{font-size:11px;color:var(--lm-muted);margin:8px 0 0;line-height:1.7;overflow-wrap:anywhere}
+
+.npBackdrop{position:fixed;inset:0;background:#0f172a66;display:flex;align-items:center;justify-content:center;padding:20px;z-index:70}
+.npPanel{background:#fff;border-radius:16px;box-shadow:var(--lm-shadow-hover);width:100%;max-width:680px;max-height:90vh;overflow:auto;padding:22px}
+.npHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.npHead h2{font-size:17px;font-weight:700;margin:0 0 4px}
+.npHead p{font-size:12px;color:var(--lm-muted);margin:0}
+.npPanel button{background:#fff;border:1px solid var(--lm-border);border-radius:9px;color:var(--lm-text);cursor:pointer;font:inherit;font-size:12px;min-height:34px;padding:6px 12px}
+.npPanel button:disabled{opacity:.5;cursor:not-allowed}
+.npGroup{border:0;border-top:1px solid var(--lm-border);margin:0;padding:12px 0 4px}
+.npGroup legend{font-size:13px;font-weight:600;color:var(--lm-text);padding:0 0 8px}
+.npHint{font-weight:400;font-size:11px;color:var(--lm-muted);margin-left:8px}
+.npChips button[aria-pressed="true"]{background:#eef2ff;border-color:var(--lm-border-hover);color:var(--lm-primary-deep);font-weight:600}
+.npBackdrop .npSource{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px;margin-top:10px}
+.npBackdrop .npSource label,.npBackdrop .npFree{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--lm-muted)}
+/* 面板会挂在 .pilot 里，而 .pilot input{width:100%} 同权重且在打包里更靠后 —— 选择器必须更具体 */
+.npBackdrop .npSource input,.npBackdrop .npSource select,.npBackdrop .npFree textarea{background:#fff;border:1px solid var(--lm-border);border-radius:10px;color:var(--lm-text);font:inherit;font-size:13px;min-height:40px;padding:8px 12px;width:100%}
+.npBackdrop .npCheck{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:12px;color:var(--lm-muted);margin-top:10px}
+.npBackdrop .npCheck input{flex:0 0 auto;width:16px;height:16px;min-height:0;min-width:0;padding:0;accent-color:var(--lm-primary)}
+.npFree{margin-top:12px}
+.npPreview{background:#f8fafc;border:1px solid var(--lm-border);border-radius:12px;margin-top:14px;padding:12px}
+.npPreview summary{cursor:pointer;font-size:12px;font-weight:600}
+.npPreview ul{margin:10px 0 0;padding-left:18px}
+.npPreview li{font-size:12px;color:var(--lm-muted);margin-bottom:6px;line-height:1.7}
+.npPreview strong{color:var(--lm-text)}
+.npActions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px;border-top:1px solid var(--lm-border);padding-top:16px}
+.npPanel .npPrimary{background:var(--lm-grad);border-color:transparent;color:#fff;font-weight:600}
+.npNote{font-size:11px;color:var(--lm-muted)}
+.npError{background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#be123c;font-size:12px;margin:0 0 12px;padding:10px 12px}
+.npLoading{font-size:12px;color:var(--lm-muted)}
+
+/* 存为笔记确认卡：贴在回答下方 */
+.nsCard{background:#fff;border:1px solid var(--lm-border);border-radius:14px;margin:12px 0 0;padding:16px;box-shadow:var(--lm-shadow)}
+.nsCard h3{font-size:14px;font-weight:700;margin:0 0 4px}
+.nsCard>p{font-size:12px;color:var(--lm-muted);margin:0 0 12px}
+.nsMode{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.nsFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.nsFields label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--lm-muted)}
+.nsFields input,.nsFields select{background:#fff;border:1px solid var(--lm-border);border-radius:10px;color:var(--lm-text);font:inherit;font-size:13px;min-height:40px;padding:8px 12px}
+.nsRemember{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--lm-muted);margin-top:12px}
+.nsWarn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;color:#b45309;font-size:12px;margin:12px 0 0;padding:10px 12px}
+.nsBlock{background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#be123c;font-size:12px;margin:12px 0 0;padding:10px 12px}
+.nsActions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+.nsCard button{background:#fff;border:1px solid var(--lm-border);border-radius:9px;color:var(--lm-text);cursor:pointer;font:inherit;font-size:12px;min-height:34px;padding:6px 12px}
+.nsCard button:disabled{opacity:.5;cursor:not-allowed}
+.nsCard .nsPrimary{background:var(--lm-grad);border-color:transparent;color:#fff;font-weight:600}
+.nsSaved{font-size:12px;color:#047857}
+
+/* 找笔记的结果卡 */
+.nhCard{background:#fff;border:1px solid var(--lm-border);border-radius:14px;margin:12px 0 0;padding:14px;box-shadow:var(--lm-shadow)}
+.nhCard h3{font-size:13px;font-weight:700;margin:0 0 10px}
+.nhList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.nhList li{border:1px solid var(--lm-border);border-radius:10px;padding:10px 12px}
+.nhCrumb{font-size:11px;color:var(--lm-muted);margin-bottom:4px;overflow-wrap:anywhere}
+.nhTitle{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.nhCard a{color:var(--lm-primary-deep);font-size:12px}
+
+/* 面板挂在 .pilot 里，而 .portal .pilot label{display:grid}（0,2,1）比本文件里
+   .npBackdrop .noPick（0,2,0）更具体；且网格项默认 justify-self:stretch 会盖掉
+   width，把复选框拉成整行宽。这里用更高权重把面板内 label/input 的布局定死。 */
+.npBackdrop .npPanel label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--lm-muted);font-weight:400}
+/* display 也必须显式写：.portal .pilot label{display:grid} 与本文件同权重，
+   打包顺序上它更靠后；只有三类的选择器（0,3,0）才压得住它（0,2,1）。 */
+.npBackdrop .npPanel .npCheck{display:flex;flex-direction:row;align-items:center}
+.npBackdrop .npPanel .noPick{display:flex;flex-direction:row;align-items:flex-start}
+.npBackdrop .npPanel .npCheck input,
+.npBackdrop .npPanel .noPick input{flex:0 0 auto;justify-self:start;align-self:flex-start;width:16px;height:16px;min-height:0;min-width:0;margin:0;padding:0;accent-color:var(--lm-primary)}
+.npBackdrop .npPanel .noPick input{margin-top:3px}
+
+/* 笔记模式开关：放在头部「参阅」旁边，平时是普通工具按钮，开启后高亮 */
+.noteModeToggle{display:inline-flex;align-items:center;gap:6px;}
+.noteModeToggle.isOn{background:#eef2ff;border-color:var(--lm-border-hover,#a5b4fc);color:var(--lm-primary-deep,#4f46e5);font-weight:600;}
+
+/* 笔记模式下：回答可点选，悬停高亮 */
+.chatAssistant.isPickable{cursor:pointer;border-radius:12px;transition:box-shadow .15s,background .15s;}
+.chatAssistant.isPickable:hover{box-shadow:inset 0 0 0 2px #c7d2fe;background:#f8faff;}
+.chatAssistant.isPicked{box-shadow:inset 0 0 0 2px #6366f1;background:#eef2ff;}
+.chatAssistant .pickMark{display:none;float:right;font-size:11px;color:#4f46e5;background:#eef2ff;border-radius:99px;padding:2px 9px;}
+.chatAssistant.isPickable .pickMark{display:inline-block;}
+.chatAssistant.isPicked .pickMark{background:#6366f1;color:#fff;}
+
+/* 选中若干回答后浮出的操作条 */
+.notePickBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 auto 8px;padding:8px 12px;max-width:760px;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.1);font-size:12px;}
+.notePickBar .notePickGo{background:var(--lm-grad,linear-gradient(135deg,#6366f1,#06b6d4));border-color:transparent;color:#fff;font-weight:600;}
+.notePickBar span{color:var(--lm-muted,#64748b);}
+
+/* 自动存库后的通知：说明存到哪了，并给一条撤回的路 */
+.noteSavedNotice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;padding:8px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-size:12px;overflow-wrap:anywhere;}
+.noteSavedNotice a{color:#047857;font-weight:600;}
+
+/* 文档上传入口：与「图片」并排 */
+.chatDocUpload{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;border:1px solid var(--lm-border,#e2e8f0);border-radius:9px;padding:6px 11px;background:#fff;color:var(--lm-text,#0f172a);}
+.chatDocUpload:hover{border-color:var(--lm-border-hover,#a5b4fc);}
+.chatDocUpload input{display:none;}
+/* 拖拽中：整块对话区给出可放置的提示 */
+.chatWorkspace[data-dragging]{outline:2px dashed #6366f1;outline-offset:-6px;border-radius:14px;}
+
+/* 输入 @ 时的笔记目录：浮在输入框上方 */
+.noteMention{display:flex;flex-direction:column;gap:2px;max-height:280px;overflow:auto;margin:0 auto 8px;padding:6px;max-width:760px;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14);}
+.noteMention button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-radius:9px;cursor:pointer;font:inherit;padding:8px 10px;}
+.noteMention button:hover,.noteMention button:focus-visible{background:#eef2ff;}
+.noteMentionTitle{font-size:13px;font-weight:500;color:var(--lm-text,#0f172a);overflow-wrap:anywhere;}
+.noteMentionMeta{font-size:11px;color:var(--lm-muted,#64748b);}
+.noteMentionEmpty{font-size:12px;color:var(--lm-muted,#64748b);margin:8px 10px;}
+
+/* 输入框里的笔记引用块 */
+.noteRefChip{display:inline;padding:1px 6px;margin:0 2px;border-radius:6px;background:#fff7ed;color:#9a3412;box-shadow:inset 0 0 0 1px #fed7aa;cursor:pointer;white-space:normal;}
+.noteRefChip:focus{outline:2px solid #fdba74;}
+
+/* 页边式笔记偏好：平时只露一条窄边，点开向上抽出（上下方向，区别于子页面的左右） */
+.noteEdge{margin:0 auto 6px;max-width:760px;position:relative;}
+.noteEdgeTab{display:flex;align-items:center;gap:8px;width:100%;background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-bottom:0;border-radius:10px 10px 0 0;color:var(--lm-muted,#64748b);cursor:pointer;font:inherit;font-size:12px;padding:5px 12px;}
+.noteEdgeTab:hover{color:var(--lm-primary-deep,#4f46e5);border-color:var(--lm-border-hover,#a5b4fc);}
+.noteEdgeGrip{width:26px;height:3px;border-radius:99px;background:#cbd5e1;}
+.noteEdge.isOpen .noteEdgeTab{border-radius:0;border-bottom:1px solid var(--lm-border,#e2e8f0);}
+/* 抽出：用 max-height 过渡，收起时高度归零、不可聚焦 */
+.noteEdgeBody{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease,opacity .2s ease;
+  background:#fff;border:1px solid var(--lm-border,#e2e8f0);border-radius:0 0 10px 10px;}
+.noteEdge.isOpen .noteEdgeBody{max-height:340px;opacity:1;overflow:auto;}
+.noteEdgeBody[aria-hidden="true"]{pointer-events:none;}
+.noteEdgeGroups{display:grid;gap:8px;padding:12px 12px 4px;}
+.noteEdgeGroup{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.noteEdgeLabel{font-size:12px;color:var(--lm-muted,#64748b);min-width:64px;}
+.noteEdgeGroup .npChips button{padding:4px 10px;min-height:28px;}
+.noteEdgeHint{font-size:11px;color:var(--lm-muted,#64748b);margin:6px 12px 12px;}

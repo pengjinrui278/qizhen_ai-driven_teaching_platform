@@ -1011,7 +1011,7 @@ def related_textbooks(body: RelatedTextbookQuery, db=Depends(db_for), user=Depen
 
 @router.get("/textbooks/{source_id}/chapters")
 def textbook_chapters(source_id: str, db=Depends(db_for), user=Depends(user_for)):
-    """获取教材章节目录。"""
+    """获取教材章节目录（只统计授权给 RAG 的文本块）。"""
     titles = db.execute(
         select(TextbookChunk.title).where(TextbookChunk.source_id == source_id)
     ).scalars().all()
@@ -1026,12 +1026,13 @@ def textbook_chapters(source_id: str, db=Depends(db_for), user=Depends(user_for)
 
 @router.get("/textbooks/{source_id}/chunks")
 def textbook_chunks(source_id: str, chapter: str | None = None, limit: int = 300, db=Depends(db_for), user=Depends(user_for)):
-    """获取教材内容块，可按章节筛选。"""
+    """获取教材内容块，可按章节筛选。未授权给 RAG 的块一律不返回。"""
+    from .retrieval import rag_allowed_chunk
     query = select(TextbookChunk).where(TextbookChunk.source_id == source_id)
     if chapter:
         query = query.where(TextbookChunk.title.contains(chapter, autoescape=True))
     query = query.order_by(TextbookChunk.locator).limit(limit)
-    chunks = db.execute(query).scalars().all()
+    chunks = [c for c in db.execute(query).scalars().all() if rag_allowed_chunk(c)]
     return [{
         "chunk_id": c.chunk_id,
         "title": c.title,

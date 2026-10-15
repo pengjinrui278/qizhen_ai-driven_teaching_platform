@@ -104,24 +104,113 @@ const groups:[string,[string,string][]][]=[
 ];
 function read(node:Node):string {
  if(node.nodeType===Node.TEXT_NODE)return node.textContent||"";
- if(node instanceof HTMLElement){if(node.dataset.latex!==undefined)return "\\("+node.dataset.latex+"\\)";if(node.tagName==="BR")return "\n";}
+ if(node instanceof HTMLElement){
+  if(node.dataset.latex!==undefined)return "\\("+node.dataset.latex+"\\)";
+  // 提示词块：序列化回它的纯文本（用户就是要看见这段要求）
+  if(node.dataset.prompt!==undefined)return node.dataset.prompt;
+  // 文件块：序列化成服务端能认的上传标记，不把文件名塞进正文
+  if(node.dataset.upload!==undefined)return "[[MIRROR-UPLOAD1 "+node.dataset.upload+"]]";
+  if(node.dataset.noteRef!==undefined)return `[[MIRROR-REF1 ${node.dataset.noteRef} ${btoa(unescape(encodeURIComponent(node.dataset.name||""))).replace(/=+$/,"")}]]`;
+  if(node.tagName==="BR")return "\n";
+ }
  return Array.from(node.childNodes).map(n=>read(n)+(n instanceof HTMLElement&&/^(DIV|P)$/.test(n.tagName)?"\n":"")).join("");
 }
 function formula(latex:string){const chip=document.createElement("span");chip.className="formulaChip";chip.contentEditable="false";chip.dataset.latex=latex;chip.tabIndex=0;chip.setAttribute("role","button");chip.setAttribute("aria-label","编辑公式");chip.title="点击修改公式";chip.innerHTML=katex.renderToString(latex,{throwOnError:false,trust:false,strict:"ignore",maxExpand:200});return chip;}
-function render(root:HTMLElement,value:string){root.replaceChildren();const pattern=/\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g;let start=0;for(const match of value.matchAll(pattern)){root.append(document.createTextNode(value.slice(start,match.index)));root.append(formula(match[1]??match[2]??match[3]));start=match.index!+match[0].length;}root.append(document.createTextNode(value.slice(start)));}
-type Props={value:string;onChange:(value:string)=>void;onSend:()=>void;disabled:boolean};
-export default forwardRef<HTMLDivElement,Props>(function FormulaComposer({value,onChange,onSend,disabled},ref){
+/** 提示词块：偏好面板点一下就在输入框里出现一段高亮要求，再点一次取消。内容存在 data-prompt 上。 */
+export function promptChip(text:string){const chip=document.createElement("span");chip.className="promptChip";chip.contentEditable="false";chip.dataset.prompt=text;chip.tabIndex=0;chip.setAttribute("role","button");chip.setAttribute("aria-label","笔记要求："+text);chip.title="点击移除这条要求";chip.textContent=text;return chip;}
+/** 文件块：显示文件名与格式，序列化成上传标记让 agent 能读到内容。 */
+export function fileChip(file:{id:string;name:string;kind:string}){const chip=document.createElement("span");chip.className="fileChip";chip.contentEditable="false";chip.dataset.upload=file.id;chip.dataset.name=file.name;chip.dataset.kind=file.kind;chip.tabIndex=0;chip.setAttribute("role","button");chip.setAttribute("aria-label",`附件：${file.name}`);chip.title=`${file.name}（${file.kind}），点击移除`;chip.textContent=`${file.name}`;const tag=document.createElement("em");tag.textContent=file.kind;chip.append(tag);return chip;}
+const UPLOAD_RE=/\[\[MIRROR-UPLOAD1 ([A-Za-z0-9_-]+)\]\]/g;
+/** 笔记引用块：显示笔记标题，序列化成引用标记让服务端把正文取来当依据。 */
+export function noteRefChip(note:{id:string;name:string}){const chip=document.createElement("span");chip.className="noteRefChip";chip.contentEditable="false";chip.dataset.noteRef=note.id;chip.dataset.name=note.name;chip.tabIndex=0;chip.setAttribute("role","button");chip.setAttribute("aria-label",`引用笔记：${note.name}`);chip.title=`引用笔记《${note.name}》，点击移除`;chip.textContent=`《${note.name}》`;return chip;}
+const NOTEREF_RE=/\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=-]*)\]\]/g;
+function render(root:HTMLElement,value:string){root.replaceChildren();const pattern=/\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$|\[\[MIRROR-UPLOAD1 [A-Za-z0-9_-]+\]\]|\[\[MIRROR-REF1 [A-Za-z0-9_-]+ [A-Za-z0-9_=-]*\]\]/g;let start=0;
+ for(const match of value.matchAll(pattern)){root.append(document.createTextNode(value.slice(start,match.index)));
+  const upload=match[0].match(/^\[\[MIRROR-UPLOAD1 ([A-Za-z0-9_-]+)\]\]$/);
+  const noteref=match[0].match(/^\[\[MIRROR-REF1 ([A-Za-z0-9_-]+) ([A-Za-z0-9_=-]*)\]\]$/);
+  if(upload){root.append(fileChip({id:upload[1],name:"附件",kind:"文件"}));}
+  else if(noteref){
+   let name=noteref[1];
+   try{name=decodeURIComponent(escape(atob(noteref[2])));}catch{/* 名字解不出来就用 id 兜底 */}
+   root.append(noteRefChip({id:noteref[1],name}));
+  }
+  else root.append(formula(match[1]??match[2]??match[3]));
+  start=match.index!+match[0].length;}
+ root.append(document.createTextNode(value.slice(start)));}
+export type FormulaComposerHandle={
+ focus:()=>void;
+ /** 偏好面板用：追加一段高亮要求（已存在则不重复加） */
+ addPrompt:(text:string)=>void;
+ /** 拖入的文件：一律插到输入框最前面，按拖入先后排 */
+ addFile:(file:{id:string;name:string;kind:string})=>void;
+ hasFile:(id:string)=>boolean;
+ /** 输入 @ 后选定一篇笔记：把光标处的「@关键词」换成引用块 */
+ insertNoteRef:(note:{id:string;name:string})=>void;
+};
+type Props={value:string;onChange:(value:string)=>void;onSend:()=>void;disabled:boolean;placeholder?:string;
+ /** 输入 @ 时回调，参数是 @ 后面的关键词（用于拉出笔记目录） */
+ onMention?:(query:string|null)=>void};
+export default forwardRef<FormulaComposerHandle,Props>(function FormulaComposer({value,onChange,onSend,disabled,placeholder,onMention},ref){
  const editor=useRef<HTMLDivElement>(null),panel=useRef<HTMLDivElement>(null),host=useRef<HTMLDivElement>(null),toggle=useRef<HTMLButtonElement>(null),field=useRef<MathfieldElement|null>(null);
  const saved=useRef<Range|null>(null),last=useRef(""),composing=useRef(false),editing=useRef<HTMLElement|null>(null),frozen=useRef(false);
+ // 输入 @ 时记下「@关键词」这一段的范围，选定笔记后整段换成引用块
+ const mention=useRef<Range|null>(null);
  const [open,setOpen]=useState(false),[ready,setReady]=useState(false),[latex,setLatex]=useState(""),[error,setError]=useState(""),[source,setSource]=useState(false);
  const latexRef=useRef(latex);latexRef.current=latex;
- useImperativeHandle(ref,()=>editor.current!);
+ // 对外暴露的操作：焦点、插入高亮要求、把文件块钉到最前面
+ useImperativeHandle(ref,()=>({
+  focus:()=>{editor.current?.focus();},
+  addPrompt:(text:string)=>{
+   const root=editor.current;if(!root||disabled)return;
+   const exists=Array.from(root.querySelectorAll<HTMLElement>(".promptChip")).some(c=>c.dataset.prompt===text);
+   if(exists||read(root).length+text.length>6000)return;
+   const r=restore();r.collapse(false);
+   const chip=promptChip(text);r.insertNode(chip);r.setStartAfter(chip);r.collapse(true);
+   changed();
+  },
+  addFile:(file:{id:string;name:string;kind:string})=>{
+   const root=editor.current;if(!root)return;
+   const exists=Array.from(root.querySelectorAll<HTMLElement>(".fileChip")).some(c=>c.dataset.upload===file.id);
+   if(exists)return;
+   // 插到最前面且不碰当前选区：不管光标在哪，文件块都按拖入顺序排在开头
+   root.insertBefore(fileChip(file),root.firstChild);
+   changed();
+  },
+  hasFile:(id:string)=>Boolean(editor.current?.querySelector(`.fileChip[data-upload="${id}"]`)),
+  insertNoteRef:(note:{id:string;name:string})=>{
+   const root=editor.current;if(!root)return;
+   const chip=noteRefChip(note);
+   // 把光标处那段「@关键词」整体换成引用块；找不到就插在光标处
+   if(mention.current){mention.current.deleteContents();mention.current.insertNode(chip);}
+   else{const r=restore();r.collapse(false);r.insertNode(chip);}
+   mention.current=null;
+   const after=document.createRange();after.setStartAfter(chip);after.collapse(true);
+   const sel=window.getSelection();sel?.removeAllRanges();sel?.addRange(after);
+   changed();
+   onMention?.(null);
+  },
+ }),[]);
  function end(){const r=document.createRange();r.selectNodeContents(editor.current!);r.collapse(false);return r;}
  // 视口尺寸变化等瞬时重排之后，直接 focus() 有时不生效（焦点落回 body，用户打的字会丢），
  // 因此下一帧再确认一次焦点。
  function focusField(){const el=field.current;if(!el)return;el.focus();requestAnimationFrame(()=>{if(field.current&&document.activeElement!==field.current)field.current.focus();});}
  function remember(){if(frozen.current)return;const s=window.getSelection();if(s?.rangeCount&&editor.current?.contains(s.getRangeAt(0).commonAncestorContainer))saved.current=s.getRangeAt(0).cloneRange();}
  function restore(){editor.current?.focus();const r=saved.current&&editor.current?.contains(saved.current.commonAncestorContainer)?saved.current:end();const s=window.getSelection();s?.removeAllRanges();s?.addRange(r);return r;}
+ // 只在光标紧跟「@若干非空白字符」时才认为是引用触发；否则关掉候选
+ function detectMention(){
+  if(!onMention)return;
+  const sel=window.getSelection();
+  const range=sel?.rangeCount?sel.getRangeAt(0):null;
+  if(!range||!range.collapsed||!editor.current?.contains(range.commonAncestorContainer)){mention.current=null;onMention(null);return;}
+  const node=range.startContainer;
+  if(node.nodeType!==Node.TEXT_NODE){mention.current=null;onMention(null);return;}
+  const before=(node.textContent||"").slice(0,range.startOffset);
+  const at=before.lastIndexOf("@");
+  const query=at<0?"":before.slice(at+1);
+  if(at<0||/\s/.test(query)||query.length>30){mention.current=null;onMention(null);return;}
+  const r=document.createRange();r.setStart(node,at);r.setEnd(node,range.startOffset);
+  mention.current=r;onMention(query);
+ }
  function changed(){const text=read(editor.current!);if(text.length>6000){setError("消息最多6000个字符，请缩短后再发送。");render(editor.current!,last.current);saved.current=end();restore();return;}last.current=text;onChange(text);remember();}
  useEffect(()=>{if(value!==last.current){render(editor.current!,value);last.current=value;saved.current=null;}},[value]);
  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
@@ -136,8 +225,12 @@ export default forwardRef<HTMLDivElement,Props>(function FormulaComposer({value,
  {source&&<textarea aria-label="LaTeX公式源码" value={latex} onChange={e=>{setLatex(e.target.value);if(field.current)field.current.value=e.target.value;}}/>}
  <div className="formulaSymbols">{groups.map(([name,items])=><section key={name}><h3>{name}</h3><div>{items.map(([label,code])=><button type="button" key={label} title={label} aria-label={label} disabled={!ready} onMouseDown={e=>e.preventDefault()} onClick={()=>{field.current?.insert(code,{selectionMode:"placeholder"});focusField();setLatex(field.current?.value||"");}}><span dangerouslySetInnerHTML={{__html:katex.renderToString(code.replaceAll("#?","\\square"),{throwOnError:false,trust:false,strict:"ignore"})}}/></button>)}</div></section>)}</div>
  {error&&<p role="alert">{error}</p>}<div className="formulaPanelFoot"><span>点击空格填写，方向键移动</span><button type="button" disabled={!ready||!latex.trim()} onClick={insert}>完成</button></div></div>}
- <div ref={editor} className="formulaMessageInput" contentEditable={!disabled} suppressContentEditableWarning role="textbox" aria-label="发送消息" aria-multiline="true" aria-disabled={disabled} data-placeholder="输入消息，或添加图片与公式…" onInput={()=>{if(!composing.current)changed();}} onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;changed();}} onKeyUp={remember} onMouseUp={remember} onBlur={remember}
- onClick={e=>{const chip=(e.target as HTMLElement).closest<HTMLElement>(".formulaChip");if(chip&&!disabled)launch(chip);}}
+ <div ref={editor} className="formulaMessageInput" contentEditable={!disabled} suppressContentEditableWarning role="textbox" aria-label="发送消息" aria-multiline="true" aria-disabled={disabled} data-placeholder={placeholder||"输入消息，或添加图片与公式…"} onInput={()=>{if(!composing.current){changed();detectMention();}}} onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;changed();}} onKeyUp={remember} onMouseUp={remember} onBlur={remember}
+ onClick={e=>{const el=e.target as HTMLElement;
+  const prompt=el.closest<HTMLElement>(".promptChip");if(prompt&&!disabled){prompt.remove();changed();return;}
+  const file=el.closest<HTMLElement>(".fileChip");if(file&&!disabled){file.remove();changed();return;}
+  const ref=el.closest<HTMLElement>(".noteRefChip");if(ref&&!disabled){ref.remove();changed();return;}
+  const chip=el.closest<HTMLElement>(".formulaChip");if(chip&&!disabled)launch(chip);}}
  onKeyDown={e=>{if(disabled)return;if(e.nativeEvent.isComposing||composing.current)return;if(e.key==="Enter"&&(e.target as HTMLElement).closest(".formulaChip")){e.preventDefault();launch((e.target as HTMLElement).closest<HTMLElement>(".formulaChip")!);return;}if(e.key==="Enter"){e.preventDefault();if(e.shiftKey){document.execCommand("insertText",false,"\n");changed();}else if(!disabled)onSend();}}}
  onPaste={e=>{e.preventDefault();if(!disabled){const text=e.clipboardData.getData("text/plain");if(text.length+read(editor.current!).length>6000){setError("粘贴内容过长。");return;}document.execCommand("insertText",false,text);changed();}}}
  onCopy={e=>{const s=window.getSelection();if(s?.rangeCount){e.preventDefault();e.clipboardData.setData("text/plain",read(s.getRangeAt(0).cloneContents()));}}}/>

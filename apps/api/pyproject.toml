@@ -17,10 +17,16 @@ dependencies = [
   # 驱动选 pg8000（纯 Python）：psycopg[binary] 无 Windows ARM64 轮子，
   # 纯 Python psycopg 依赖本机 libpq 动态库，两者在 ARM64 Windows 都不可用。
   "pg8000>=1.31,<2",
+  # 笔记附件上传（FastAPI 的 multipart 表单支持）
+  "python-multipart>=0.0.9,<1",
   # 模型网关（OpenAI 兼容接口）的运行时依赖
   "httpx>=0.27,<1",
   # PDF 文本抽取（教材语料入库）
-  "pypdf>=5,<7"
+  "pypdf>=5,<7",
+  # 笔记导出（python-docx / python-pptx 都是 py3-none-any 纯 Python 轮子；
+  # 它们的依赖 lxml 与 Pillow 均提供 win_arm64 轮子，不违反上面的 ARM64 约束）
+  "python-docx>=1.2,<2",
+  "python-pptx>=1.0,<2"
 ]
 
 [project.optional-dependencies]

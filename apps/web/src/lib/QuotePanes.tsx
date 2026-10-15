@@ -2,7 +2,7 @@
 import {cloneElement,isValidElement,useEffect,useRef,useState} from "react";
 import type {ReactElement,ReactNode} from "react";
 import ChatMarkdown,{messageSource} from "./ChatMarkdown";
-import FormulaComposer from "./FormulaComposer";
+import FormulaComposer,{type FormulaComposerHandle} from "./FormulaComposer";
 import StudentIcon from "./StudentIcon";
 import QuoteSurface from "./QuoteSurface";
 import {QuoteCard,QuoteHud,QuoteToolbar} from "./QuoteTray";
@@ -80,7 +80,7 @@ function SubChatPane({pane,index,title,transport,user,quote,sourcesRef,layout,dr
  const [events,setEvents]=useState<Row[]>([]);
  const [draft,setDraft]=useState("");
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(Boolean(pane.attemptId)),[stage,setStage]=useState(""),[error,setError]=useState(""),[missing,setMissing]=useState(false);
- const lock=useRef(false),epoch=useRef(0),abort=useRef<AbortController|null>(null),bottom=useRef<HTMLDivElement>(null),scroll=useRef<HTMLDivElement>(null),input=useRef<HTMLDivElement>(null);
+ const lock=useRef(false),epoch=useRef(0),abort=useRef<AbortController|null>(null),bottom=useRef<HTMLDivElement>(null),scroll=useRef<HTMLDivElement>(null),input=useRef<FormulaComposerHandle>(null);
  const pending=useRef<Row|null>(null),loaded=useRef<string|null>(null);
  const pieces=quote.piecesOf(pane.id);
  const quoting=quote.quotingPaneId===pane.id;

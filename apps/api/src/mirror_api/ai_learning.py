@@ -157,6 +157,14 @@ def answer_chat(sid, body, db, user):
             raise HTTPException(409, "请求编号已被使用，请重新发送")
         return public(previous)
     settings = get_settings()
+    # 笔记面板拼的提示词末尾带来源标记：检索、送模型、会话标题都用剥离后的可见文本。
+    # 存下来的 question 保留标记，确认卡重载后才能恢复面板选择。
+    from .note_prefs import build_upload_material, parse_upload_ids, strip_marker, strip_upload_markers
+    visible = strip_upload_markers(strip_marker(body.text))
+    upload_block = ""
+    if parse_upload_ids(body.text):
+        from .chat_upload import load_uploads
+        upload_block = build_upload_material(load_uploads(db, user.id, parse_upload_ids(body.text)))
     if settings.llm_provider == "stub" or not settings.llm_api_key or not settings.llm_base_url:
         raise ModelError(503, "AI 助手尚未连接，请稍后再试")
     if body.image:
@@ -176,7 +184,7 @@ def answer_chat(sid, body, db, user):
     history = list(reversed(db.scalars(select(AIMessage).where(
         AIMessage.session_id == sid, AIMessage.account_id == user.id)
         .order_by(AIMessage.created_at.desc(), AIMessage.id.desc()).limit(6)).all()))
-    pages = search(db, body.text + " " + " ".join(m.question[:200] for m in history[-2:]))
+    pages = search(db, visible + " " + " ".join(m.question[:200] for m in history[-2:]))
     citations = []
     evidence = []
     for i, page in enumerate(pages, 1):
@@ -194,8 +202,9 @@ def answer_chat(sid, body, db, user):
     for item in history:
         messages.extend([{"role": "user", "content": item.question + ("（此前附图不保留，如需再看请重传）" if item.has_image else "")},
                          {"role": "assistant", "content": item.answer}])
-    content = body.text if not body.image else [
-        {"type": "text", "text": body.text},
+    sent_text = f"{visible}\n\n{upload_block}" if upload_block else visible
+    content = sent_text if not body.image else [
+        {"type": "text", "text": sent_text},
         {"type": "image_url", "image_url": {"url": body.image, "detail": "original"}}]
     messages.append({"role": "user", "content": content})
     payload = {"model": settings.vision_model if body.image else settings.llm_model,
@@ -210,7 +219,7 @@ def answer_chat(sid, body, db, user):
                     answer=answer, has_image=bool(body.image), citations=citations)
     db.add(row)
     if session.title == "新对话":
-        session.title = body.text[:60]
+        session.title = visible[:60]
     db.commit()
     return public(row)
 

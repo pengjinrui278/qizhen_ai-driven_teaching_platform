@@ -18,11 +18,16 @@ import AIToolDirectory from "./AIToolDirectory"; import coursePrompts from "./co
 import {liveApi} from "./Pilot";
 import StudentIcon from "./StudentIcon";
 import ChatMarkdown from "./ChatMarkdown";
-import FormulaComposer from "./FormulaComposer";
+import FormulaComposer,{type FormulaComposerHandle} from "./FormulaComposer";
 import "./student-ai-chat.css";
 import "katex/dist/katex.min.css";
 import "./ai-learning.css";
 import "./ai-prompts.css";
+import NotePreferencePanel,{NoteModeToggle} from "./NotePreferencePanel";
+import NoteOrganizeDialog from "./NoteOrganizeDialog";
+import NoteSaveCard,{type SaveTarget} from "./NoteSaveCard";
+import {decodeNoteMarker,stripNoteMarker,withNoteMarker} from "./note-prefs";
+import "./note-prefs.css";
 type Row=Record<string,any>;
 type SourceMeta={source:string;label:string;paneId:string;attemptId?:string|null;requestId:string};
 const entranceMeta:Record<string,[string,string]>={ // [图标, 一句说明]
@@ -45,19 +50,33 @@ export default function AILearning({section=""}:{section?:string}){
  const [resources,setResources]=useState<Row[]>([]),[notes,setNotes]=useState<Row[]>([]),[results,setResults]=useState<Row[]>([]),[query,setQuery]=useState("");
  const [draft,setDraft]=useState<Row|null>(null);
  const [historyOpen,setHistoryOpen]=useState(false);
- const lock=useRef(false),bottom=useRef<HTMLDivElement>(null),aiMessagesRef=useRef<HTMLDivElement>(null),pending=useRef<{id:string;text:string;image:string}|null>(null),aiInput=useRef<HTMLDivElement>(null);
+ // 笔记：AI 素养路径没有教材章可读，来源只能是「刚才的回答」
+ const [notePanel,setNotePanel]=useState<{purpose?:string;source?:string}|null>(null);
+ const [noteTarget,setNoteTarget]=useState<SaveTarget|null>(null);
+ const noteComposed=useRef<{prompt:string;marker:string}|null>(null);
+ const [organizing,setOrganizing]=useState(false);
+ // 笔记模式：关着时笔记相关交互一概不出现
+ const [noteMode,setNoteMode]=useState(false);
+ const lock=useRef(false),bottom=useRef<HTMLDivElement>(null),aiMessagesRef=useRef<HTMLDivElement>(null),pending=useRef<{id:string;text:string;image:string}|null>(null),aiInput=useRef<FormulaComposerHandle>(null);
  async function run(task:()=>Promise<void>){if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");try{await task();}catch(e){setError(e instanceof Error?e.message:"暂时无法完成");}finally{lock.current=false;setBusy(false);}}
- useEffect(()=>{if(tab==="tools"||tab==="setup")return;let live=true;Promise.all([liveApi("/ai/sessions"),liveApi("/ai/resources"),liveApi("/ai/notes")]).then(([s,r,n])=>{if(live){setSessions(s);setResources(r);setNotes(n);}}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
+ // 笔记列表改从新的笔记库取（科目=AI 教学）；旧的 /ai/notes 由后端 migrate_ai_notes 并过去
+ useEffect(()=>{if(tab==="tools"||tab==="setup")return;let live=true;Promise.all([liveApi("/ai/sessions"),liveApi("/ai/resources"),liveApi("/notes?course_id=ai_literacy")]).then(([s,r,n])=>{if(live){setSessions(s);setResources(r);setNotes(n.items||[]);}}).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
  useEffect(()=>{bottom.current?.scrollIntoView({block:"nearest",behavior:"smooth"});},[messages,busy]);
  async function send(){if(!text.trim())return;await run(async()=>{
   let current=active;
   if(!current){current=await liveApi("/ai/sessions","POST");setActive(current);}
+  // 面板拼好的提示词：发送时追加来源标记（输入框与气泡里都不显示）
+  const composed=noteComposed.current&&noteComposed.current.prompt.trim()===text?noteComposed.current:null;
+  const wire=composed?withNoteMarker(text,composed.marker):text;
+  if(composed)noteComposed.current=null;
   if(!pending.current||pending.current.text!==text||pending.current.image!==picture)pending.current={id:crypto.randomUUID(),text,image:picture};
-  await liveApi("/ai/sessions/"+current!.id+"/messages","POST",{request_id:pending.current.id,text,image:picture||null});
+  await liveApi("/ai/sessions/"+current!.id+"/messages","POST",{request_id:pending.current.id,text:wire,image:picture||null});
   const detail=await liveApi("/ai/sessions/"+current!.id);setActive(detail);setMessages(detail.messages);
   setSessions(await liveApi("/ai/sessions"));setText("");setPicture("");pending.current=null;
  });}
- function noteFrom(m:Row){setDraft({title:m.question.slice(0,80),content:m.answer,message_id:m.id});}
+ // 走同一张「存为笔记」确认卡（默认新建、并入须显式选）
+ function noteFrom(m:Row){setNoteTarget({answer:m.answer,courseId:"ai_literacy",marker:decodeNoteMarker(m.question),
+   chat:{page:"ai",session_id:active?.id,message_id:m.id}});}
  async function chooseImage(file?:File){if(!file)return;setError("");if(file.size>4*1024*1024){setError("图片请小于 4MB");return;}if(!["image/png","image/jpeg","image/webp"].includes(file.type)){setError("请选择 PNG、JPEG 或 WebP 图片");return;}const reader=new FileReader();reader.onload=()=>setPicture(String(reader.result));reader.onerror=()=>setError("无法读取图片");reader.readAsDataURL(file);}
 
  // ===== 摘录 / 参阅：与课程对话同一套工作区，传输层换成 AI 会话（/ai/sessions，无 SSE）=====
@@ -184,7 +203,8 @@ export default function AILearning({section=""}:{section?:string}){
   window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
  }
 
- const noteEditor=draft&&<section className="aiNoteEditor" aria-label="编辑笔记"><h2>{draft.id?"编辑笔记":"保存笔记"}</h2><input aria-label="笔记标题" maxLength={120} value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/><textarea aria-label="笔记内容" rows={10} maxLength={30000} value={draft.content} onChange={e=>setDraft({...draft,content:e.target.value})}/><div className="aiActions"><button disabled={busy||!draft.title.trim()||!draft.content.trim()} onClick={()=>run(async()=>{await liveApi("/ai/notes"+(draft.id?"/"+draft.id:""),draft.id?"PUT":"POST",{title:draft.title,content:draft.content,message_id:draft.message_id});setNotes(await liveApi("/ai/notes"));setDraft(null);setNotice("笔记已保存");})}>确认保存</button><button disabled={busy} onClick={()=>setDraft(null)}>取消</button></div></section>;
+ // 自己动手改/建笔记：同样落在新的笔记库（科目=AI 教学）
+ const noteEditor=draft&&<section className="aiNoteEditor" aria-label="编辑笔记"><h2>{draft.id?"编辑笔记":"新建笔记"}</h2><input aria-label="笔记标题" maxLength={200} value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/><textarea aria-label="笔记内容" rows={10} maxLength={60000} value={draft.content} onChange={e=>setDraft({...draft,content:e.target.value})}/><div className="aiActions"><button disabled={busy||!draft.title.trim()} onClick={()=>void run(async()=>{const body={title:draft.title,content:draft.content||"",course_id:"ai_literacy",folder_path:draft.folder_path||"",kind:"md",source:"student"};if(draft.id)await liveApi("/notes/"+draft.id,"PATCH",body);else await liveApi("/notes","POST",body);const list=await liveApi("/notes?course_id=ai_literacy");setNotes(list.items||[]);setDraft(null);setNotice("笔记已保存");})}>确认保存</button><button disabled={busy} onClick={()=>setDraft(null)}>取消</button></div></section>;
  return <div className={"aiLearning"+(tab===""?" lmAIChat":"")} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
  {dropping&&<div className={"dropOverlay"+(dropZone?" is"+dropZone:"")} aria-hidden="true">
   <div className="dropZone dropZoneAsk"><StudentIcon name="file"/><strong>上传文件 · 向 AI 提问</strong><span>文本/Markdown 直接读入输入框；图片先识别成文字再提问</span></div>
@@ -192,7 +212,8 @@ export default function AILearning({section=""}:{section?:string}){
   <div className="dropZone dropZoneBoard"><StudentIcon name="library"/><strong>并排参阅 · 不参与提问</strong><span>作为参阅页停在右侧，只看不聊（文件不出本机）</span></div>
  </div>}
  <div className="pageHeading"><div><h1>AI 学习</h1>{tab===""&&<p>{courseIntro("ai")} · 独立知识问答</p>}</div>{tab===""&&<button aria-label="打开AI对话列表" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(!historyOpen)}><StudentIcon name="menu"/>历史对话</button>}</div>
- <nav className="aiEntrances" aria-label="AI 学习导航">{tabs.map(([key,title])=><Link key={key} className="aiEntrance" href={"/student/ai"+(key?"/"+key:"")} aria-current={key===tab?"page":undefined}><span className="aiEntranceMark"><StudentIcon name={(entranceMeta[key]||["spark",""])[0]}/></span><span className="aiEntranceBody"><strong>{title}</strong><span>{(entranceMeta[key]||["",""])[1]}</span></span></Link>)}</nav>
+ {/* 笔记入口直接指向新的笔记库，不再在 AI 页另起一套 */}
+ <nav className="aiEntrances" aria-label="AI 学习导航">{tabs.map(([key,title])=><Link key={key} className="aiEntrance" href={key==="notes"?"/student/notes":"/student/ai"+(key?"/"+key:"")} aria-current={key===tab?"page":undefined}><span className="aiEntranceMark"><StudentIcon name={(entranceMeta[key]||["spark",""])[0]}/></span><span className="aiEntranceBody"><strong>{title}</strong><span>{(entranceMeta[key]||["",""])[1]}</span></span></Link>)}</nav>
  {error&&<p role="alert" className="portalError">{error}</p>}{notice&&<p role="status">{notice}</p>}
  {tab===""&&<div className="aiChatLayout"><aside className={"aiHistory"+(historyOpen?" isOpen":"")}><button disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button>{sessions.map(s=><div className="aiHistoryRow" key={s.id}><button disabled={busy} aria-pressed={active?.id===s.id} onClick={()=>run(async()=>{const d=await liveApi("/ai/sessions/"+s.id);setHistoryOpen(false);setActive(d);setMessages(d.messages);pending.current=null;setText("");setPicture("");})}>{s.title}</button><button title="删除对话" aria-label={"删除对话 "+s.title} disabled={busy} onClick={()=>{if(window.confirm("删除这段对话？已保存的笔记会保留。"))void run(async()=>{await liveApi("/ai/sessions/"+s.id,"DELETE");setSessions(await liveApi("/ai/sessions"));if(active?.id===s.id){setActive(null);setMessages([]);}});}}>×</button></div>)}</aside>
  <QuotePanes panes={panes} quote={quoteUi()} board={materials.length>0?<>
@@ -201,23 +222,31 @@ export default function AILearning({section=""}:{section?:string}){
     <MaterialBoard panes={materials} onClose={closeMaterial} onHeight={(id,h)=>setMaterials(cur=>cur.map(x=>x.id===id?{...x,height:h}:x))} onMove={moveMaterial} onClear={clearMaterials}/>
    </div>
  </>:null} dropping={dropping} transport={paneTransport} user={{status:"active"}} sourcesRef={sourcesRef} mainWeight={mainWeight} layout={{onWeights:resizePanes,onReorder:movePane,onCollapse:collapsePanes,onCollapseOne:collapseOnePane,onPin:pinPane}} onClose={closePane} onBindAttempt={bindAttempt} onSources={registerSources}>
- <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
+ <section className="aiChat" aria-label="AI 知识问答"><header className="aiChatHead"><span className="aiChatChip">AI 学习助手</span><span className="aiChatHint">独立知识问答 · 不参与能力评估</span><QuoteToolbar quoting={quotingPaneId==="main"} count={piecesOf("main").length} disabled={busy} onToggle={()=>toggleScissors("main")}/><MaterialToolbar count={materials.length} onPick={files=>void addFiles(files)} onUrl={addUrl} disabled={busy}/><NoteModeToggle on={noteMode} disabled={busy} toggle={()=>setNoteMode(v=>!v)}/><button type="button" disabled={busy} onClick={()=>{setHistoryOpen(false);setActive(null);setMessages([]);pending.current=null;setText("");setPicture("");}}>新对话</button></header><div className="aiMessages" aria-live="polite" ref={aiMessagesRef}>
  {!messages.length&&!busy&&<div className="aiEmpty"><h2>从一个问题开始</h2><p>{courseIntro("ai")}</p><div className="aiPromptList">{coursePrompts.ai.map(p=><button key={p.title} title={p.question} onClick={()=>{setText(p.question);aiInput.current?.focus();}}>{p.title}</button>)}</div></div>}
- {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={m.question}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
+ {messages.map(m=><article key={m.id}><div className="lmAIMessage lmAIMe"><span className="lmAIAvatar"><StudentIcon name="person"/></span><div className="lmAIMessageBody"><div className="lmAIName">我</div><div className="aiQuestion" data-quote-src={"m:"+m.id+":user"}><Markdown text={stripNoteMarker(m.question)}/>{m.has_image&&<span>附图已分析（原图不保存）</span>}</div></div></div><div className="lmAIMessage"><span className="lmAIAvatar lmAIBot"><StudentIcon name="spark"/></span><div className="lmAIMessageBody"><div className="lmAIName">AI 学习助手</div><div className="aiAnswer" data-quote-src={"m:"+m.id+":ai"}><Markdown text={m.answer}/>{m.citations.length>0&&<details><summary>教材依据</summary>{m.citations.map((c:Row,i:number)=><p key={c.id}>[{i+1}] {c.title} · PDF 第 {c.pdf_page} 页 · {c.heading}</p>)}</details>}<button disabled={busy} onClick={()=>noteFrom(m)}>整理为笔记</button></div></div></div></article>)}
  {busy&&<p role="status">正在处理…</p>}{quotingPaneId==="main"&&<QuoteHud count={piecesOf("main").length} limit={pieceLimit} error={quoteError} canAssemble={piecesOf("main").length>0} onAssemble={()=>assemble("main")} onCopy={()=>void copyPieces("main")} onClear={()=>setPiecesOf("main",[])} onExit={exitScissors}/>}<div ref={bottom}/></div>
  <QuoteSurface paneId="main" active={quotingPaneId==="main"} containerRef={aiMessagesRef} sourcesRef={sourcesRef} pieces={piecesOf("main")} onChange={next=>setPiecesOf("main",next)} onExit={exitScissors}/>
  <QuoteTray pieces={piecesOf("main")} onRemove={id=>setPiecesOf("main",piecesOf("main").filter(x=>x.id!==id))} onLocate={locatePiece} onAssemble={()=>assemble("main")} busy={busy}/>
  <form className="aiComposer" onSubmit={e=>{e.preventDefault();void send();}}>
  {picture&&<div className="aiAttachment"><img src={picture} alt="待发送图片"/><button type="button" onClick={()=>setPicture("")} disabled={busy}>移除图片</button></div>}
  {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
- <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}/>
+ <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}
+  placeholder={noteMode?"笔记模式：可拖入文件、输入 @ 引用笔记，或选中上面的回答后点「存为笔记」":undefined}/>
  <div className="aiActions"><label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><label className="aiFile"><StudentIcon name="camera"/>拍照<input aria-label="拍照" type="file" accept="image/*" capture="environment" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label><button className="aiPrimary" disabled={busy||!text.trim()} type="submit"><StudentIcon name="send"/>发送</button></div>
  <p className="aiPrivacy">消息及图片会发送至 DeepSeek；图片仅用于本次回答，不保存原图。</p>
  </form></section></QuotePanes></div>}
  {tab==="resources"&&<><form className="aiSearch" onSubmit={e=>{e.preventDefault();void run(async()=>{const found=await liveApi("/ai/search?q="+encodeURIComponent(query));setResults(found);if(!found.length)setNotice("未找到已核对的相关内容");});}}><input aria-label="搜索教材" placeholder="搜索知识点" value={query} maxLength={500} onChange={e=>setQuery(e.target.value)}/><button disabled={busy||!query.trim()}>搜索</button></form><div className="aiGrid">{resources.map(r=><section className="portalPanel" key={r.id}><h2>{r.title}</h2><p>{r.metadata_json.authors||""}</p><p>{r.metadata_json.total_pages} 页 · 已核对 {r.reviewed_pages} 处节选</p></section>)}{!resources.length&&<p>暂无教材</p>}</div>{results.map(r=><section className="portalPanel" key={r.id}><h3>{r.heading||"教材段落"} · PDF 第 {r.page} 页</h3><Markdown text={r.content}/></section>)}<div className="aiGrid"><section className="portalPanel"><h2>例题与习题</h2><p>暂无已核对的题目</p></section><section className="portalPanel"><h2>课程试卷</h2><p>暂无试卷</p></section></div></>}
- {tab==="notes"&&<><div className="aiActions"><button disabled={busy} onClick={()=>setDraft({title:"",content:""})}>新建笔记</button><button disabled={!notes.length} onClick={()=>saveFile("AI学习笔记.md",notes.map(n=>"# "+n.title+"\n\n"+n.content+"\n\n"+n.citations.map((c:Row)=>c.title+" PDF第"+c.pdf_page+"页").join("\n")).join("\n\n---\n\n"))}>导出全部</button></div><div className="aiGrid">{notes.map(n=><article className="portalPanel" key={n.id}><h2>{n.title}</h2><Markdown text={n.content}/><div className="aiActions"><button disabled={busy} onClick={()=>setDraft(n)}>编辑</button><button disabled={busy} onClick={()=>{if(window.confirm("删除这篇笔记？"))void run(async()=>{await liveApi("/ai/notes/"+n.id,"DELETE");setNotes(await liveApi("/ai/notes"));});}}>删除</button></div></article>)}</div>{!notes.length&&<p>还没有笔记，可以从回答中整理，也可以自己记录。</p>}</>}
+ {tab==="notes"&&<><div className="aiActions"><button disabled={busy} onClick={()=>setDraft({title:"",content:"",folder_path:""})}>新建笔记</button><Link href="/student/notes">在笔记库中打开</Link></div><div className="aiGrid">{notes.map(n=><article className="portalPanel" key={n.id}><h2>{n.starred?"★ ":""}{n.title}</h2><p>{n.folder_path||"科目根"} · {n.source==="agent"?"AI 整理":"自写"}</p><div className="aiActions"><Link href={"/student/notes?note="+encodeURIComponent(n.id)}>打开</Link><button disabled={busy} onClick={()=>void run(async()=>{const full=await liveApi("/notes/"+n.id);setDraft(full);})}>编辑</button><button disabled={busy} onClick={()=>{if(window.confirm("把这篇笔记移到回收站？30 天内可以还原。"))void run(async()=>{await liveApi("/notes/"+n.id,"DELETE");const list=await liveApi("/notes?course_id=ai_literacy");setNotes(list.items||[]);});}}>删除</button></div></article>)}</div>{!notes.length&&<p>还没有笔记。可以从回答里「存为笔记」，也可以自己新建。</p>}</>}
  {tab==="tools"&&<AIToolDirectory/>}
  {tab==="setup"&&<WindowsInstaller/>}
  {noteEditor}
+ {organizing&&<NoteOrganizeDialog courses={[{course_id:"ai_literacy",display_name:"AI 教学"}]} onClose={()=>setOrganizing(false)}
+   onDone={count=>{setOrganizing(false);void run(async()=>{const list=await liveApi("/notes?course_id=ai_literacy");setNotes(list.items||[]);setNotice(`已移动 ${count} 份笔记`);});}}/>}
+ {noteTarget&&<NoteSaveCard target={noteTarget} courses={[{course_id:"ai_literacy",display_name:"AI 教学"}]} onClose={()=>setNoteTarget(null)}
+   onSaved={()=>void run(async()=>{const list=await liveApi("/notes?course_id=ai_literacy");setNotes(list.items||[]);})}/>}
+ {notePanel&&<NotePreferencePanel courseId="ai_literacy" courses={[{course_id:"ai_literacy",display_name:"AI 教学"}]} preset={notePanel}
+   allowedSources={["chat"]} onClose={()=>setNotePanel(null)}
+   onComposed={(prompt,marker)=>{noteComposed.current={prompt,marker};setText(prompt);setNotePanel(null);aiInput.current?.focus();}}/>}
  </div>;
 }

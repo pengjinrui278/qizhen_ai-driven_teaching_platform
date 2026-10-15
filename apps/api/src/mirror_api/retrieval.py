@@ -201,6 +201,27 @@ def rag_allowed_chunk(chunk: TextbookChunk) -> bool:
     return bool(chunk.source.get("allowed_for_rag"))
 
 
+def chapter_chunks(session: Session, source_id: str, chapter: str, limit: int = 600) -> list[TextbookChunk]:
+    """取某本教材某一章的文本块，按页序返回；只返回 allowed_for_rag 的块。
+
+    故意不走 /textbooks/{id}/chunks：那条路由没有授权门控，会把未授权正文发出去。
+    """
+    query = select(TextbookChunk).where(TextbookChunk.source_id == source_id)
+    if chapter:
+        query = query.where(TextbookChunk.title.contains(chapter, autoescape=True))
+    rows = [row for row in session.execute(query).scalars() if rag_allowed_chunk(row)]
+    rows.sort(key=chunk_page_order)
+    return rows[:limit]
+
+
+def chunk_page_order(chunk: TextbookChunk) -> tuple[int, int, str]:
+    """按 PDF 页码排序。locator/title 都是字符串，直接排会把 p.100 排到 p.20 前面。"""
+    spans = chunk.source.get("source_spans") if isinstance(chunk.source, dict) else None
+    if spans and isinstance(spans[0], dict) and isinstance(spans[0].get("pdf_page"), int):
+        return (spans[0]["pdf_page"], int(spans[0].get("block_index") or 0), chunk.chunk_id)
+    return (10 ** 6, 0, chunk.chunk_id)
+
+
 def find_similar_problems(
     session: Session,
     pack_ids: list[str],

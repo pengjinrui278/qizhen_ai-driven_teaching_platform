@@ -119,6 +119,28 @@ def test_private_notes_export_delete_and_cross_role(client, monkeypatch):
             assert db.query(model).count() == 0
 
 
+def test_note_marker_is_stripped_for_model_search_and_title(client, monkeypatch):
+    """笔记面板拼的提示词带来源标记：送模型/检索/会话标题都要用剥离后的可见文本。"""
+    from mirror_api.note_prefs import build_marker, parse_marker
+
+    calls = []
+    monkeypatch.setattr("mirror_api.ai_learning.complete",
+                        lambda base, key, payload, timeout: calls.append(payload) or "回答")
+    marker = build_marker({"v": 1, "mode": "generate", "src": {"k": "chat"}, "p": {"purpose": "review"}})
+    sid = new_session(client)
+    question = "把刚才的回答整理成复习笔记"
+    assert send(client, sid, "request-marked", text=f"{question}\n\n{marker}").status_code == 200
+
+    sent = calls[-1]["messages"][-1]["content"]
+    assert "MIRROR-NOTE1" not in sent, "标记不能进模型上下文"
+    assert sent.startswith(question)
+
+    stored = client.get(f"/api/v2/ai/sessions/{sid}").json()
+    assert stored["title"] == question, "会话标题不能带标记"
+    assert parse_marker(stored["messages"][0]["question"]) is not None, \
+        "存下来的问题要保留标记，确认卡重载后才能恢复面板选择"
+
+
 def test_failed_answer_not_persisted(client, monkeypatch):
     from mirror_api.model_transport import ModelError
     def fail(*args): raise ModelError(503,"暂不可用")
