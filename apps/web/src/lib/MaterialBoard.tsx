@@ -41,6 +41,7 @@ export function MaterialToolbar({count,onPick,onUrl,disabled}:{count:number;onPi
  const [open,setOpen]=useState(false),[value,setValue]=useState("");
  const file=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(!open)return;const esc=(e:KeyboardEvent)=>{if(e.key==="Escape")setOpen(false);};document.addEventListener("keydown",esc);return()=>document.removeEventListener("keydown",esc);},[open]);
+ const add=()=>{if(!value.trim())return;onUrl(value);setValue("");setOpen(false);};
  return <div className="materialToolbar">
   <button type="button" className={"quoteTool"+(open?" isActive":"")} aria-expanded={open} aria-describedby="materialToolHint" title="把本地文件拖进页面，或在这里选择文件/粘贴网址" disabled={disabled} onClick={()=>setOpen(v=>!v)}>
    <StudentIcon name="library"/>参阅{count>0&&<span className="quoteToolCount">{count}</span>}
@@ -50,10 +51,14 @@ export function MaterialToolbar({count,onPick,onUrl,disabled}:{count:number;onPi
    <p className="materialPopupNote">文件只在本地浏览器打开，不上传服务器。</p>
    <button type="button" className="materialPopupPick" onClick={()=>file.current?.click()}>选择本地文件…</button>
    <input ref={file} type="file" multiple hidden aria-label="选择本地文件" onChange={e=>{if(e.target.files?.length)onPick(e.target.files);e.target.value="";setOpen(false);}}/>
-   <form className="materialPopupUrl" onSubmit={e=>{e.preventDefault();if(!value.trim())return;onUrl(value);setValue("");setOpen(false);}}>
-    <input aria-label="粘贴网址" placeholder="粘贴网址 https://…" value={value} onChange={e=>setValue(e.target.value)}/>
-    <button type="submit" disabled={!value.trim()}>加入</button>
-   </form>
+   {/* 这个弹层长在输入框的 <form> 里，form 不能嵌套：里面的 <form> 会让「加入」
+       变成一次 GET 提交，直接把整页刷掉。所以自己处理回车，按钮用 type="button"。 */}
+   <div className="materialPopupUrl">
+    <input aria-label="粘贴网址" placeholder="粘贴网址 https://…" value={value}
+     onChange={e=>setValue(e.target.value)}
+     onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}}/>
+    <button type="button" disabled={!value.trim()} onClick={add}>加入</button>
+   </div>
    <p className="materialPopupNote">注意：多数网站禁止被嵌入，空白时请用「在新标签中打开」。</p>
   </div>}
  </div>;
