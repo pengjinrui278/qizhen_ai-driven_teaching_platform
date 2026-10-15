@@ -166,8 +166,8 @@ def answer_chat(sid, body, db, user):
     settings = get_settings()
     # 笔记面板拼的提示词末尾带来源标记：检索、送模型、会话标题都用剥离后的可见文本。
     # 存下来的 question 保留标记，确认卡重载后才能恢复面板选择。
-    from .note_prefs import (build_upload_material, note_title_from, parse_marker,
-                             parse_upload_ids, strip_marker, strip_upload_markers)
+    from .note_prefs import (build_upload_material, parse_marker, parse_upload_ids,
+                             strip_marker, strip_upload_markers)
     visible = strip_upload_markers(strip_marker(body.text))
     # 笔记模式下的自由请求：这条路走 agent，能直接建/改/整理笔记库。
     # 与课程对话页是同一套操作块机制，否则同一个「笔记」按钮在两边行为不一样。
@@ -237,15 +237,8 @@ def answer_chat(sid, body, db, user):
     # 模型自己发过操作块就不再自动新建一份，免得同样的内容存两遍。
     from .note_ops import run_ops_block
     answer, ops_receipt = run_ops_block(db, user.id, answer, default_course=NOTE_COURSE)
-    if note_agent and not ops_receipt:
-        from .note_library import save_agent_note
-        save_agent_note(db, user.id, NOTE_COURSE,
-                        note_title_from(marker, answer), answer,
-                        source_meta={"v": 1, "origin": "note_mode", "mode": "agent",
-                                     "prefs": (marker or {}).get("p") or {},
-                                     "src": (marker or {}).get("src") or {},
-                                     "session_id": sid, "request_id": body.request_id},
-                        folder_path=((marker or {}).get("d") or {}).get("f") or "")
+    # 与课程对话页一致：agent 模式下**不自动新建**——学生随便问一句不该被存成一份笔记。
+    # 要笔记就由模型自己发 save 操作块（那是照办），或者走偏好面板那条 generate 路径。
     row = AIMessage(id=ident, session_id=sid, account_id=user.id, question=body.text,
                     answer=answer, has_image=bool(body.image), citations=citations,
                     note_ops=ops_receipt or {})

@@ -368,16 +368,45 @@ def test_agent_mode_reports_ops_it_could_not_do(note_db):
     assert note_db.get(Note, "n1").title == "真的"
 
 
-def test_agent_mode_without_ops_still_saves_the_note(note_db):
-    """笔记模式下直接提要求要能直接存进笔记库 —— 不能只回一条普通回答。"""
+def test_agent_mode_never_saves_on_its_own(note_db):
+    """笔记模式下随口问一句，不能就被存成一份笔记。
+
+    哪些回答进笔记必须由学生自己勾选（「存为笔记」走 compose）。agent 模式是让 agent
+    **管理**笔记库用的，不是把每一轮问答都当成笔记。
+    """
     from mirror_api.note_library import Note
     marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
-    model = CapturingModel()   # 不带操作块
+    model = CapturingModel()   # 学生没让存，模型也没发操作块
+    before = note_db.query(Note).count()
     response = MirrorPipeline(model).handle(
-        note_db, request_with(marker, number=14, message="整理一份反常积分的笔记"))
-    assert "比较判别法" in model.contexts[0].note_material
-    saved = response.decision.get("note_saved")
-    assert saved and note_db.get(Note, saved["id"]) is not None
+        note_db, request_with(marker, number=14, message="反常积分的比较判别法是什么"))
+    assert "note_saved" not in response.decision, "agent 模式不许自动落库"
+    assert "note_ops" not in response.decision
+    assert note_db.query(Note).count() == before, "库里不该多出任何笔记"
+
+
+def test_agent_mode_saves_only_when_the_student_asked_for_a_note(note_db):
+    """学生明确要一份笔记时，由模型自己发 save —— 那是照办，不是自动存。"""
+    import json
+
+    from mirror_api.note_library import Note
+    from mirror_api.note_ops import OPS_FENCE
+
+    block = ("```" + OPS_FENCE + "\n" + json.dumps({"ops": [
+        {"op": "save", "title": "反常积分 · 预习笔记", "folder": "第8章 反常积分"}]},
+        ensure_ascii=False) + "\n```")
+    model = OpsModel("# 反常积分\n\n比较判别法……\n\n" + block)
+    marker = build_marker({"v": 1, "mode": "agent", "src": {"k": "chat"}})
+    response = MirrorPipeline(model).handle(
+        note_db, request_with(marker, number=17, message="帮我做一份反常积分的预习笔记"))
+
+    receipt = response.decision["note_ops"]
+    assert receipt["done"] == 1 and receipt["failed"] == 0
+    rows = note_db.query(Note).all()
+    assert len(rows) == 1 and rows[0].account_id == "student"
+    assert rows[0].title == "反常积分 · 预习笔记" and rows[0].folder_path == "第8章 反常积分"
+    assert "比较判别法" in rows[0].content, "save 没给 body 时要用回答正文"
+    assert OPS_FENCE not in response.answer, "操作块不能留在可见正文里"
 
 
 def test_agent_mode_managing_only_does_not_create_a_note(note_db):
@@ -405,3 +434,67 @@ def test_plain_chat_has_no_note_ops_ability(note_db):
     model = CapturingModel()
     MirrorPipeline(model).handle(note_db, request_with("", number=16, message="什么是极限"))
     assert model.contexts[0].note_ops_enabled is False
+
+
+def test_selected_replies_are_captured_whole_not_truncated(note_db):
+    """学生选中的回答必须**完整**进材料：一个字都不许截。
+
+    早先单处只给 6000 字节，长回答被拦腰砍掉，笔记的覆盖范围就错了。
+    """
+    from mirror_api.models import MirrorEvent
+
+    head = "一致收敛的判别。"
+    middle = "中间这一大段是最容易被截掉的部分，里面写着判别法的条件。" * 900
+    tail = "末尾这一句必须还在。"
+    long_answer = head + middle + tail
+    note_db.add(MirrorEvent(request_id="r-whole", course_id="mathematical_analysis",
+                            profile_id="v1", participant_code="student", interaction_mode="chat",
+                            request_payload={"message": "什么是一致收敛？"},
+                            response_json={"answer": long_answer}))
+    note_db.commit()
+
+    marker = build_marker({"v": 1, "mode": "compose", "src": {"k": "replies", "ids": ["r-whole"]}})
+    model = CapturingModel()
+    MirrorPipeline(model).handle(note_db, request_with(marker, number=18, message="整理成笔记"))
+
+    material = model.contexts[0].note_material
+    assert head in material, "开头要在"
+    assert tail in material, "结尾也要在——只留开头就是被截断了"
+    assert middle[:2000] in material, "中段整段都该在"
+    assert len(material.encode("utf-8")) > len(long_answer.encode("utf-8")) * 0.95, \
+        "材料应当基本等于回答原文的长度，而不是被裁过"
+
+
+def test_many_selected_replies_all_get_through(note_db):
+    """多选几处也要都在，不能只装得下前两处。"""
+    from mirror_api.models import MirrorEvent
+
+    ids = []
+    for i in range(8):
+        rid = f"r-many-{i}"
+        ids.append(rid)
+        note_db.add(MirrorEvent(request_id=rid, course_id="mathematical_analysis",
+                                profile_id="v1", participant_code="student",
+                                interaction_mode="chat",
+                                request_payload={"message": f"第 {i} 个问题"},
+                                response_json={"answer": f"第 {i} 处的回答。" + "细节说明。" * 300}))
+    note_db.commit()
+
+    marker = build_marker({"v": 1, "mode": "compose", "src": {"k": "replies", "ids": ids}})
+    model = CapturingModel()
+    MirrorPipeline(model).handle(note_db, request_with(marker, number=19, message="整理成笔记"))
+
+    material = model.contexts[0].note_material
+    for i in range(8):
+        assert f"第 {i} 处的回答。" in material, f"第 {i} 处被丢掉了"
+    assert "没放进来" not in material, "八处应当全都装得下"
+
+
+def test_reply_material_says_so_when_it_really_cannot_fit(note_db):
+    """真到装不下时要说实话，不能让笔记显得覆盖了全部选中的内容。"""
+    from mirror_api.note_prefs import build_replies_material
+
+    huge = "内容。" * 60000          # 单处就超过总额度
+    material = build_replies_material([("问一", huge), ("问二", "第二处")], budget_bytes=1000)
+    assert "没放进来" in material and "如实说明" in material
+    assert "第二处" not in material

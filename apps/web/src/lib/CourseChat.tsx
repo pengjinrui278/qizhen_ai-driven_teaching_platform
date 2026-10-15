@@ -477,7 +477,7 @@ export default function CourseChat({api,courses,user,sandboxes=[],streaming=fals
  </div>}
  <form className="chatComposer" key="composer" onSubmit={e=>{e.preventDefault();void send();}}>
  <FormulaComposer key={photoEpoch} ref={input} value={draft} onChange={setDraft} onSend={()=>void send()} disabled={busy||loading||user.status!=="active"||quotingPaneId==="main"}
-  placeholder={noteMode?"笔记模式：说明你要什么笔记，生成后自动存进「我的笔记」；也可以拖入文件、用 @ 引用笔记，或选中上面的回答再点「存为笔记」":undefined}
+  placeholder={noteMode?"笔记模式：点选回答后按「存为笔记」整理入库；也可以让我整理已有笔记、找一篇笔记，或拖入文件、用 @ 引用笔记":undefined}
   onMention={query=>setMentionQuery(query)}/>
  <div className="chatComposerActions">
   <ChatToolMenu label="工具库" disabled={busy||loading||user.status!=="active"}>

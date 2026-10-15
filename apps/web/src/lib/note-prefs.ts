@@ -46,10 +46,12 @@ export function composeRepliesMarker(ids:string[],mergeId?:string){
 }
 
 /**
- * 笔记模式下学生直接提要求、没走偏好面板也没选回答。
- * 走 agent 模式：既能把这次的要求写成一份新笔记并自动存库（不用手动复制粘贴），
- * 也能直接管理笔记库——整理、移动、改名、标星、删除、还原、并入某篇。
- * 材料由服务端按这次的要求去教材里现找，笔记库索引也一并交给它。
+ * 笔记模式下学生直接说话（没走偏好面板、也没勾选回答）。
+ * 走 agent 模式：让 agent 能**管理**笔记库——整理、移动、改名、标星、删除、还原、
+ * 按关键词找、并入某篇；笔记库索引也一并交给它。
+ *
+ * 这条路**不会**自动新建笔记：哪些回答进笔记必须由学生自己勾选（「存为笔记」）。
+ * 学生在这条路上明确说「帮我做一份笔记」时，由模型自己发 save 操作块落库。
  */
 export function freeNoteMarker(mergeId?:string,folder?:string){
  return encodeNoteMarker({mode:"agent",src:{k:"chat"},d:{...dest(mergeId),f:folder||""}});

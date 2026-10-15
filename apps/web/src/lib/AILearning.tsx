@@ -253,7 +253,7 @@ export default function AILearning({section=""}:{section?:string}){
  {picture&&<div className="aiAttachment"><img src={picture} alt="待发送图片"/><button type="button" onClick={()=>setPicture("")} disabled={busy}>移除图片</button></div>}
  {/* 与课程对话页统一：可混排公式的输入区（公式渲染为排版结果，发送时序列化为数学文本） */}
  <FormulaComposer key="ai-composer" ref={aiInput} value={text} onChange={setText} onSend={()=>void send()} disabled={busy}
-  placeholder={noteMode?"笔记模式：说明你要什么笔记，生成后自动存进「我的笔记」；也可以拖入文件或输入 @ 引用笔记":undefined}/>
+  placeholder={noteMode?"笔记模式：让我整理或查找你已有的笔记，也可以拖入文件、用 @ 引用笔记":undefined}/>
  <div className="aiActions">
   <ChatToolMenu label="工具库" disabled={busy}>
     <label className="aiFile"><StudentIcon name="file"/>上传图片<input aria-label="上传图片" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void chooseImage(e.target.files?.[0]);e.target.value="";}}/></label>

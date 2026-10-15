@@ -332,9 +332,13 @@ class MirrorPipeline:
         # 笔记模式：agent 自主落库。用户已授权自动保存（见「自动存 + 事后通知可撤销」），
         # 前端拿 decision.note_saved 回一条「已存到 …」并提供撤回。被 harness 拦下的不存。
         saved_note, saved_merged, merge_overflow = None, False, False
-        # 模型自己发过操作块就不再自动新建：它已经说清楚该怎么落库了，
-        # 再存一份就成了同样的内容存两遍。
-        auto_save = (marker and marker.get("mode") in ("compose", "generate", "agent") and note_material
+        # 落库只有两条由学生**显式**触发的路：
+        #   compose  —— 学生逐条勾选了哪几处回答要写进笔记（「存为笔记」）；
+        #   generate —— 学生走了偏好面板，指定了要一份什么样的笔记。
+        # agent 模式（笔记模式下直接说话）不在其中：那条路是让 agent 管理笔记库用的，
+        # 学生随便问一句就被存成一份笔记是不能接受的。
+        # 学生在 agent 模式下明确要一份笔记时，由模型自己发 save 操作块——那是它照办，不是自动。
+        auto_save = (marker and marker.get("mode") in ("compose", "generate") and note_material
                      and note_source_found and not note_results and harness.status != "failed")
         if auto_save:
             from .note_library import merge_agent_note, save_agent_note
