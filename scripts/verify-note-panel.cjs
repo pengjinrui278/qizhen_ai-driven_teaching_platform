@@ -84,6 +84,8 @@ const COURSE = {course_id: 'mathematical_analysis', display_name: '数学分析'
     await page.getByRole('button', {name: /按教材章生成/}).click();
     const panel = page.locator('.npPanel');
     await panel.waitFor({timeout: 5000});
+    // 面板骨架先出来、选项 schema 是异步拉的；不等它到位就断言会间歇性失败
+    await panel.getByText('笔记的来源').waitFor({timeout: 10000});
     assert.equal(await panel.getByText('笔记的来源').count(), 1, '面板要有「笔记的来源」');
     assert.equal(await panel.getByText('存在哪里').count(), 1, '面板要有「存在哪里」');
 
